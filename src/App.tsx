@@ -775,6 +775,11 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
   const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
 
+  // Reset local state when round or match changes
+  useEffect(() => {
+    setIsChanging(false);
+  }, [state.currentMatchId, currentMatch?.currentRound]);
+
   const redP = state.participants.find(p => p.id === currentMatch?.redTeamId);
   const blueP = state.participants.find(p => p.id === currentMatch?.blueTeamId);
 
@@ -944,8 +949,22 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
                     <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
-                      {totalCurrentVotes >= state.juryCount ? 'Tous les votes sont enregistrés' : 'Attente des autres membres...'}
+                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : 'VOTE ENREGISTRÉ'}
                     </p>
+
+                    {totalCurrentVotes >= state.juryCount && (
+                      <div className="mb-8 flex items-center gap-6 bg-white/5 border border-white/10 px-8 py-4 rounded-2xl animate-in fade-in zoom-in duration-500">
+                        <div className="flex flex-col items-center">
+                          <span className="text-[8px] font-black uppercase text-brand-red mb-1 opacity-60 tracking-widest">ROUGE</span>
+                          <span className="text-3xl font-black italic">{currentVotesRed}</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex flex-col items-center">
+                          <span className="text-[8px] font-black uppercase text-brand-blue mb-1 opacity-60 tracking-widest">BLEU</span>
+                          <span className="text-3xl font-black italic">{currentVotesBlue}</span>
+                        </div>
+                      </div>
+                    )}
                     
                     <div className="flex flex-col gap-3 w-full">
                        {totalCurrentVotes >= state.juryCount && currentMatch.votingMode === 'round' && currentMatch.currentRound <= currentMatch.roundCount && (
