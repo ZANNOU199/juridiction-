@@ -425,6 +425,18 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
     }
   };
 
+  const selectMatch = async (matchId: string) => {
+    try {
+      await fetch('/api/admin/select-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId })
+      });
+    } catch (e) {
+      console.warn("Server sync failed during selectMatch");
+    }
+  };
+
   const reset = async () => {
     onSave(DEFAULT_STATE);
     try {
@@ -689,6 +701,14 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
                       </div>
                       
                       <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
+                        {m.status === 'pending' && (
+                          <button 
+                            onClick={() => selectMatch(m.id)}
+                            className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                          >
+                            LANCER
+                          </button>
+                        )}
                         {m.status === 'finished' && (
                           <div className="flex gap-4 items-center">
                               <div className="flex items-center -space-x-1">
@@ -773,6 +793,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
 function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onBack: () => void }) {
   const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
   const [isChanging, setIsChanging] = useState(false);
+  const [showMatchList, setShowMatchList] = useState(false);
   const myVote = state.juryVotes[juryId];
 
   // Reset local state when round or match changes
@@ -807,6 +828,21 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
       }
     } catch (e) {
       console.warn("Server sync failed during nextMatch");
+    }
+  };
+
+  const selectMatch = async (matchId: string) => {
+    try {
+      const res = await fetch('/api/admin/select-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId })
+      });
+      if (res.ok) {
+        setShowMatchList(false);
+      }
+    } catch (e) {
+      console.warn("Server sync failed during selectMatch");
     }
   };
 
@@ -977,8 +1013,17 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                        )}
 
                        {currentMatch.votingMode === 'match' && totalCurrentVotes >= state.juryCount && (
-                         <div className="py-4 px-8 bg-white/5 border border-white/10 rounded-full">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Votes Terminés - Attente clôture...</span>
+                         <div className="flex flex-col gap-3 w-full mb-2">
+                           <div className="py-4 px-8 bg-white/5 border border-white/10 rounded-full">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Votes Terminés - Attente clôture...</span>
+                           </div>
+                           <button 
+                             onClick={() => setShowMatchList(true)}
+                             className="flex items-center justify-center gap-3 px-8 py-3 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-full group"
+                           >
+                             <Users size={14} className="opacity-40 group-hover:scale-110 transition-transform" />
+                             <span className="text-[10px] font-black uppercase tracking-widest">Liste des battles</span>
+                           </button>
                          </div>
                        )}
                     </div>
@@ -1017,13 +1062,22 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                  </div>
                  <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">Battle Terminé</h2>
                  <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px] mb-8">Résultats disponibles sur l'écran public</p>
-                 <button 
-                    onClick={nextMatch}
-                    className="flex items-center justify-center gap-3 px-10 py-5 bg-white text-black transition-all rounded-full group shadow-[0_10px_40px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95"
-                  >
-                    <SkipForward size={20} className="group-hover:translate-x-1 duration-300" />
-                    <span className="text-xs font-black uppercase tracking-widest">Passer au battle suivant</span>
-                  </button>
+                 <div className="flex flex-col gap-3 w-full max-w-xs">
+                    <button 
+                       onClick={nextMatch}
+                       className="flex items-center justify-center gap-3 px-10 py-5 bg-white text-black transition-all rounded-full group shadow-[0_10px_40px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95"
+                     >
+                       <SkipForward size={20} className="group-hover:translate-x-1 duration-300" />
+                       <span className="text-xs font-black uppercase tracking-widest">Suivant (Auto)</span>
+                     </button>
+                     <button 
+                       onClick={() => setShowMatchList(true)}
+                       className="flex items-center justify-center gap-3 px-10 py-5 bg-white/5 border border-white/10 text-white transition-all rounded-full group hover:bg-white/10"
+                     >
+                       <Users size={18} className="opacity-40" />
+                       <span className="text-xs font-black uppercase tracking-widest">Choisir un battle</span>
+                     </button>
+                 </div>
               </>
             ) : (
               <>
@@ -1052,6 +1106,80 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
           QUITTER
         </button>
       </footer>
+
+      {/* Match Selection Overlay */}
+      <AnimatePresence>
+        {showMatchList && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/95 backdrop-blur-3xl z-[100] p-6 flex flex-col items-center"
+          >
+            <div className="w-full max-w-2xl flex flex-col h-full">
+              <div className="flex justify-between items-center mb-12">
+                <div className="flex flex-col">
+                  <h2 className="text-3xl font-black italic uppercase tracking-tighter">SÉLECTION DU BATTLE</h2>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Choisissez le prochain match à lancer</p>
+                </div>
+                <button 
+                  onClick={() => setShowMatchList(false)}
+                  className="w-12 h-12 flex items-center justify-center bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all font-black"
+                >
+                  X
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+                {state.matches.map((m, i) => {
+                  const red = state.participants.find(p => p.id === m.redTeamId);
+                  const blue = state.participants.find(p => p.id === m.blueTeamId);
+                  const isFinished = m.status === 'finished';
+                  const isActive = m.status === 'active';
+
+                  return (
+                    <button 
+                      key={m.id}
+                      disabled={isActive}
+                      onClick={() => selectMatch(m.id)}
+                      className={`w-full group p-6 flex flex-col md:flex-row justify-between items-center gap-4 transition-all border text-left
+                        ${isActive ? 'bg-white/10 border-white opacity-50 cursor-not-allowed' : 'bg-white/5 border-white/10 hover:border-white hover:bg-white/10'}
+                        ${isFinished ? 'opacity-40' : ''}
+                      `}
+                    >
+                      <div className="flex items-center gap-6 w-full md:w-auto">
+                        <span className="text-[10px] font-black text-white/20 w-6">0{i+1}</span>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black uppercase text-white/30 mb-1">{m.round}</span>
+                          <div className="flex flex-1 items-center gap-4 text-xl italic font-black uppercase">
+                              <span className={isFinished && m.winnerId === m.redTeamId ? 'text-brand-red' : ''}>{red?.name}</span>
+                              <span className="text-white/10 text-[10px] not-italic font-bold">VS</span>
+                              <span className={isFinished && m.winnerId === m.blueTeamId ? 'text-brand-blue' : ''}>{blue?.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-4">
+                         {isActive ? (
+                           <div className="flex items-center gap-2 px-3 py-1 bg-green-500/20 border border-green-500/40 text-green-500 text-[8px] font-black uppercase tracking-widest">
+                             LIVE
+                           </div>
+                         ) : isFinished ? (
+                           <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 text-white/40 text-[8px] font-black uppercase tracking-widest">
+                             FINI
+                           </div>
+                         ) : (
+                           <Play size={16} className="text-white/40 group-hover:text-white transition-colors" />
+                         )}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

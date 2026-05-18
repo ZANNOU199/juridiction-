@@ -187,6 +187,23 @@ app.post("/api/admin/confirm-round", (req, res) => {
   res.json({ success: true, state: tournamentState });
 });
 
+app.post("/api/admin/select-match", (req, res) => {
+  const { matchId } = req.body;
+  const match = tournamentState.matches.find(m => m.id === matchId);
+  if (match) {
+    // Finish current if exists
+    const current = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
+    if (current && current.status !== 'finished') current.status = 'finished';
+
+    tournamentState.currentMatchId = matchId;
+    match.status = 'active';
+    tournamentState.juryVotes = {};
+    res.json({ success: true, state: tournamentState });
+  } else {
+    res.status(404).json({ error: "Match non trouvé" });
+  }
+});
+
 app.post("/api/admin/next-match", (req, res) => {
   const activeIdx = tournamentState.matches.findIndex(m => m.id === tournamentState.currentMatchId);
   if (activeIdx !== -1) {
