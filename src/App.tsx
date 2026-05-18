@@ -840,19 +840,17 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   };
 
   const finalizeMatch = async () => {
-    if (!state.currentMatchId) return;
+    const cid = state.currentMatchId;
+    setView('list'); // Immediate feedback for the user
+    if (!cid) return;
     try {
-      const res = await fetch('/api/jury/finalize', {
+      await fetch('/api/jury/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ juryId, matchId: state.currentMatchId })
+        body: JSON.stringify({ juryId, matchId: cid })
       });
-      if (res.ok) {
-        setView('list');
-      }
     } catch (e) {
       console.warn("Server sync failed during finalizeMatch");
-      setView('list');
     }
   };
 
@@ -913,10 +911,18 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
     <div className="fixed inset-0 flex flex-col bg-black overflow-hidden select-none font-sans text-white">
       {/* Header for Jury Console */}
       <header className="fixed top-4 left-4 right-4 flex justify-between items-center z-[100] pointer-events-none">
-        <div className="flex bg-black/40 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full pointer-events-auto">
+        <div className="flex bg-black/40 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full pointer-events-auto items-center gap-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-white italic">
             CONSOLE JURY : <span className="text-white/60 ml-2">{state.juryAccounts.find(j => j.id === juryId)?.username}</span>
           </span>
+          {view === 'vote' && (
+            <button 
+              onClick={() => setView('list')}
+              className="text-[9px] font-black uppercase text-white/40 hover:text-white border-l border-white/10 pl-4 transition-colors"
+            >
+              RETOUR LISTE
+            </button>
+          )}
         </div>
         <button 
           onClick={onLogout}
@@ -1374,8 +1380,8 @@ function PublicView({ state }: { state: TournamentState }) {
 
       {/* Admin Quick Links (Discreet) */}
       <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
-          <a href={`${window.location.origin}?view=admin`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Console Admin</a>
-          <a href={`${window.location.origin}?view=public`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Live Display</a>
+          <a href="/admin" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Console Admin</a>
+          <a href="/" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Affichage Public</a>
       </div>
 
       {/* Footer Info */}
