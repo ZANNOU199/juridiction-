@@ -34,6 +34,7 @@ interface Match {
   blueVotes: number;
   winnerId: string | null;
   status: 'pending' | 'active' | 'finished';
+  allVotesCastAt?: number;
   round: string;
 }
 
@@ -723,13 +724,14 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
       
       const newMatches = state.matches.map(m => {
         if (m.id === state.currentMatchId) {
-          const finished = totalVotes >= state.juryCount;
+          const allVoted = totalVotes >= state.juryCount;
           return {
             ...m,
             redVotes,
             blueVotes,
-            status: (finished ? 'finished' : m.status) as any,
-            winnerId: finished ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : null
+            allVotesCastAt: allVoted ? Date.now() : undefined,
+            // DO NOT set status to finished here to keep jury in the dark
+            winnerId: allVoted ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : null
           };
         }
         return m;
@@ -783,7 +785,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none relative overflow-hidden group
                 ${isChanging && myVote === 'red' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]' : ''}
-                ${myVote && !isChanging ? (myVote === 'red' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl blur-[2px]') : 'p-8 active:scale-95 active:brightness-90'}
+                ${myVote && !isChanging ? (myVote === 'red' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-8 active:scale-95 active:brightness-90'}
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
@@ -810,7 +812,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
                 ${isChanging && myVote === 'blue' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]' : ''}
-                ${myVote && !isChanging ? (myVote === 'blue' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl blur-[2px]') : 'p-8 active:scale-95 active:brightness-90 border-t-2 sm:border-t-0 sm:border-l-2'}
+                ${myVote && !isChanging ? (myVote === 'blue' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-8 active:scale-95 active:brightness-90 border-t-2 sm:border-t-0 sm:border-l-2'}
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
@@ -917,6 +919,12 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
   const redP = activeMatch ? state.participants.find(p => p.id === activeMatch.redTeamId) : null;
   const blueP = activeMatch ? state.participants.find(p => p.id === activeMatch.blueTeamId) : null;
 
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 500);
+    return () => clearInterval(interval);
+  }, []);
+
   if (!activeMatch) {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-12 text-center font-sans text-white">
@@ -933,7 +941,10 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
   const redVotes = Object.values(state.juryVotes).filter(v => v === 'red').length;
   const blueVotes = Object.values(state.juryVotes).filter(v => v === 'blue').length;
   const totalVotes = redVotes + blueVotes;
-  const showResults = activeMatch.status === 'finished' || totalVotes >= state.juryCount;
+  
+  // Show results if finished manually OR if all voted AND 5s grace period passed
+  const gracePeriodPassed = activeMatch.allVotesCastAt ? (now - activeMatch.allVotesCastAt > 5000) : false;
+  const showResults = activeMatch.status === 'finished' || (totalVotes >= state.juryCount && gracePeriodPassed);
   const winner = showResults ? (redVotes > blueVotes ? redP : blueP) : null;
 
   return (

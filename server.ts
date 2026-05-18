@@ -16,6 +16,7 @@ interface Match {
   blueVotes: number;
   winnerId: string | null;
   status: 'pending' | 'active' | 'finished';
+  allVotesCastAt?: number;
   round: string;
 }
 
@@ -39,14 +40,23 @@ interface TournamentState {
 
 // Helper to check if a match is finished and update winner
 function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | null>, juryCount: number) {
-  const voteList = Object.values(votes).filter(v => v !== null);
-  if (voteList.length === juryCount) {
-    const redCount = voteList.filter(v => v === 'red').length;
-    const blueCount = voteList.filter(v => v === 'blue').length;
-    match.redVotes = redCount;
-    match.blueVotes = blueCount;
+  const voteList = Object.values(votes).filter(v => v !== null && v !== undefined);
+  
+  const redCount = voteList.filter(v => v === 'red').length;
+  const blueCount = voteList.filter(v => v === 'blue').length;
+  match.redVotes = redCount;
+  match.blueVotes = blueCount;
+
+  if (voteList.length >= juryCount) {
+    // Record when all votes were in for the 5s grace period
+    match.allVotesCastAt = Date.now();
+    // We do NOT set status = 'finished' here anymore. 
+    // It will stay 'active' so jury doesn't know they are done.
+    // WinnerId is calculated but not used for display yet.
     match.winnerId = redCount > blueCount ? match.redTeamId : match.blueTeamId;
-    match.status = 'finished';
+  } else {
+    match.allVotesCastAt = undefined;
+    match.winnerId = null;
   }
 }
 
