@@ -84,12 +84,24 @@ const STORAGE_KEY = 'arena_tournament_state';
 // --- Main App ---
 
 export default function App() {
-  const [role, setRole] = useState<UserRole>(UserRole.SELECT);
+  const [role, setRole] = useState<UserRole>(() => {
+    const savedRole = sessionStorage.getItem('role');
+    return (savedRole as UserRole) || UserRole.SELECT;
+  });
   const [juryId, setJuryId] = useState<string | null>(sessionStorage.getItem('juryId'));
   const [state, setState] = useState<TournamentState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_STATE;
   });
+
+  const handleSelectRole = (r: UserRole, id?: string) => {
+    setRole(r);
+    sessionStorage.setItem('role', r);
+    if (id) {
+      setJuryId(id);
+      sessionStorage.setItem('juryId', id);
+    }
+  };
   const [error, setError] = useState<string | null>(null);
 
   const saveStateLocal = (newState: TournamentState) => {
@@ -130,19 +142,30 @@ export default function App() {
   // --- View Switcher ---
 
   if (role === UserRole.SELECT) {
-    return <RoleSelection state={state} onSelect={(r, id) => { setRole(r); if (id) setJuryId(id); }} />;
+    return <RoleSelection state={state} onSelect={handleSelectRole} />;
   }
 
   if (role === UserRole.ADMIN) {
-    return <AdminView state={state} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
+    return <AdminView state={state} onSave={saveStateLocal} onBack={() => handleSelectRole(UserRole.SELECT)} />;
   }
 
   if (role === UserRole.JURY && juryId) {
-    return <JuryView state={state} juryId={juryId} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
+    return (
+      <JuryView 
+        state={state} 
+        juryId={juryId} 
+        onSave={saveStateLocal} 
+        onBack={() => {
+          sessionStorage.removeItem('role');
+          sessionStorage.removeItem('juryId');
+          handleSelectRole(UserRole.SELECT);
+        }} 
+      />
+    );
   }
 
   if (role === UserRole.PUBLIC) {
-    return <PublicView state={state} onBack={() => setRole(UserRole.SELECT)} />;
+    return <PublicView state={state} onBack={() => handleSelectRole(UserRole.SELECT)} />;
   }
 
   return null;
@@ -163,7 +186,6 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
     // Local Login first
     const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
     if (jury) {
-      sessionStorage.setItem('juryId', jury.id);
       onSelect(UserRole.JURY, jury.id);
       return;
     }
@@ -176,7 +198,6 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
       });
       const data = await res.json();
       if (data.success) {
-        sessionStorage.setItem('juryId', data.juryId);
         onSelect(UserRole.JURY, data.juryId);
       } else {
         setLoginError(data.error);
@@ -827,16 +848,21 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
         juryVotes: newVotes,
         matches: newMatches
       };
-      onSave(newState);
+      // Optimistic update
+      // onSave(newState); // We'll wait for the server response or next poll to be safer against concurrent votes
       setIsChanging(false);
     }
 
     try {
-      await fetch('/api/jury/vote', {
+      const res = await fetch('/api/jury/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ juryId, vote })
       });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
     } catch (err) {
       console.warn("Server sync failed during vote");
     }
@@ -949,32 +975,24 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
                     <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
-                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : 'VOTE ENREGISTRÉ'}
+                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : `ATTENTE DES JUGES (${totalCurrentVotes}/${state.juryCount})`}
                     </p>
-
-                    {totalCurrentVotes >= state.juryCount && (
-                      <div className="mb-8 flex items-center gap-6 bg-white/5 border border-white/10 px-8 py-4 rounded-2xl animate-in fade-in zoom-in duration-500">
-                        <div className="flex flex-col items-center">
-                          <span className="text-[8px] font-black uppercase text-brand-red mb-1 opacity-60 tracking-widest">ROUGE</span>
-                          <span className="text-3xl font-black italic">{currentVotesRed}</span>
-                        </div>
-                        <div className="w-px h-8 bg-white/10" />
-                        <div className="flex flex-col items-center">
-                          <span className="text-[8px] font-black uppercase text-brand-blue mb-1 opacity-60 tracking-widest">BLEU</span>
-                          <span className="text-3xl font-black italic">{currentVotesBlue}</span>
-                        </div>
-                      </div>
-                    )}
                     
                     <div className="flex flex-col gap-3 w-full">
-                       {totalCurrentVotes >= state.juryCount && currentMatch.votingMode === 'round' && currentMatch.currentRound <= currentMatch.roundCount && (
+                       {currentMatch.votingMode === 'round' && currentMatch.currentRound <= currentMatch.roundCount && (
                          <button 
                            onClick={confirmRound}
-                           className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white border border-green-500/50 transition-all rounded-full group pointer-events-auto"
+                           disabled={totalCurrentVotes < state.juryCount}
+                           className={`flex items-center justify-center gap-3 px-8 py-4 transition-all rounded-full group pointer-events-auto
+                             ${totalCurrentVotes >= state.juryCount 
+                               ? 'bg-green-600 hover:bg-green-500 text-white border-green-500/50 cursor-pointer shadow-[0_0_20px_rgba(22,163,74,0.4)]' 
+                               : 'bg-white/5 text-white/20 border-white/10 cursor-not-allowed opacity-50'}`}
                          >
-                           <SkipForward size={16} className="group-hover:translate-x-1 duration-300" />
+                           <SkipForward size={16} className={totalCurrentVotes >= state.juryCount ? "group-hover:translate-x-1 duration-300" : ""} />
                            <span className="text-[11px] font-black uppercase tracking-widest">
-                             {currentMatch.currentRound < currentMatch.roundCount ? 'Passer au round suivant' : 'Terminer le match'}
+                             {totalCurrentVotes < state.juryCount 
+                               ? 'En attente des autres...' 
+                               : (currentMatch.currentRound < currentMatch.roundCount ? 'Passer au round suivant' : 'Terminer le match')}
                            </span>
                          </button>
                        )}
