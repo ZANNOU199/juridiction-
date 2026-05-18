@@ -706,6 +706,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
 
 function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onBack: () => void }) {
   const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
+  const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
 
   const redP = state.participants.find(p => p.id === currentMatch?.redTeamId);
@@ -713,9 +714,9 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
 
   const castVote = async (vote: 'red' | 'blue') => {
     const newVotes = { ...state.juryVotes, [juryId]: vote };
-    const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
+    const currentMatchRef = state.matches.find(m => m.id === state.currentMatchId);
     
-    if (currentMatch) {
+    if (currentMatchRef) {
       const redVotes = Object.values(newVotes).filter(v => v === 'red').length;
       const blueVotes = Object.values(newVotes).filter(v => v === 'blue').length;
       const totalVotes = redVotes + blueVotes;
@@ -727,7 +728,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
             ...m,
             redVotes,
             blueVotes,
-            status: finished ? 'finished' as const : m.status,
+            status: (finished ? 'finished' : m.status) as any,
             winnerId: finished ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : null
           };
         }
@@ -740,6 +741,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
         matches: newMatches
       };
       onSave(newState);
+      setIsChanging(false);
     }
 
     try {
@@ -767,7 +769,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
     <div className="fixed inset-0 flex flex-col bg-black overflow-hidden select-none font-sans text-white">
       {/* Dynamic Palette */}
       <AnimatePresence mode="wait">
-        {currentMatch && currentMatch.status === 'active' && !myVote ? (
+        {currentMatch && currentMatch.status === 'active' && (!myVote || isChanging) ? (
           <motion.div 
             key="palette"
             initial={{ opacity: 0 }}
@@ -777,27 +779,45 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
           >
             <button 
               onClick={() => castVote('red')}
-              className="flex-1 bg-brand-red flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none relative"
+              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none relative
+                ${isChanging && myVote === 'red' ? 'ring-4 ring-white/50 z-20' : ''}
+              `}
+              style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
               {redP?.photo && <img src={redP.photo} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay grayscale" />}
               <div className="relative z-10 flex flex-col items-center">
                 <Shield className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
                 <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{redP?.name}</h2>
-                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">VOTER ROUGE</div>
+                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">
+                  {isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE'}
+                </div>
               </div>
             </button>
 
             <button 
               onClick={() => castVote('blue')}
-              className="flex-1 bg-brand-blue flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none border-t-2 sm:border-t-0 sm:border-l-2 border-white/20 relative"
+              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none border-t-2 sm:border-t-0 sm:border-l-2 border-white/20 relative
+                ${isChanging && myVote === 'blue' ? 'ring-4 ring-white/50 z-20' : ''}
+              `}
+              style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               {blueP?.photo && <img src={blueP.photo} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay grayscale" />}
               <div className="relative z-10 flex flex-col items-center">
                 <Rocket className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
                 <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{blueP?.name}</h2>
-                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">VOTER BLEU</div>
+                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">
+                   {isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU'}
+                </div>
               </div>
             </button>
+            {isChanging && (
+              <button 
+                onClick={() => setIsChanging(false)}
+                className="absolute top-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black"
+              >
+                Annuler le changement
+              </button>
+            )}
           </motion.div>
         ) : (
           <motion.div 
@@ -812,7 +832,15 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                    <CheckCircle2 size={64} className="text-white" />
                 </div>
                 <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">Vote Transmis</h2>
-                <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px]">Attente des autres juges & du résultat</p>
+                <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px] mb-12">Attente des autres juges & du résultat</p>
+                
+                <button 
+                  onClick={() => setIsChanging(true)}
+                  className="flex items-center gap-3 px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 transition-all rounded-full group"
+                >
+                  <RotateCcw size={16} className="text-white/40 group-hover:text-white transition-colors group-hover:rotate-180 duration-500" />
+                  <span className="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Changer mon vote</span>
+                </button>
               </>
             ) : (
               <>
