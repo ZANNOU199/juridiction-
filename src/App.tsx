@@ -66,9 +66,18 @@ enum UserRole {
 
 export default function App() {
   const [role, setRole] = useState<UserRole>(UserRole.SELECT);
-  const [juryId, setJuryId] = useState<string | null>(null);
+  const [juryId, setJuryId] = useState<string | null>(localStorage.getItem('juryId'));
   const [state, setState] = useState<TournamentState | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Check URL parameters for direct view access
+    const params = new URLSearchParams(window.location.search);
+    const view = params.get('view');
+    if (view === 'admin') setRole(UserRole.ADMIN);
+    if (view === 'public') setRole(UserRole.PUBLIC);
+    if (view === 'jury' && juryId) setRole(UserRole.JURY);
+  }, [juryId]);
 
   // Sync state with server
   const fetchState = async () => {
@@ -157,6 +166,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
       });
       const data = await res.json();
       if (data.success) {
+        localStorage.setItem('juryId', data.juryId);
         onSelect(UserRole.JURY, data.juryId);
       } else {
         setLoginError(data.error);
