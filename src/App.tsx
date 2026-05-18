@@ -779,16 +779,23 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
           >
             <button 
               onClick={() => castVote('red')}
-              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none relative
-                ${isChanging && myVote === 'red' ? 'ring-4 ring-white/50 z-20' : ''}
+              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none relative overflow-hidden
+                ${isChanging && myVote === 'red' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]' : ''}
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
-              {redP?.photo && <img src={redP.photo} className="absolute inset-0 w-full h-full object-cover opacity-70" referrerPolicy="no-referrer" />}
-              <div className="relative z-10 flex flex-col items-center">
-                <Shield className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
-                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{redP?.name}</h2>
-                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">
+              {redP?.photo && (
+                <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
+                  <div className="w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative">
+                    <img src={redP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
+                  </div>
+                </div>
+              )}
+              <div className="relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/10">
+                <Shield className="w-12 h-12 md:w-16 md:h-16 mb-4 text-white drop-shadow-lg" />
+                <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md">{redP?.name}</h2>
+                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
                   {isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE'}
                 </div>
               </div>
@@ -796,16 +803,23 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
 
             <button 
               onClick={() => castVote('blue')}
-              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none border-t-2 sm:border-t-0 sm:border-l-2 border-white/20 relative
-                ${isChanging && myVote === 'blue' ? 'ring-4 ring-white/50 z-20' : ''}
+              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none border-t-2 sm:border-t-0 sm:border-l-2 border-white/20 relative overflow-hidden
+                ${isChanging && myVote === 'blue' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]' : ''}
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
-              {blueP?.photo && <img src={blueP.photo} className="absolute inset-0 w-full h-full object-cover opacity-70" referrerPolicy="no-referrer" />}
-              <div className="relative z-10 flex flex-col items-center">
-                <Rocket className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
-                <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{blueP?.name}</h2>
-                <div className="px-6 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest">
+              {blueP?.photo && (
+                <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
+                  <div className="w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative">
+                    <img src={blueP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
+                  </div>
+                </div>
+              )}
+              <div className="relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/10">
+                <Rocket className="w-12 h-12 md:w-16 md:h-16 mb-4 text-white drop-shadow-lg" />
+                <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md">{blueP?.name}</h2>
+                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
                    {isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU'}
                 </div>
               </div>
