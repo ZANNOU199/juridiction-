@@ -844,11 +844,15 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
     setView('list'); // Immediate feedback for the user
     if (!cid) return;
     try {
-      await fetch('/api/jury/finalize', {
+      const res = await fetch('/api/jury/finalize', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ juryId, matchId: cid })
       });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
     } catch (e) {
       console.warn("Server sync failed during finalizeMatch");
     }
@@ -1080,7 +1084,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
                   const isFinishedGlobal = m.status === 'finished';
-                  const isFinishedByMe = m.finishedJuries?.includes(juryId);
+                  const isFinishedByMe = m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId);
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
@@ -1107,13 +1111,18 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                          {isActive && !isFinishedByMe ? (
                            <button 
                              onClick={() => setView('vote')}
-                             className="w-full md:w-auto px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2"
+                             className="w-full md:w-auto px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
                            >
                              <Play size={14} className="fill-current" />
                              ENTRER
                            </button>
-                         ) : isFinished ? (
-                           <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2">TERMINÉ</span>
+                         ) : isFinishedByMe && isActive ? (
+                            <div className="flex flex-col items-end">
+                               <span className="text-[10px] font-black uppercase text-brand-red mb-1 italic">VOTE FINALISÉ</span>
+                               <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2 bg-white/5">TERMINÉ POUR VOUS</span>
+                            </div>
+                         ) : isFinishedGlobal ? (
+                           <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2">BATTLE TERMINÉ</span>
                          ) : (
                            <span className="text-[8px] font-black uppercase tracking-widest text-white/10 italic">EN ATTENTE...</span>
                          )}
