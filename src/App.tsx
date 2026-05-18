@@ -1030,23 +1030,20 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
                })}
             </div>
             <div 
-              className="grid h-32"
+              className="grid h-16"
               style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
             >
                {state.juryAccounts.map((jury, i) => {
                  const vote = state.juryVotes[jury.id];
                  return (
-                   <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-1 gap-1 relative overflow-hidden">
-                      {[1, 2, 3, 4, 5].map(barId => (
-                        <div 
-                          key={barId}
-                          className={`flex-1 transition-all duration-700 ${
-                            vote 
-                              ? (vote === 'red' ? 'bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]' : 'bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]') 
-                              : 'bg-white/5'
-                          }`} 
-                        />
-                      ))}
+                   <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-2 relative overflow-hidden">
+                      <div 
+                        className={`flex-1 transition-all duration-700 ${
+                          vote 
+                            ? (vote === 'red' ? 'bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]' : 'bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]') 
+                            : 'bg-white/5'
+                        }`} 
+                      />
                    </div>
                  );
                })}
