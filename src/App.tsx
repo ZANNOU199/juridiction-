@@ -844,158 +844,179 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
 }
 
 function PublicView({ state, onBack }: { state: TournamentState, onBack: () => void }) {
-  const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
-  const redCount = Object.values(state.juryVotes).filter(v => v === 'red').length;
-  const blueCount = Object.values(state.juryVotes).filter(v => v === 'blue').length;
+  const activeMatch = state.matches.find(m => m.id === state.currentMatchId);
+  const redP = activeMatch ? state.participants.find(p => p.id === activeMatch.redTeamId) : null;
+  const blueP = activeMatch ? state.participants.find(p => p.id === activeMatch.blueTeamId) : null;
 
-  const redP = state.participants.find(p => p.id === currentMatch?.redTeamId);
-  const blueP = state.participants.find(p => p.id === currentMatch?.blueTeamId);
+  if (!activeMatch) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-12 text-center font-sans text-white">
+        <h1 className="text-4xl font-black italic text-white/10 uppercase tracking-widest leading-none mb-8">
+          {state.competitionName || "ARENA SYSTEM"}
+        </h1>
+        <div className="w-16 h-16 border-2 border-white/5 border-t-white/40 rounded-full animate-spin mb-6" />
+        <p className="text-white/10 font-bold uppercase tracking-[0.4em] text-[10px]">System Interlink Pending • Waiting for Active Battle</p>
+        <button onClick={onBack} className="mt-12 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all underline underline-offset-8">Hub System</button>
+      </div>
+    );
+  }
+
+  const redVotes = Object.values(state.juryVotes).filter(v => v === 'red').length;
+  const blueVotes = Object.values(state.juryVotes).filter(v => v === 'blue').length;
+  const totalVotes = redVotes + blueVotes;
+  const isFinished = totalVotes >= state.juryCount;
+  const winner = isFinished ? (redVotes > blueVotes ? redP : blueP) : null;
 
   return (
-    <div className="min-h-screen bg-[#050505] flex flex-col p-6 md:p-12 relative overflow-hidden font-sans text-white">
-      {/* Dynamic Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden opacity-20">
-         <div className="absolute -top-1/2 -left-1/4 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(225,29,72,0.15)_0%,transparent_50%)]" />
-         <div className="absolute -bottom-1/2 -right-1/4 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(37,99,235,0.15)_0%,transparent_50%)]" />
+    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col overflow-hidden relative">
+      {/* Background Ambience */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-red blur-[150px] opacity-10" />
+        <div className="absolute -bottom-1/4 -right-1/4 w-full h-full bg-brand-blue blur-[150px] opacity-10" />
       </div>
 
-      <header className="flex flex-col sm:flex-row justify-between items-center sm:items-start mb-12 gap-4 z-10">
-        <div className="bg-white/5 border border-white/10 px-4 py-1 text-[10px] font-black uppercase tracking-widest text-white/30 truncate flex items-center gap-2">
-          {state.competitionLogo && <img src={state.competitionLogo} className="w-4 h-4 object-contain" />}
-          Live Feed • {state.matches.filter(m => m.status === 'finished').length + 1} / {state.matches.length}
+      {/* Header Bar */}
+      <header className="px-12 py-8 flex justify-between items-start z-10">
+        <div className="flex flex-col gap-2">
+          <div className="bg-white/10 border border-white/20 px-4 py-1 text-[11px] font-black italic uppercase tracking-widest text-white/80">
+            {activeMatch.round}
+          </div>
+          <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
         </div>
-        <div className="text-center order-first sm:order-none">
-          <p className="text-[10px] font-black tracking-[0.5em] text-white/40 mb-2 uppercase">CHAMPIONSHIP LIVE</p>
-          <h1 className="text-5xl md:text-7xl font-black italic tracking-tighter leading-none border-b-4 border-white/10 pb-4 uppercase">{state.competitionName}</h1>
+        
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-8">
+          <p className="text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-2">INSTAX PRESENTED BY</p>
+          <h1 className="text-5xl font-black tracking-tighter leading-none italic uppercase">{state.competitionName}</h1>
         </div>
-        <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-white/30 hover:text-white transition-all">Hub System</button>
+
+        <div className="text-right">
+          <p className="text-[11px] font-black tracking-widest text-white/40 uppercase">CREW 5VS5 CATEGORY</p>
+          <div className="h-[2px] w-full bg-gradient-to-l from-white/20 to-transparent mt-2" />
+        </div>
       </header>
 
-      {currentMatch ? (
-        <div className="flex-1 flex flex-col justify-center gap-12 z-10">
-          <div className="text-center">
-             <motion.div 
-               initial={{ opacity: 0, y: 10 }}
-               animate={{ opacity: 1, y: 0 }}
-               className="inline-block px-12 py-2 bg-white/5 border border-white/10 text-xs font-black italic uppercase tracking-[0.8em]"
-             >
-               {currentMatch.round}
-             </motion.div>
-          </div>
-
-          <div className="relative grid grid-cols-1 md:grid-cols-[1fr_auto_1fr] items-center justify-center gap-12 max-w-7xl mx-auto w-full">
-            {/* Participant Red Section */}
-            <div className="flex flex-col items-center gap-6 w-full">
-              <div className="flex items-center gap-6 w-full">
-                <div className="w-32 h-32 md:w-48 md:h-48 bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative">
-                   {redP?.photo ? (
-                     <img src={redP.photo} className="absolute inset-0 w-full h-full object-cover" />
-                   ) : (
-                     <Shield className={`w-16 h-16 ${currentMatch.winnerId === currentMatch.redTeamId ? 'text-brand-red' : 'text-white/10'}`} />
-                   )}
-                </div>
-                <div className={`flex-1 h-32 md:h-48 flex items-center justify-center relative overflow-hidden transition-all duration-700
-                  ${currentMatch.winnerId === currentMatch.redTeamId ? 'bg-brand-red shadow-[0_0_100px_rgba(225,29,72,0.6)]' : 'bg-white/5 border border-white/10'}`}>
-                  <span className="text-7xl md:text-[10rem] font-black italic tracking-tighter leading-none z-10">
-                    {currentMatch.status === 'finished' ? currentMatch.redVotes : redCount}
-                  </span>
-                </div>
+      {/* Main Battle Area */}
+      <main className="flex-1 flex flex-col items-center justify-center px-12 z-10 -mt-16">
+        <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-center gap-12 relative">
+          
+          {/* Red Side */}
+          <div className="space-y-8">
+            <div className="flex justify-end gap-8 items-end">
+              <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+                {redP?.photo ? (
+                  <img src={redP.photo} className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-700" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
-              <div className="w-full h-20 bg-brand-red border-l-[12px] border-white/30 flex items-center px-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-black/20" />
-                <h2 className="text-4xl font-black italic uppercase truncate relative z-10">{redP?.name}</h2>
+              <div className="w-48 h-48 bg-brand-red flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20">
+                {activeMatch.status === 'finished' ? activeMatch.redVotes : redVotes}
               </div>
             </div>
-
-            {/* VS Divider */}
-            <div className="text-center relative py-8 md:py-0">
-              <span className="text-5xl md:text-7xl font-black italic opacity-20 tracking-tighter">VS</span>
-            </div>
-
-            {/* Participant Blue Section */}
-            <div className="flex flex-col items-center gap-6 w-full">
-              <div className="flex items-center gap-6 w-full">
-                <div className={`flex-1 h-32 md:h-48 flex items-center justify-center relative overflow-hidden transition-all duration-700
-                  ${currentMatch.winnerId === currentMatch.blueTeamId ? 'bg-brand-blue shadow-[0_0_100px_rgba(37,99,235,0.6)]' : 'bg-white/5 border border-white/10'}`}>
-                  <span className="text-7xl md:text-[10rem] font-black italic tracking-tighter leading-none z-10">
-                    {currentMatch.status === 'finished' ? currentMatch.blueVotes : blueCount}
-                  </span>
-                </div>
-                <div className="w-32 h-32 md:w-48 md:h-48 bg-white/5 border border-white/10 flex items-center justify-center shrink-0 overflow-hidden relative">
-                   {blueP?.photo ? (
-                     <img src={blueP.photo} className="absolute inset-0 w-full h-full object-cover" />
-                   ) : (
-                     <Rocket className={`w-16 h-16 ${currentMatch.winnerId === currentMatch.blueTeamId ? 'text-brand-blue' : 'text-white/10'}`} />
-                   )}
-                </div>
-              </div>
-              <div className="w-full h-20 bg-brand-blue border-r-[12px] border-white/30 flex items-center justify-end px-8 relative overflow-hidden">
-                <div className="absolute inset-0 bg-black/20" />
-                <h2 className="text-4xl font-black italic uppercase truncate relative z-10">{blueP?.name}</h2>
-              </div>
+            <div className="bg-brand-red font-black italic text-4xl px-10 py-6 flex items-center justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
+              <span className="truncate uppercase tracking-tighter">{redP?.name || "???"}</span>
             </div>
           </div>
 
-          {/* Winner Announcement Overlay */}
-          <AnimatePresence>
-            {currentMatch.status === 'finished' && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute inset-0 flex items-center justify-center pointer-events-none z-20"
-              >
-                 <div className="px-24 py-12 bg-white/95 backdrop-blur-3xl border-y-8 border-black shadow-[0_0_200px_rgba(255,255,255,0.3)] flex flex-col items-center">
-                    <Trophy className="w-24 h-24 text-yellow-500 mb-6" />
-                    <p className="text-black font-black italic uppercase tracking-[0.5em] text-sm mb-4">MATCH WINNER</p>
-                    <h3 className="text-8xl font-black italic text-black uppercase tracking-tighter">
-                      {state.participants.find(p => p.id === currentMatch.winnerId)?.name}
-                    </h3>
-                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* VS Divider */}
+          <div className="text-6xl font-black italic text-white/5 px-4 pt-24 select-none">VS</div>
 
-          <footer className="max-w-4xl mx-auto w-full py-8 border-t border-white/10 flex flex-col items-center gap-6">
-            <div className="flex flex-wrap justify-center gap-4">
-              {state.juryAccounts.map((jury, i) => (
-                <div 
-                  key={jury.id} 
-                  className={`flex-1 min-w-[100px] max-w-[120px] aspect-square border-2 flex flex-col items-center justify-center text-[10px] font-black transition-all duration-300 gap-2
-                  ${state.juryVotes[jury.id] 
-                    ? (state.juryVotes[jury.id] === 'red' ? 'bg-brand-red border-brand-red shadow-[0_0_20px_rgba(225,29,72,0.4)]' : 'bg-brand-blue border-brand-blue shadow-[0_0_20px_rgba(37,99,235,0.4)]') 
-                    : 'bg-white/5 border-white/10 text-white/5'}`}
-                >
-                  {state.juryVotes[jury.id] ? <CheckCircle2 size={16} /> : <span className="opacity-20 text-[8px] uppercase truncate px-2 text-center">{jury.username}</span>}
-                  <span className={`text-[8px] uppercase truncate px-1 text-center font-black ${state.juryVotes[jury.id] ? 'text-white' : 'text-white/20'}`}>
-                    {jury.username}
-                  </span>
-                </div>
-              ))}
-            </div>
-            
-            <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/5 w-full">
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Liens Directs (Affichage Live)</p>
-              <div className="flex gap-4">
-                <a href={`${window.location.origin}?view=public`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase text-white/40 hover:text-white transition-all border-b border-white/10 pb-1">
-                  Écran Public
-                </a>
-                <a href={`${window.location.origin}?view=admin`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase text-white/40 hover:text-white transition-all border-b border-white/10 pb-1">
-                  Console Admin
-                </a>
+          {/* Blue Side */}
+          <div className="space-y-8">
+            <div className="flex justify-start gap-8 items-end">
+              <div className="w-48 h-48 bg-brand-blue flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20">
+                {activeMatch.status === 'finished' ? activeMatch.blueVotes : blueVotes}
+              </div>
+              <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+                {blueP?.photo ? (
+                  <img src={blueP.photo} className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-700" referrerPolicy="no-referrer" />
+                ) : (
+                  <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
             </div>
-          </footer>
+            <div className="bg-brand-blue font-black italic text-4xl px-10 py-6 flex items-center justify-end border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
+              <span className="truncate uppercase tracking-tighter">{blueP?.name || "???"}</span>
+            </div>
+          </div>
         </div>
-      ) : (
-        <div className="flex-1 flex flex-col items-center justify-center z-10 text-center">
-           <div className="w-32 h-32 border-4 border-white/5 border-t-white rounded-full animate-spin mb-12" />
-           <p className="text-4xl font-black italic opacity-20 uppercase tracking-[0.5em]">System Interlink Pending</p>
-        </div>
-      )}
 
-      <footer className="mt-auto h-12 flex justify-between items-center text-[10px] font-black tracking-[0.5em] text-white/5 uppercase z-10">
-        <span>ARENA LIVE FEED</span>
-        <span>© {new Date().getFullYear()} ARENA PRO OFFICIALS</span>
+        {/* Jury Table */}
+        <div className="w-full max-w-7xl mt-20 relative">
+          <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl">
+            <div className="grid grid-cols-7 border-b border-white/10">
+               {Array.from({ length: 7 }).map((_, i) => {
+                 const jury = state.juryAccounts[i];
+                 return (
+                   <div key={i} className="py-3 text-center border-r border-white/5 last:border-r-0">
+                     <span className={`text-[10px] font-black uppercase tracking-widest italic ${jury ? 'text-white/50' : 'text-white/10'}`}>
+                       {jury ? jury.username : `JURY ${i + 1}`}
+                     </span>
+                   </div>
+                 );
+               })}
+            </div>
+            <div className="grid grid-cols-7 h-32">
+               {Array.from({ length: 7 }).map((_, i) => {
+                 const jury = state.juryAccounts[i];
+                 const vote = jury ? state.juryVotes[jury.id] : null;
+                 return (
+                   <div key={i} className="border-r border-white/5 last:border-r-0 flex flex-col p-1 gap-1 relative overflow-hidden">
+                      {[1, 2, 3, 4, 5].map(barId => (
+                        <div 
+                          key={barId}
+                          className={`flex-1 transition-all duration-1000 ${
+                            vote 
+                              ? (vote === 'red' ? 'bg-brand-red/90' : 'bg-brand-blue/90') 
+                              : 'bg-white/5'
+                          }`} 
+                        />
+                      ))}
+                      {!jury && <div className="absolute inset-0 bg-[#050505]/40 pointer-events-none" />}
+                   </div>
+                 );
+               })}
+            </div>
+          </div>
+        </div>
+
+        {/* Winner Banner */}
+        <AnimatePresence>
+          {winner && (
+            <motion.div 
+              initial={{ height: 0, opacity: 0, scale: 0.95 }}
+              animate={{ height: 'auto', opacity: 1, scale: 1 }}
+              className="w-full max-w-7xl mt-16 overflow-hidden"
+            >
+              <div className={`py-10 flex items-center justify-center gap-10 font-black italic text-5xl tracking-widest uppercase shadow-[0_0_120px_rgba(0,0,0,1)] relative overflow-hidden border-y-2 border-white/10
+                ${winner.id === redP?.id ? 'bg-brand-red' : 'bg-brand-blue'}
+              `}>
+                <div className="absolute inset-0 bg-white/10 animate-pulse mix-blend-overlay" />
+                <div className="z-10 flex items-center gap-8 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                  <Trophy size={48} className="text-white fill-white/20" />
+                  {winner.name} WINS
+                </div>
+                {/* Glowing Outer Light */}
+                <div className={`absolute -inset-1 blur-[40px] -z-10 opacity-60 animate-pulse ${winner.id === redP?.id ? 'bg-brand-red' : 'bg-brand-blue'}`} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      {/* Admin Quick Links (Discreet) */}
+      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
+          <a href={`${window.location.origin}?view=admin`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Console Admin</a>
+          <a href={`${window.location.origin}?view=public`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Live Display</a>
+      </div>
+
+      {/* Footer Info */}
+      <footer className="px-12 py-10 flex justify-center gap-16 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-md">
+        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">INSTAX</span>
+        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">ARENA JUDGE PRO</span>
+        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">WDSF OFFICIATING SYSTEM</span>
       </footer>
     </div>
   );
