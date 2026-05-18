@@ -74,20 +74,48 @@ export default function App() {
   const fetchState = async () => {
     try {
       const res = await fetch('/api/state');
+      if (!res.ok) throw new Error("Server communication issue");
       const data = await res.json();
       setState(data);
+      setError(null);
     } catch (err) {
       console.error("Fetch failed", err);
+      setError("Le serveur est introuvable ou ne répond pas.");
     }
   };
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 2000); // Poll every 2s
+    const interval = setInterval(fetchState, 3000); // Poll every 3s
     return () => clearInterval(interval);
   }, []);
 
-  if (!state) return <div className="min-h-screen bg-black flex items-center justify-center font-black animate-pulse">LOADING SYSTEM...</div>;
+  if (!state) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center font-sans text-white p-6">
+        <div className="flex flex-col items-center gap-8 max-w-md text-center">
+          <div className="w-16 h-16 border-4 border-white/10 border-t-white rounded-full animate-spin" />
+          <div className="space-y-4">
+            <p className="text-white font-black italic text-2xl tracking-tighter uppercase animate-pulse">Chargement Système...</p>
+            {error && (
+              <div className="bg-red-500/10 border border-red-500/20 p-4 space-y-2">
+                <p className="text-red-500 text-xs font-black uppercase tracking-widest">{error}</p>
+                <p className="text-white/40 text-[10px] leading-relaxed">
+                  Cette application nécessite un serveur actif. Si vous l'avez déployée sur Vercel, assurez-vous d'avoir configuré le backend correctement.
+                </p>
+              </div>
+            )}
+          </div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-8 py-2 border border-white/20 text-white/40 hover:text-white hover:border-white transition-all font-black italic uppercase text-[10px] tracking-widest"
+          >
+            Réessayer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // --- View Switcher ---
 
