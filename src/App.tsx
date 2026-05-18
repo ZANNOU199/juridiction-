@@ -769,65 +769,100 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
     <div className="fixed inset-0 flex flex-col bg-black overflow-hidden select-none font-sans text-white">
       {/* Dynamic Palette */}
       <AnimatePresence mode="wait">
-        {currentMatch && currentMatch.status === 'active' && (!myVote || isChanging) ? (
+        {currentMatch && currentMatch.status === 'active' ? (
           <motion.div 
             key="palette"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="flex-1 flex flex-col sm:flex-row h-full"
+            className={`flex-1 flex flex-col sm:flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-4 gap-4' : ''}`}
           >
+            {/* Red Button */}
             <button 
               onClick={() => castVote('red')}
-              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none relative overflow-hidden
+              disabled={!!myVote && !isChanging}
+              className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none relative overflow-hidden group
                 ${isChanging && myVote === 'red' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]' : ''}
+                ${myVote && !isChanging ? (myVote === 'red' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl blur-[2px]') : 'p-8 active:scale-95 active:brightness-90'}
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
               {redP?.photo && (
-                <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
-                  <div className="w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative">
+                <div className={`absolute inset-0 flex items-center justify-center p-4 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
+                  <div className={`w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
                     <img src={redP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
                   </div>
                 </div>
               )}
-              <div className="relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/10">
-                <Shield className="w-12 h-12 md:w-16 md:h-16 mb-4 text-white drop-shadow-lg" />
-                <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md">{redP?.name}</h2>
+              <div className={`relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+                <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{redP?.name}</h2>
                 <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
-                  {isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE'}
+                  {myVote === 'red' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE')}
                 </div>
               </div>
             </button>
 
+            {/* Blue Button */}
             <button 
               onClick={() => castVote('blue')}
-              className={`flex-1 flex flex-col items-center justify-center p-8 transition-all active:scale-95 active:brightness-90 touch-none border-t-2 sm:border-t-0 sm:border-l-2 border-white/20 relative overflow-hidden
+              disabled={!!myVote && !isChanging}
+              className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
                 ${isChanging && myVote === 'blue' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]' : ''}
+                ${myVote && !isChanging ? (myVote === 'blue' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl blur-[2px]') : 'p-8 active:scale-95 active:brightness-90 border-t-2 sm:border-t-0 sm:border-l-2'}
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               {blueP?.photo && (
-                <div className="absolute inset-0 flex items-center justify-center p-4 md:p-8">
-                  <div className="w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative">
+                <div className={`absolute inset-0 flex items-center justify-center p-4 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
+                  <div className={`w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
                     <img src={blueP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
                   </div>
                 </div>
               )}
-              <div className="relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm px-6 py-4 rounded-xl border border-white/10">
-                <Rocket className="w-12 h-12 md:w-16 md:h-16 mb-4 text-white drop-shadow-lg" />
-                <h2 className="text-2xl md:text-4xl font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md">{blueP?.name}</h2>
+              <div className={`relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+                <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{blueP?.name}</h2>
                 <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
-                   {isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU'}
+                   {myVote === 'blue' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU')}
                 </div>
               </div>
             </button>
+
+            {/* Confirmation Overlay (Active when vote cast and not changing) */}
+            {myVote && !isChanging && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-30"
+              >
+                <div className="bg-black/80 backdrop-blur-xl border border-white/20 p-8 rounded-[3rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,0.8)] pointer-events-auto">
+                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border-4 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-[0_0_30_rgba(225,29,72,0.4)]' : 'border-brand-blue bg-brand-blue/20 shadow-[0_0_30_rgba(37,99,235,0.4)]'}`}>
+                       <CheckCircle2 size={40} className="text-white" />
+                    </div>
+                    <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-2">VOTE ENREGISTRÉ</p>
+                    <h3 className="text-4xl font-black italic tracking-tighter uppercase mb-2">
+                       {myVote === 'red' ? redP?.name : blueP?.name}
+                    </h3>
+                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">Attente des autres membres...</p>
+                    
+                    <button 
+                      onClick={() => setIsChanging(true)}
+                      className="flex items-center gap-3 px-8 py-3 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group"
+                    >
+                      <RotateCcw size={14} className="group-hover:rotate-180 duration-500" />
+                      <span className="text-[10px] font-black uppercase tracking-widest">Changer mon vote</span>
+                    </button>
+                </div>
+              </motion.div>
+            )}
+
             {isChanging && (
               <button 
                 onClick={() => setIsChanging(false)}
-                className="absolute top-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black"
+                className="absolute top-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black rounded-full"
               >
                 Annuler le changement
               </button>
@@ -840,48 +875,14 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
             animate={{ opacity: 1 }}
             className="flex-1 flex flex-col items-center justify-center p-12 text-center"
           >
-            {myVote ? (
-              <div className="flex flex-col items-center justify-center relative w-full h-full p-12">
-                <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-10 border-4 shadow-2xl transition-all duration-700 relative overflow-hidden ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-brand-red/20' : 'border-brand-blue bg-brand-blue/20 shadow-brand-blue/20'}`}>
-                   {(myVote === 'red' ? redP?.photo : blueP?.photo) ? (
-                     <img src={myVote === 'red' ? redP?.photo : blueP?.photo} className="absolute inset-0 w-full h-full object-cover opacity-60" referrerPolicy="no-referrer" />
-                   ) : null}
-                   <CheckCircle2 size={64} className="text-white relative z-10" />
-                </div>
-                
-                <p className="text-[10px] font-black tracking-[0.6em] text-white/40 uppercase mb-4">CONFIRMATION DE VOTE</p>
-                <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-2 uppercase leading-none">
-                  {myVote === 'red' ? redP?.name : blueP?.name}
-                </h2>
-                <div className={`h-1 w-32 mb-8 ${myVote === 'red' ? 'bg-brand-red' : 'bg-brand-blue'}`} />
-                
-                <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[11px] mb-16 max-w-sm">
-                  Le système a enregistré votre décision. Attente de la validation finale du battle.
-                </p>
-                
-                <button 
-                  onClick={() => setIsChanging(true)}
-                  className="flex items-center gap-3 px-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 transition-all rounded-full group"
-                >
-                  <RotateCcw size={16} className="text-white/40 group-hover:text-white transition-colors group-hover:rotate-180 duration-500" />
-                  <span className="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Changer mon vote</span>
-                </button>
-
-                {/* Bottom Right Indicator - "Design & Beauty" */}
-                <div className="absolute bottom-12 right-12 flex items-center gap-4 animate-in fade-in slide-in-from-right-8 duration-700">
-                  <div className="text-right">
-                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">STATUS JURY</p>
-                    <p className={`text-sm font-black italic uppercase tracking-tighter ${myVote === 'red' ? 'text-brand-red' : 'text-brand-blue'}`}>
-                      SÉLECTION {myVote === 'red' ? 'ROUGE' : 'BLEUE'}
-                    </p>
-                  </div>
-                  <div className={`w-12 h-12 border-2 flex items-center justify-center rotate-45 transition-colors ${myVote === 'red' ? 'border-brand-red bg-brand-red/10' : 'border-brand-blue bg-brand-blue/10'}`}>
-                    <div className={`w-6 h-6 rotate-[-45deg] flex items-center justify-center ${myVote === 'red' ? 'text-brand-red' : 'text-brand-blue'}`}>
-                      {myVote === 'red' ? <Shield size={18} /> : <Rocket size={18} />}
-                    </div>
-                  </div>
-                </div>
-              </div>
+            {currentMatch && currentMatch.status === 'finished' ? (
+              <>
+                 <div className="w-24 h-24 bg-white/5 border-2 border-white/10 rounded-full flex items-center justify-center mb-8">
+                   <Trophy size={48} className="text-yellow-500" />
+                 </div>
+                 <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">Battle Terminé</h2>
+                 <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px]">Résultats disponibles sur l'écran public</p>
+              </>
             ) : (
               <>
                 <div className="w-16 h-16 border-2 border-white/10 border-t-white rounded-full animate-spin mb-8" />
