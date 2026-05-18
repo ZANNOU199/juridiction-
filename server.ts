@@ -147,6 +147,10 @@ app.post("/api/admin/confirm-round", (req, res) => {
   if (!match || match.status !== 'active') return res.status(400).json({ error: "No active match" });
 
   const voteList = Object.values(tournamentState.juryVotes).filter(v => v !== null && v !== undefined);
+  if (voteList.length < tournamentState.juryCount) {
+    return res.status(400).json({ error: "En attente des votes de tous les jurés" });
+  }
+
   const redCount = voteList.filter(v => v === 'red').length;
   const blueCount = voteList.filter(v => v === 'blue').length;
 
@@ -155,13 +159,12 @@ app.post("/api/admin/confirm-round", (req, res) => {
     if (!match.roundResults) match.roundResults = [];
     match.roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount };
 
-    // Update overall score: 1 point for team that won the round
+    // Update overall score
     if (redCount > blueCount) {
       match.redVotes += 1;
     } else if (blueCount > redCount) {
       match.blueVotes += 1;
     }
-    // Note: Ties might not add points, or half point? Let's assume user wants 1 point to winner.
 
     if (match.currentRound < match.roundCount) {
       match.currentRound += 1;
@@ -169,9 +172,15 @@ app.post("/api/admin/confirm-round", (req, res) => {
       match.allVotesCastAt = undefined;
     } else {
       // All rounds finished
-      match.winnerId = match.redVotes > match.blueVotes ? match.redTeamId : (match.blueVotes > match.redVotes ? match.blueTeamId : null);
+      if (match.redVotes > match.blueVotes) {
+        match.winnerId = match.redTeamId;
+      } else if (match.blueVotes > match.redVotes) {
+        match.winnerId = match.blueTeamId;
+      } else {
+        match.winnerId = null; // Absolute tie
+      }
       match.status = 'finished';
-      tournamentState.currentMatchId = null; // No current match active after finishing
+      tournamentState.currentMatchId = null;
     }
   }
 

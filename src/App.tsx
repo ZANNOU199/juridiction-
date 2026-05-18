@@ -85,7 +85,7 @@ const STORAGE_KEY = 'arena_tournament_state';
 
 export default function App() {
   const [role, setRole] = useState<UserRole>(UserRole.SELECT);
-  const [juryId, setJuryId] = useState<string | null>(localStorage.getItem('juryId'));
+  const [juryId, setJuryId] = useState<string | null>(sessionStorage.getItem('juryId'));
   const [state, setState] = useState<TournamentState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_STATE;
@@ -123,7 +123,7 @@ export default function App() {
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 3000); // Poll every 3s
+    const interval = setInterval(fetchState, 1000); // Poll every 1s
     return () => clearInterval(interval);
   }, []);
 
@@ -163,7 +163,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
     // Local Login first
     const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
     if (jury) {
-      localStorage.setItem('juryId', jury.id);
+      sessionStorage.setItem('juryId', jury.id);
       onSelect(UserRole.JURY, jury.id);
       return;
     }
@@ -176,7 +176,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
       });
       const data = await res.json();
       if (data.success) {
-        localStorage.setItem('juryId', data.juryId);
+        sessionStorage.setItem('juryId', data.juryId);
         onSelect(UserRole.JURY, data.juryId);
       } else {
         setLoginError(data.error);
@@ -288,7 +288,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
     let newAccounts = [...juryAccounts];
     if (count > juryAccounts.length) {
       for (let i = juryAccounts.length; i < count; i++) {
-        newAccounts.push({ id: `jury-${Date.now()}-${i}`, username: `JURE ${i + 1}`, password: "" });
+        newAccounts.push({ id: `jury-${i + 1}`, username: `JURE ${i + 1}`, password: "" });
       }
     } else {
       newAccounts = newAccounts.slice(0, count);
@@ -317,7 +317,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
     let newParticipants = [...participants];
     if (count > participants.length) {
       for (let i = participants.length; i < count; i++) {
-        newParticipants.push({ id: `p-${Date.now()}-${i}`, name: "", photo: "" });
+        newParticipants.push({ id: `p-${i + 1}`, name: "", photo: "" });
       }
     } else if (count < participants.length) {
       newParticipants = newParticipants.slice(0, count);
