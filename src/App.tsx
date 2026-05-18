@@ -933,8 +933,8 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
   const redVotes = Object.values(state.juryVotes).filter(v => v === 'red').length;
   const blueVotes = Object.values(state.juryVotes).filter(v => v === 'blue').length;
   const totalVotes = redVotes + blueVotes;
-  const isFinished = totalVotes >= state.juryCount;
-  const winner = isFinished ? (redVotes > blueVotes ? redP : blueP) : null;
+  const showResults = activeMatch.status === 'finished' || totalVotes >= state.juryCount;
+  const winner = showResults ? (redVotes > blueVotes ? redP : blueP) : null;
 
   return (
     <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col overflow-hidden relative">
@@ -979,8 +979,8 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
-              <div className="w-48 h-48 bg-brand-red flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20">
-                {activeMatch.status === 'finished' ? activeMatch.redVotes : redVotes}
+              <div className="w-48 h-48 bg-brand-red flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20 uppercase">
+                {showResults ? (activeMatch.status === 'finished' ? activeMatch.redVotes : redVotes) : 0}
               </div>
             </div>
             <div className="bg-brand-red font-black italic text-4xl px-10 py-6 flex items-center justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
@@ -994,8 +994,8 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
           {/* Blue Side */}
           <div className="space-y-8">
             <div className="flex justify-start gap-8 items-end">
-              <div className="w-48 h-48 bg-brand-blue flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20">
-                {activeMatch.status === 'finished' ? activeMatch.blueVotes : blueVotes}
+              <div className="w-48 h-48 bg-brand-blue flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20 uppercase">
+                {showResults ? (activeMatch.status === 'finished' ? activeMatch.blueVotes : blueVotes) : 0}
               </div>
               <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {blueP?.photo ? (
