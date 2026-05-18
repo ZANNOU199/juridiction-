@@ -824,6 +824,9 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   };
 
   const selectMatch = async (matchId: string) => {
+    const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (localFinished.includes(matchId)) return;
+
     try {
       const res = await fetch('/api/admin/select-match', {
         method: 'POST',
@@ -841,8 +844,20 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
 
   const finalizeMatch = async () => {
     const cid = state.currentMatchId;
-    setView('list'); // Immediate feedback for the user
-    if (!cid) return;
+    if (!cid) {
+      setView('list');
+      return;
+    }
+    
+    // Optimistic UI update: local storage and state
+    const juryFinishedMatches = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (!juryFinishedMatches.includes(cid)) {
+      juryFinishedMatches.push(cid);
+      localStorage.setItem(`finished_${juryId}`, JSON.stringify(juryFinishedMatches));
+    }
+    
+    setView('list'); 
+    
     try {
       const res = await fetch('/api/jury/finalize', {
         method: 'POST',
@@ -1084,7 +1099,8 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
                   const isFinishedGlobal = m.status === 'finished';
-                  const isFinishedByMe = m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId);
+                  const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+                  const isFinishedByMe = (m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId)) || localFinished.includes(m.id);
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
@@ -1116,10 +1132,9 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                              <Play size={14} className="fill-current" />
                              ENTRER
                            </button>
-                         ) : isFinishedByMe && isActive ? (
-                            <div className="flex flex-col items-end">
-                               <span className="text-[10px] font-black uppercase text-brand-red mb-1 italic">VOTE FINALISÉ</span>
-                               <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2 bg-white/5">TERMINÉ POUR VOUS</span>
+                         ) : isFinishedByMe ? (
+                            <div className="flex flex-col items-end opacity-40">
+                               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 border border-white/10 px-4 py-2 bg-white/5">TERMINÉ</span>
                             </div>
                          ) : isFinishedGlobal ? (
                            <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2">BATTLE TERMINÉ</span>
