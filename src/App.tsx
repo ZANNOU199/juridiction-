@@ -799,6 +799,17 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
     }
   };
 
+  const nextMatch = async () => {
+    try {
+      const res = await fetch('/api/admin/next-match', { method: 'POST' });
+      if (res.ok) {
+        // State will update via polling
+      }
+    } catch (e) {
+      console.warn("Server sync failed during nextMatch");
+    }
+  };
+
   const castVote = async (vote: 'red' | 'blue') => {
     const newVotes = { ...state.juryVotes, [juryId]: vote };
     const currentMatchRef = state.matches.find(m => m.id === state.currentMatchId);
@@ -949,28 +960,14 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
                     <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
-                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : 'VOTE ENREGISTRÉ'}
+                       SÉLECTION BIEN TRANSMISE
                     </p>
-
-                    {totalCurrentVotes >= state.juryCount && (
-                      <div className="mb-8 flex items-center gap-6 bg-white/5 border border-white/10 px-8 py-4 rounded-2xl animate-in fade-in zoom-in duration-500">
-                        <div className="flex flex-col items-center">
-                          <span className="text-[8px] font-black uppercase text-brand-red mb-1 opacity-60 tracking-widest">ROUGE</span>
-                          <span className="text-3xl font-black italic">{currentVotesRed}</span>
-                        </div>
-                        <div className="w-px h-8 bg-white/10" />
-                        <div className="flex flex-col items-center">
-                          <span className="text-[8px] font-black uppercase text-brand-blue mb-1 opacity-60 tracking-widest">BLEU</span>
-                          <span className="text-3xl font-black italic">{currentVotesBlue}</span>
-                        </div>
-                      </div>
-                    )}
                     
-                    <div className="flex flex-col gap-3 w-full">
-                       {totalCurrentVotes >= state.juryCount && currentMatch.votingMode === 'round' && currentMatch.currentRound <= currentMatch.roundCount && (
+                    <div className="flex flex-col gap-3 w-full mb-6">
+                       {currentMatch.votingMode === 'round' && (
                          <button 
                            onClick={confirmRound}
-                           className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white border border-green-500/50 transition-all rounded-full group pointer-events-auto"
+                           className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white border border-green-500/50 transition-all rounded-full group pointer-events-auto shadow-[0_10px_20px_rgba(22,163,74,0.3)]"
                          >
                            <SkipForward size={16} className="group-hover:translate-x-1 duration-300" />
                            <span className="text-[11px] font-black uppercase tracking-widest">
@@ -978,6 +975,13 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                            </span>
                          </button>
                        )}
+
+                       {currentMatch.votingMode === 'match' && totalCurrentVotes >= state.juryCount && (
+                         <div className="py-4 px-8 bg-white/5 border border-white/10 rounded-full">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Votes Terminés - Attente clôture...</span>
+                         </div>
+                       )}
+                    </div>
 
                        <button 
                          onClick={() => setIsChanging(true)}
@@ -987,7 +991,6 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                          <span className="text-[10px] font-black uppercase tracking-widest">Changer mon vote</span>
                        </button>
                     </div>
-                </div>
               </motion.div>
             )}
 
@@ -1013,7 +1016,14 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                    <Trophy size={48} className="text-yellow-500" />
                  </div>
                  <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">Battle Terminé</h2>
-                 <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px]">Résultats disponibles sur l'écran public</p>
+                 <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px] mb-8">Résultats disponibles sur l'écran public</p>
+                 <button 
+                    onClick={nextMatch}
+                    className="flex items-center justify-center gap-3 px-10 py-5 bg-white text-black transition-all rounded-full group shadow-[0_10px_40px_rgba(255,255,255,0.2)] hover:scale-105 active:scale-95"
+                  >
+                    <SkipForward size={20} className="group-hover:translate-x-1 duration-300" />
+                    <span className="text-xs font-black uppercase tracking-widest">Passer au battle suivant</span>
+                  </button>
               </>
             ) : (
               <>
