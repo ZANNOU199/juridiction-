@@ -62,13 +62,35 @@ enum UserRole {
   PUBLIC = 'public'
 }
 
+const DEFAULT_STATE: TournamentState = {
+  competitionName: "ARENA CHAMPIONSHIP",
+  competitionLogo: "",
+  participants: [],
+  juryAccounts: [],
+  juryCount: 3,
+  currentMatchId: null,
+  matches: [],
+  juryVotes: {},
+  configured: false
+};
+
+const STORAGE_KEY = 'arena_tournament_state';
+
 // --- Main App ---
 
 export default function App() {
   const [role, setRole] = useState<UserRole>(UserRole.SELECT);
   const [juryId, setJuryId] = useState<string | null>(localStorage.getItem('juryId'));
-  const [state, setState] = useState<TournamentState | null>(null);
+  const [state, setState] = useState<TournamentState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_STATE;
+  });
   const [error, setError] = useState<string | null>(null);
+
+  const saveStateLocal = (newState: TournamentState) => {
+    setState(newState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+  };
 
   useEffect(() => {
     // Check URL parameters for direct view access
@@ -83,13 +105,14 @@ export default function App() {
   const fetchState = async () => {
     try {
       const res = await fetch('/api/state');
-      if (!res.ok) throw new Error("Server communication issue");
-      const data = await res.json();
-      setState(data);
-      setError(null);
+      if (res.ok) {
+        const data = await res.json();
+        saveStateLocal(data);
+        setError(null);
+      }
     } catch (err) {
-      console.error("Fetch failed", err);
-      setError("Le serveur est introuvable ou ne répond pas.");
+      console.warn("Fetch failed, using local storage", err);
+      // We don't set error here because we are using localStorage for now
     }
   };
 
@@ -99,33 +122,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  if (!state) {
-    return (
-      <div className="min-h-screen bg-black flex items-center justify-center font-sans text-white p-6">
-        <div className="flex flex-col items-center gap-8 max-w-md text-center">
-          <div className="w-16 h-16 border-4 border-white/10 border-t-white rounded-full animate-spin" />
-          <div className="space-y-4">
-            <p className="text-white font-black italic text-2xl tracking-tighter uppercase animate-pulse">Chargement Système...</p>
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/20 p-4 space-y-2">
-                <p className="text-red-500 text-xs font-black uppercase tracking-widest">{error}</p>
-                <p className="text-white/40 text-[10px] leading-relaxed">
-                  Cette application nécessite un serveur actif. Si vous l'avez déployée sur Vercel, assurez-vous d'avoir configuré le backend correctement.
-                </p>
-              </div>
-            )}
-          </div>
-          <button 
-            onClick={() => window.location.reload()}
-            className="px-8 py-2 border border-white/20 text-white/40 hover:text-white hover:border-white transition-all font-black italic uppercase text-[10px] tracking-widest"
-          >
-            Réessayer
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   // --- View Switcher ---
 
   if (role === UserRole.SELECT) {
@@ -133,11 +129,11 @@ export default function App() {
   }
 
   if (role === UserRole.ADMIN) {
-    return <AdminView state={state} onBack={() => setRole(UserRole.SELECT)} />;
+    return <AdminView state={state} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
   }
 
   if (role === UserRole.JURY && juryId) {
-    return <JuryView state={state} juryId={juryId} onBack={() => setRole(UserRole.SELECT)} />;
+    return <JuryView state={state} juryId={juryId} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
   }
 
   if (role === UserRole.PUBLIC) {
@@ -158,6 +154,15 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
   const handleJuryLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError("");
+
+    // Local Login first
+    const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
+    if (jury) {
+      localStorage.setItem('juryId', jury.id);
+      onSelect(UserRole.JURY, jury.id);
+      return;
+    }
+
     try {
       const res = await fetch('/api/jury/login', {
         method: 'POST',
@@ -172,7 +177,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
         setLoginError(data.error);
       }
     } catch (err) {
-      setLoginError("Connexion échouée");
+      setLoginError("Identifiants incorrects (Mode Local)");
     }
   };
 
@@ -259,7 +264,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
   );
 }
 
-function AdminView({ state, onBack }: { state: TournamentState, onBack: () => void }) {
+function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: (s: TournamentState) => void, onBack: () => void }) {
   const [competitionName, setCompetitionName] = useState(state.competitionName || "");
   const [competitionLogo, setCompetitionLogo] = useState(state.competitionLogo || "");
   const [participants, setParticipants] = useState<Participant[]>(state.participants || []);
@@ -343,15 +348,68 @@ function AdminView({ state, onBack }: { state: TournamentState, onBack: () => vo
   const removeMatch = (id: string) => { setMatches(matches.filter(m => m.id !== id)); };
 
   const configure = async () => {
-    await fetch('/api/admin/configure', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches })
-    });
+    const newState: TournamentState = {
+      ...state,
+      competitionName,
+      competitionLogo,
+      participants,
+      juryAccounts,
+      juryCount: juryAccounts.length,
+      currentMatchId: matches.length > 0 ? matches[0].id : null,
+      matches: matches.map((m, i) => i === 0 ? { ...m, status: 'active' } : m),
+      configured: true,
+      juryVotes: {}
+    };
+    onSave(newState);
+
+    try {
+      await fetch('/api/admin/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches })
+      });
+    } catch (e) {
+      console.warn("Server sync failed during configure");
+    }
   };
 
-  const nextMatch = async () => { await fetch('/api/admin/next-match', { method: 'POST' }); };
-  const reset = async () => { await fetch('/api/admin/reset', { method: 'POST' }); };
+  const nextMatch = async () => {
+    const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
+    if (activeIdx !== -1) {
+      const newMatches = [...state.matches];
+      newMatches[activeIdx] = { ...newMatches[activeIdx], status: 'finished' };
+      
+      const nextIdx = newMatches.findIndex((m, i) => i > activeIdx && m.status === 'pending');
+      let nextId = null;
+      if (nextIdx !== -1) {
+        newMatches[nextIdx] = { ...newMatches[nextIdx], status: 'active' };
+        nextId = newMatches[nextIdx].id;
+      }
+
+      const newState: TournamentState = {
+        ...state,
+        matches: newMatches,
+        currentMatchId: nextId,
+        juryVotes: {}
+      };
+      onSave(newState);
+    }
+
+    try {
+      await fetch('/api/admin/next-match', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during nextMatch");
+    }
+  };
+
+  const reset = async () => {
+    onSave(DEFAULT_STATE);
+    try {
+      await fetch('/api/admin/reset', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during reset");
+    }
+  };
 
   const activeMatch = state.matches.find(m => m.id === state.currentMatchId);
 
@@ -646,7 +704,7 @@ function AdminView({ state, onBack }: { state: TournamentState, onBack: () => vo
   );
 }
 
-function JuryView({ state, juryId, onBack }: { state: TournamentState, juryId: string, onBack: () => void }) {
+function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onBack: () => void }) {
   const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
   const myVote = state.juryVotes[juryId];
 
@@ -654,11 +712,45 @@ function JuryView({ state, juryId, onBack }: { state: TournamentState, juryId: s
   const blueP = state.participants.find(p => p.id === currentMatch?.blueTeamId);
 
   const castVote = async (vote: 'red' | 'blue') => {
-    await fetch('/api/jury/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ juryId, vote })
-    });
+    const newVotes = { ...state.juryVotes, [juryId]: vote };
+    const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
+    
+    if (currentMatch) {
+      const redVotes = Object.values(newVotes).filter(v => v === 'red').length;
+      const blueVotes = Object.values(newVotes).filter(v => v === 'blue').length;
+      const totalVotes = redVotes + blueVotes;
+      
+      const newMatches = state.matches.map(m => {
+        if (m.id === state.currentMatchId) {
+          const finished = totalVotes >= state.juryCount;
+          return {
+            ...m,
+            redVotes,
+            blueVotes,
+            status: finished ? 'finished' as const : m.status,
+            winnerId: finished ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : null
+          };
+        }
+        return m;
+      });
+
+      const newState: TournamentState = {
+        ...state,
+        juryVotes: newVotes,
+        matches: newMatches
+      };
+      onSave(newState);
+    }
+
+    try {
+      await fetch('/api/jury/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ juryId, vote })
+      });
+    } catch (err) {
+      console.warn("Server sync failed during vote");
+    }
   };
 
   if (!state.configured) {
@@ -863,21 +955,35 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
             )}
           </AnimatePresence>
 
-          <footer className="max-w-4xl mx-auto w-full py-8 border-t border-white/10 flex gap-4 justify-center">
-            {state.juryAccounts.map((jury, i) => (
-              <div 
-                key={jury.id} 
-                className={`flex-1 max-w-[120px] aspect-square border-2 flex flex-col items-center justify-center text-[10px] font-black transition-all duration-300 gap-2
-                ${state.juryVotes[jury.id] 
-                  ? (state.juryVotes[jury.id] === 'red' ? 'bg-brand-red border-brand-red shadow-[0_0_20px_rgba(225,29,72,0.4)]' : 'bg-brand-blue border-brand-blue shadow-[0_0_20px_rgba(37,99,235,0.4)]') 
-                  : 'bg-white/5 border-white/10 text-white/5'}`}
-              >
-                {state.juryVotes[jury.id] ? <CheckCircle2 size={16} /> : <span className="opacity-20 text-[8px] uppercase truncate px-2 text-center">{jury.username}</span>}
-                <span className={`text-[8px] uppercase truncate px-1 text-center font-black ${state.juryVotes[jury.id] ? 'text-white' : 'text-white/20'}`}>
-                  {jury.username}
-                </span>
+          <footer className="max-w-4xl mx-auto w-full py-8 border-t border-white/10 flex flex-col items-center gap-6">
+            <div className="flex flex-wrap justify-center gap-4">
+              {state.juryAccounts.map((jury, i) => (
+                <div 
+                  key={jury.id} 
+                  className={`flex-1 min-w-[100px] max-w-[120px] aspect-square border-2 flex flex-col items-center justify-center text-[10px] font-black transition-all duration-300 gap-2
+                  ${state.juryVotes[jury.id] 
+                    ? (state.juryVotes[jury.id] === 'red' ? 'bg-brand-red border-brand-red shadow-[0_0_20px_rgba(225,29,72,0.4)]' : 'bg-brand-blue border-brand-blue shadow-[0_0_20px_rgba(37,99,235,0.4)]') 
+                    : 'bg-white/5 border-white/10 text-white/5'}`}
+                >
+                  {state.juryVotes[jury.id] ? <CheckCircle2 size={16} /> : <span className="opacity-20 text-[8px] uppercase truncate px-2 text-center">{jury.username}</span>}
+                  <span className={`text-[8px] uppercase truncate px-1 text-center font-black ${state.juryVotes[jury.id] ? 'text-white' : 'text-white/20'}`}>
+                    {jury.username}
+                  </span>
+                </div>
+              ))}
+            </div>
+            
+            <div className="flex flex-col items-center gap-3 pt-6 border-t border-white/5 w-full">
+              <p className="text-[9px] font-black uppercase tracking-widest text-white/20">Liens Directs (Affichage Live)</p>
+              <div className="flex gap-4">
+                <a href={`${window.location.origin}?view=public`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase text-white/40 hover:text-white transition-all border-b border-white/10 pb-1">
+                  Écran Public
+                </a>
+                <a href={`${window.location.origin}?view=admin`} target="_blank" rel="noreferrer" className="text-[10px] font-black italic uppercase text-white/40 hover:text-white transition-all border-b border-white/10 pb-1">
+                  Console Admin
+                </a>
               </div>
-            ))}
+            </div>
           </footer>
         </div>
       ) : (
