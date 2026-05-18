@@ -827,21 +827,44 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
             className="flex-1 flex flex-col items-center justify-center p-12 text-center"
           >
             {myVote ? (
-              <>
-                <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-8 border-4 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20' : 'border-brand-blue bg-brand-blue/20'}`}>
+              <div className="flex flex-col items-center justify-center relative w-full h-full p-12">
+                <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-10 border-4 shadow-2xl transition-all duration-700 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-brand-red/20' : 'border-brand-blue bg-brand-blue/20 shadow-brand-blue/20'}`}>
                    <CheckCircle2 size={64} className="text-white" />
                 </div>
-                <h2 className="text-4xl font-black italic tracking-tighter mb-4 uppercase">Vote Transmis</h2>
-                <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[10px] mb-12">Attente des autres juges & du résultat</p>
+                
+                <p className="text-[10px] font-black tracking-[0.6em] text-white/40 uppercase mb-4">CONFIRMATION DE VOTE</p>
+                <h2 className="text-6xl md:text-8xl font-black italic tracking-tighter mb-2 uppercase leading-none">
+                  {myVote === 'red' ? redP?.name : blueP?.name}
+                </h2>
+                <div className={`h-1 w-32 mb-8 ${myVote === 'red' ? 'bg-brand-red' : 'bg-brand-blue'}`} />
+                
+                <p className="text-white/20 font-bold uppercase tracking-[0.4em] text-[11px] mb-16 max-w-sm">
+                  Le système a enregistré votre décision. Attente de la validation finale du battle.
+                </p>
                 
                 <button 
                   onClick={() => setIsChanging(true)}
-                  className="flex items-center gap-3 px-8 py-3 bg-white/5 hover:bg-white/10 border border-white/10 transition-all rounded-full group"
+                  className="flex items-center gap-3 px-10 py-4 bg-white/5 hover:bg-white/10 border border-white/10 transition-all rounded-full group"
                 >
                   <RotateCcw size={16} className="text-white/40 group-hover:text-white transition-colors group-hover:rotate-180 duration-500" />
                   <span className="text-[11px] font-black uppercase tracking-widest text-white/40 group-hover:text-white transition-colors">Changer mon vote</span>
                 </button>
-              </>
+
+                {/* Bottom Right Indicator - "Design & Beauty" */}
+                <div className="absolute bottom-12 right-12 flex items-center gap-4 animate-in fade-in slide-in-from-right-8 duration-700">
+                  <div className="text-right">
+                    <p className="text-[10px] font-black text-white/30 uppercase tracking-widest">STATUS JURY</p>
+                    <p className={`text-sm font-black italic uppercase tracking-tighter ${myVote === 'red' ? 'text-brand-red' : 'text-brand-blue'}`}>
+                      SÉLECTION {myVote === 'red' ? 'ROUGE' : 'BLEUE'}
+                    </p>
+                  </div>
+                  <div className={`w-12 h-12 border-2 flex items-center justify-center rotate-45 transition-colors ${myVote === 'red' ? 'border-brand-red bg-brand-red/10' : 'border-brand-blue bg-brand-blue/10'}`}>
+                    <div className={`w-6 h-6 rotate-[-45deg] flex items-center justify-center ${myVote === 'red' ? 'text-brand-red' : 'text-brand-blue'}`}>
+                      {myVote === 'red' ? <Shield size={18} /> : <Rocket size={18} />}
+                    </div>
+                  </div>
+                </div>
+              </div>
             ) : (
               <>
                 <div className="w-16 h-16 border-2 border-white/10 border-t-white rounded-full animate-spin mb-8" />
