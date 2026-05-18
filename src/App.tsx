@@ -778,6 +778,22 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
   const redP = state.participants.find(p => p.id === currentMatch?.redTeamId);
   const blueP = state.participants.find(p => p.id === currentMatch?.blueTeamId);
 
+  const currentVotesRed = Object.values(state.juryVotes).filter(v => v === 'red').length;
+  const currentVotesBlue = Object.values(state.juryVotes).filter(v => v === 'blue').length;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue;
+
+  const confirmRound = async () => {
+    try {
+      const res = await fetch('/api/admin/confirm-round', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
+    } catch (e) {
+      console.warn("Server sync failed during confirmRound");
+    }
+  };
+
   const castVote = async (vote: 'red' | 'blue') => {
     const newVotes = { ...state.juryVotes, [juryId]: vote };
     const currentMatchRef = state.matches.find(m => m.id === state.currentMatchId);
@@ -792,11 +808,10 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
           const allVoted = totalVotes >= state.juryCount;
           return {
             ...m,
-            redVotes,
-            blueVotes,
+            redVotes: m.votingMode === 'match' ? redVotes : m.redVotes,
+            blueVotes: m.votingMode === 'match' ? blueVotes : m.blueVotes,
             allVotesCastAt: allVoted ? Date.now() : undefined,
-            // DO NOT set status to finished here to keep jury in the dark
-            winnerId: allVoted ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : null
+            winnerId: allVoted && m.votingMode === 'match' ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : m.winnerId
           };
         }
         return m;
@@ -928,15 +943,45 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                     <h3 className="text-4xl font-black italic tracking-tighter uppercase mb-2">
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
-                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">Attente des autres membres...</p>
+                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
+                      {totalCurrentVotes >= state.juryCount ? 'Votes enregistrés' : 'Attente des autres membres...'}
+                    </p>
+
+                    {totalCurrentVotes >= state.juryCount && (
+                      <div className="mb-8 flex items-center gap-6 bg-white/5 border border-white/10 px-8 py-4 rounded-2xl">
+                        <div className="flex flex-col items-center">
+                          <span className="text-[8px] font-black uppercase text-brand-red mb-1 opacity-60">ROUGE</span>
+                          <span className="text-2xl font-black italic">{currentVotesRed}</span>
+                        </div>
+                        <div className="w-px h-8 bg-white/10" />
+                        <div className="flex flex-col items-center">
+                          <span className="text-[8px] font-black uppercase text-brand-blue mb-1 opacity-60">BLEU</span>
+                          <span className="text-2xl font-black italic">{currentVotesBlue}</span>
+                        </div>
+                      </div>
+                    )}
                     
-                    <button 
-                      onClick={() => setIsChanging(true)}
-                      className="flex items-center gap-3 px-8 py-3 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group"
-                    >
-                      <RotateCcw size={14} className="group-hover:rotate-180 duration-500" />
-                      <span className="text-[10px] font-black uppercase tracking-widest">Changer mon vote</span>
-                    </button>
+                    <div className="flex flex-col gap-3 w-full">
+                       {totalCurrentVotes >= state.juryCount && currentMatch.votingMode === 'round' && currentMatch.currentRound <= currentMatch.roundCount && (
+                         <button 
+                           onClick={confirmRound}
+                           className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white border border-green-500/50 transition-all rounded-full group pointer-events-auto"
+                         >
+                           <SkipForward size={16} className="group-hover:translate-x-1 duration-300" />
+                           <span className="text-[11px] font-black uppercase tracking-widest">
+                             {currentMatch.currentRound < currentMatch.roundCount ? 'Passer au round suivant' : 'Terminer le match'}
+                           </span>
+                         </button>
+                       )}
+
+                       <button 
+                         onClick={() => setIsChanging(true)}
+                         className="flex items-center justify-center gap-3 px-8 py-3 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group pointer-events-auto"
+                       >
+                         <RotateCcw size={14} className="group-hover:rotate-180 duration-500" />
+                         <span className="text-[10px] font-black uppercase tracking-widest">Changer mon vote</span>
+                       </button>
+                    </div>
                 </div>
               </motion.div>
             )}
@@ -983,9 +1028,9 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
              <span className="text-[10px] font-black tracking-widest uppercase opacity-40 leading-none mb-1">
                CONTRÔLE: {state.juryAccounts.find(j => j.id === juryId)?.username || "GUEST"}
              </span>
-             {currentMatch && currentMatch.votingMode === 'round' && (
+             {currentMatch && (
                <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">
-                 SCORE: {currentMatch.redVotes} - {currentMatch.blueVotes}
+                 {currentMatch.votingMode === 'round' ? `ROUNDS GAGNÉS: ${currentMatch.redVotes} - ${currentMatch.blueVotes}` : `SCORE: ${currentVotesRed} - ${currentVotesBlue}`}
                </span>
              )}
            </div>

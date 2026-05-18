@@ -170,7 +170,8 @@ app.post("/api/admin/confirm-round", (req, res) => {
     } else {
       // All rounds finished
       match.winnerId = match.redVotes > match.blueVotes ? match.redTeamId : (match.blueVotes > match.redVotes ? match.blueTeamId : null);
-      // We don't auto-finish so admin can review
+      match.status = 'finished';
+      tournamentState.currentMatchId = null; // No current match active after finishing
     }
   }
 
