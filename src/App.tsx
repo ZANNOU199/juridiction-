@@ -795,7 +795,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
                 <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
                 <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{redP?.name}</h2>
                 <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
@@ -822,7 +822,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/20 backdrop-blur-sm rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
                 <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
                 <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{blueP?.name}</h2>
                 <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
@@ -1034,7 +1034,8 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
               style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
             >
                {state.juryAccounts.map((jury, i) => {
-                 const vote = state.juryVotes[jury.id];
+                 const allVoted = Object.keys(state.juryVotes).length >= state.juryAccounts.length;
+                 const vote = allVoted ? state.juryVotes[jury.id] : null;
                  return (
                    <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-2 relative overflow-hidden">
                       <div 
