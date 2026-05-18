@@ -784,7 +784,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
-              {redP?.photo && <img src={redP.photo} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay grayscale" />}
+              {redP?.photo && <img src={redP.photo} className="absolute inset-0 w-full h-full object-cover opacity-70" referrerPolicy="no-referrer" />}
               <div className="relative z-10 flex flex-col items-center">
                 <Shield className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
                 <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{redP?.name}</h2>
@@ -801,7 +801,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
-              {blueP?.photo && <img src={blueP.photo} className="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-overlay grayscale" />}
+              {blueP?.photo && <img src={blueP.photo} className="absolute inset-0 w-full h-full object-cover opacity-70" referrerPolicy="no-referrer" />}
               <div className="relative z-10 flex flex-col items-center">
                 <Rocket className="w-16 h-16 md:w-24 md:h-24 mb-6 opacity-40 text-white" />
                 <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter text-center leading-tight mb-4">{blueP?.name}</h2>
@@ -828,8 +828,11 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
           >
             {myVote ? (
               <div className="flex flex-col items-center justify-center relative w-full h-full p-12">
-                <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-10 border-4 shadow-2xl transition-all duration-700 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-brand-red/20' : 'border-brand-blue bg-brand-blue/20 shadow-brand-blue/20'}`}>
-                   <CheckCircle2 size={64} className="text-white" />
+                <div className={`w-32 h-32 rounded-full flex items-center justify-center mb-10 border-4 shadow-2xl transition-all duration-700 relative overflow-hidden ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-brand-red/20' : 'border-brand-blue bg-brand-blue/20 shadow-brand-blue/20'}`}>
+                   {(myVote === 'red' ? redP?.photo : blueP?.photo) ? (
+                     <img src={myVote === 'red' ? redP?.photo : blueP?.photo} className="absolute inset-0 w-full h-full object-cover opacity-60" referrerPolicy="no-referrer" />
+                   ) : null}
+                   <CheckCircle2 size={64} className="text-white relative z-10" />
                 </div>
                 
                 <p className="text-[10px] font-black tracking-[0.6em] text-white/40 uppercase mb-4">CONFIRMATION DE VOTE</p>
@@ -955,7 +958,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
             <div className="flex justify-end gap-8 items-end">
               <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {redP?.photo ? (
-                  <img src={redP.photo} className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-700" referrerPolicy="no-referrer" />
+                  <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
                   <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
@@ -981,7 +984,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
               </div>
               <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {blueP?.photo ? (
-                  <img src={blueP.photo} className="w-full h-full object-cover grayscale brightness-75 group-hover:grayscale-0 group-hover:brightness-100 transition-all duration-700" referrerPolicy="no-referrer" />
+                  <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
                   <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
