@@ -946,35 +946,38 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
         {/* Jury Table */}
         <div className="w-full max-w-7xl mt-20 relative">
           <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl">
-            <div className="grid grid-cols-7 border-b border-white/10">
-               {Array.from({ length: 7 }).map((_, i) => {
-                 const jury = state.juryAccounts[i];
+            <div 
+              className="grid border-b border-white/10"
+              style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
+            >
+               {state.juryAccounts.map((jury, i) => {
                  return (
-                   <div key={i} className="py-3 text-center border-r border-white/5 last:border-r-0">
-                     <span className={`text-[10px] font-black uppercase tracking-widest italic ${jury ? 'text-white/50' : 'text-white/10'}`}>
-                       {jury ? jury.username : `JURY ${i + 1}`}
+                   <div key={jury.id} className="py-3 text-center border-r border-white/5 last:border-r-0">
+                     <span className="text-[10px] font-black uppercase tracking-widest italic text-white/50">
+                       {jury.username}
                      </span>
                    </div>
                  );
                })}
             </div>
-            <div className="grid grid-cols-7 h-32">
-               {Array.from({ length: 7 }).map((_, i) => {
-                 const jury = state.juryAccounts[i];
-                 const vote = jury ? state.juryVotes[jury.id] : null;
+            <div 
+              className="grid h-32"
+              style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
+            >
+               {state.juryAccounts.map((jury, i) => {
+                 const vote = state.juryVotes[jury.id];
                  return (
-                   <div key={i} className="border-r border-white/5 last:border-r-0 flex flex-col p-1 gap-1 relative overflow-hidden">
+                   <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-1 gap-1 relative overflow-hidden">
                       {[1, 2, 3, 4, 5].map(barId => (
                         <div 
                           key={barId}
-                          className={`flex-1 transition-all duration-1000 ${
+                          className={`flex-1 transition-all duration-700 ${
                             vote 
-                              ? (vote === 'red' ? 'bg-brand-red/90' : 'bg-brand-blue/90') 
+                              ? (vote === 'red' ? 'bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]' : 'bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]') 
                               : 'bg-white/5'
                           }`} 
                         />
                       ))}
-                      {!jury && <div className="absolute inset-0 bg-[#050505]/40 pointer-events-none" />}
                    </div>
                  );
                })}
