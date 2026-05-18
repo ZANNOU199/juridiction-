@@ -814,6 +814,10 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
       if (res.ok) {
         const data = await res.json();
         onSave(data.state);
+        setIsChanging(false);
+      } else {
+        const errData = await res.json();
+        console.warn("Round confirm failed:", errData.error);
       }
     } catch (e) {
       console.warn("Server sync failed during confirmRound");
@@ -849,7 +853,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
         matches: newMatches
       };
       // Optimistic update
-      // onSave(newState); // We'll wait for the server response or next poll to be safer against concurrent votes
+      onSave(newState); 
       setIsChanging(false);
     }
 
@@ -975,7 +979,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
                     <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
-                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : `ATTENTE DES JUGES (${totalCurrentVotes}/${state.juryCount})`}
+                      {totalCurrentVotes >= state.juryCount ? 'TOUS LES VOTES SONT ENREGISTRÉS' : `VOTES REÇUS : ${totalCurrentVotes} / ${state.juryCount}`}
                     </p>
                     
                     <div className="flex flex-col gap-3 w-full">
