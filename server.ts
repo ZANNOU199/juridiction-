@@ -18,6 +18,11 @@ interface Match {
   status: 'pending' | 'active' | 'finished';
   allVotesCastAt?: number;
   round: string;
+  // New fields for multi-round support
+  votingMode: 'match' | 'round';
+  roundCount: number;
+  currentRound: number;
+  roundResults: { red: number; blue: number }[]; // Index matches round index (0-based)
 }
 
 interface JuryAccount {
@@ -44,19 +49,30 @@ function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | 
   
   const redCount = voteList.filter(v => v === 'red').length;
   const blueCount = voteList.filter(v => v === 'blue').length;
-  match.redVotes = redCount;
-  match.blueVotes = blueCount;
 
-  if (voteList.length >= juryCount) {
-    // Record when all votes were in for the 5s grace period
-    match.allVotesCastAt = Date.now();
-    // We do NOT set status = 'finished' here anymore. 
-    // It will stay 'active' so jury doesn't know they are done.
-    // WinnerId is calculated but not used for display yet.
-    match.winnerId = redCount > blueCount ? match.redTeamId : match.blueTeamId;
+  if (match.votingMode === 'match') {
+    match.redVotes = redCount;
+    match.blueVotes = blueCount;
+
+    if (voteList.length >= juryCount) {
+      match.allVotesCastAt = Date.now();
+      match.winnerId = redCount > blueCount ? match.redTeamId : match.blueTeamId;
+    } else {
+      match.allVotesCastAt = undefined;
+      match.winnerId = null;
+    }
   } else {
-    match.allVotesCastAt = undefined;
-    match.winnerId = null;
+    // Round-based voting
+    // We update the results for the CURRENT round
+    if (voteList.length >= juryCount) {
+      // Current round is finished locally in this update
+      match.allVotesCastAt = Date.now();
+    } else {
+      match.allVotesCastAt = undefined;
+    }
+    
+    // The actual "point" addition happens when moving to next round
+    // But we can store temporary current round votes if needed
   }
 }
 
@@ -96,20 +112,67 @@ app.post("/api/jury/login", (req, res) => {
 app.post("/api/admin/configure", (req, res) => {
   const { competitionName, competitionLogo, participants, juryAccounts, matches } = req.body;
   
+  const processedMatches = (matches || []).map((m: any) => ({
+    ...m,
+    votingMode: m.votingMode || 'match',
+    roundCount: m.roundCount || 1,
+    currentRound: m.currentRound || 1,
+    roundResults: m.roundResults || [],
+    redVotes: 0,
+    blueVotes: 0,
+    winnerId: null,
+    status: 'pending'
+  }));
+
   tournamentState = {
     competitionName: competitionName || "ARENA CHAMPIONSHIP",
     competitionLogo: competitionLogo || "",
     participants: participants || [],
     juryAccounts: juryAccounts || [],
     juryCount: juryAccounts ? juryAccounts.length : 3,
-    currentMatchId: matches && matches.length > 0 ? matches[0].id : null,
-    matches: matches || [],
+    currentMatchId: processedMatches.length > 0 ? processedMatches[0].id : null,
+    matches: processedMatches,
     juryVotes: {},
     configured: true
   };
   
   const active = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (active) active.status = 'active';
+
+  res.json({ success: true, state: tournamentState });
+});
+
+app.post("/api/admin/confirm-round", (req, res) => {
+  const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
+  if (!match || match.status !== 'active') return res.status(400).json({ error: "No active match" });
+
+  const voteList = Object.values(tournamentState.juryVotes).filter(v => v !== null && v !== undefined);
+  const redCount = voteList.filter(v => v === 'red').length;
+  const blueCount = voteList.filter(v => v === 'blue').length;
+
+  if (match.votingMode === 'round') {
+    // Save current round result
+    if (!match.roundResults) match.roundResults = [];
+    match.roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount };
+
+    // Update overall score: 1 point for team that won the round
+    if (redCount > blueCount) {
+      match.redVotes += 1;
+    } else if (blueCount > redCount) {
+      match.blueVotes += 1;
+    }
+    // Note: Ties might not add points, or half point? Let's assume user wants 1 point to winner.
+
+    if (match.currentRound < match.roundCount) {
+      match.currentRound += 1;
+      tournamentState.juryVotes = {}; // Reset for next round
+      match.allVotesCastAt = undefined;
+    } else {
+      // All rounds finished
+      match.winnerId = match.redVotes > match.blueVotes ? match.redTeamId : (match.blueVotes > match.redVotes ? match.blueTeamId : null);
+      // We don't auto-finish so admin can review
+    }
+  }
 
   res.json({ success: true, state: tournamentState });
 });

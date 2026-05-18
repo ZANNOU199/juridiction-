@@ -36,6 +36,10 @@ interface Match {
   status: 'pending' | 'active' | 'finished';
   allVotesCastAt?: number;
   round: string;
+  votingMode: 'match' | 'round';
+  roundCount: number;
+  currentRound: number;
+  roundResults: { red: number; blue: number }[];
 }
 
 interface JuryAccount {
@@ -305,6 +309,8 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
   const [newMatchRound, setNewMatchRound] = useState("");
   const [redId, setRedId] = useState("");
   const [blueId, setBlueId] = useState("");
+  const [votingMode, setVotingMode] = useState<'match' | 'round'>('match');
+  const [roundCount, setRoundCount] = useState(1);
 
   const handleParticipantCountChange = (count: number) => {
     setParticipantCount(count);
@@ -337,7 +343,11 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
         blueVotes: 0,
         winnerId: null,
         status: 'pending',
-        round: newMatchRound
+        round: newMatchRound,
+        votingMode,
+        roundCount: votingMode === 'round' ? roundCount : 1,
+        currentRound: 1,
+        roundResults: []
       };
       setMatches([...matches, m]);
       setNewMatchRound("");
@@ -400,6 +410,18 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
       await fetch('/api/admin/next-match', { method: 'POST' });
     } catch (e) {
       console.warn("Server sync failed during nextMatch");
+    }
+  };
+
+  const confirmRound = async () => {
+    try {
+      const res = await fetch('/api/admin/confirm-round', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
+    } catch (e) {
+      console.warn("Server sync failed during confirmRound");
     }
   };
 
@@ -530,7 +552,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
           {/* Section 3: Bracket Builder */}
           <div className="space-y-6 bg-white/5 p-6 border border-white/10">
             <h3 className="text-[10px] font-black tracking-widest uppercase text-white/40">3. Bracket Manuel ({matches.length} Matchs)</h3>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <input 
                 type="text" 
                 value={newMatchRound} 
@@ -556,6 +578,41 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
                   {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
+              
+              <div className="space-y-2 py-2 border-y border-white/5">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black uppercase text-white/30 italic">Type de Juridiction</span>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => setVotingMode('match')}
+                      className={`px-3 py-1 text-[9px] font-black italic border ${votingMode === 'match' ? 'bg-white text-black border-white' : 'border-white/10 text-white/40'}`}
+                    >
+                      BATTLE
+                    </button>
+                    <button 
+                      onClick={() => setVotingMode('round')}
+                      className={`px-3 py-1 text-[9px] font-black italic border ${votingMode === 'round' ? 'bg-white text-black border-white' : 'border-white/10 text-white/40'}`}
+                    >
+                      ROUND
+                    </button>
+                  </div>
+                </div>
+
+                {votingMode === 'round' && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black uppercase text-white/30 italic">Nombre de Rounds</span>
+                    <input 
+                      type="number"
+                      min="1"
+                      max="10"
+                      value={roundCount}
+                      onChange={e => setRoundCount(parseInt(e.target.value) || 1)}
+                      className="w-16 bg-black/40 border border-white/10 px-2 py-1 font-black text-xs outline-none italic text-center"
+                    />
+                  </div>
+                )}
+              </div>
+
               <button 
                 onClick={addMatch} 
                 disabled={!newMatchRound || !redId || !blueId}
@@ -686,11 +743,19 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-white/10">
+                  {activeMatch?.votingMode === 'round' && activeMatch.status === 'active' && (
+                    <button 
+                      onClick={confirmRound}
+                      className="w-full py-4 bg-green-600 text-white font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:scale-[1.02]"
+                    >
+                      {activeMatch.currentRound < activeMatch.roundCount ? `VALIDER ROUND ${activeMatch.currentRound}` : "VALIDER DERNIER ROUND"}
+                    </button>
+                  )}
                   <button 
-                    disabled={!activeMatch || activeMatch.status !== 'finished'}
+                    disabled={!activeMatch || (activeMatch.votingMode === 'round' && activeMatch.currentRound <= activeMatch.roundCount && activeMatch.status !== 'finished') || activeMatch.status === 'finished'}
                     onClick={nextMatch} 
                     className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm
-                      ${!activeMatch || activeMatch.status !== 'finished' ? 'bg-white/5 text-white/10' : 'bg-white text-black hover:scale-[1.02] cursor-pointer'}`}
+                      ${(!activeMatch || (activeMatch.votingMode === 'round' && activeMatch.currentRound <= activeMatch.roundCount && activeMatch.status !== 'finished') || activeMatch.status === 'finished') ? 'bg-white/5 text-white/10' : 'bg-white text-black hover:scale-[1.02] cursor-pointer'}`}
                   >
                     <SkipForward size={18} /> MATCH SUIVANT
                   </button>
@@ -779,6 +844,21 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
             exit={{ opacity: 0 }}
             className={`flex-1 flex flex-col sm:flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-4 gap-4' : ''}`}
           >
+            <div className="flex flex-col items-center gap-2 mb-4">
+               <h3 className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase">
+                 {currentMatch.votingMode === 'round' ? `ROUND ${currentMatch.currentRound} / ${currentMatch.roundCount}` : currentMatch.round}
+               </h3>
+               {currentMatch.votingMode === 'round' && (
+                 <div className="flex gap-1">
+                   {Array.from({ length: currentMatch.roundCount }).map((_, i) => (
+                     <div 
+                       key={i} 
+                       className={`w-12 h-1 ${i < currentMatch.currentRound - 1 ? 'bg-green-500' : (i === currentMatch.currentRound - 1 ? 'bg-white/40' : 'bg-white/5')}`} 
+                     />
+                   ))}
+                 </div>
+               )}
+            </div>
             {/* Red Button */}
             <button 
               onClick={() => castVote('red')}
@@ -896,12 +976,19 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
         )}
       </AnimatePresence>
 
-      <footer className="h-16 bg-black/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-6 z-50">
+      <footer className="h-20 bg-black/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-6 z-50">
         <div className="flex items-center gap-4">
            <div className={`w-2 h-2 rounded-full ${myVote ? 'bg-green-500' : 'bg-white/20 animate-pulse'}`} />
-           <span className="text-[10px] font-black tracking-widest uppercase opacity-40">
-             CONTRÔLE: {state.juryAccounts.find(j => j.id === juryId)?.username || "GUEST"}
-           </span>
+           <div className="flex flex-col">
+             <span className="text-[10px] font-black tracking-widest uppercase opacity-40 leading-none mb-1">
+               CONTRÔLE: {state.juryAccounts.find(j => j.id === juryId)?.username || "GUEST"}
+             </span>
+             {currentMatch && currentMatch.votingMode === 'round' && (
+               <span className="text-[8px] font-bold text-white/20 uppercase tracking-tighter">
+                 SCORE: {currentMatch.redVotes} - {currentMatch.blueVotes}
+               </span>
+             )}
+           </div>
         </div>
         <button 
           onClick={onBack}
@@ -938,14 +1025,24 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
     );
   }
 
-  const redVotes = Object.values(state.juryVotes).filter(v => v === 'red').length;
-  const blueVotes = Object.values(state.juryVotes).filter(v => v === 'blue').length;
-  const totalVotes = redVotes + blueVotes;
+  const currentVotesRed = Object.values(state.juryVotes).filter(v => v === 'red').length;
+  const currentVotesBlue = Object.values(state.juryVotes).filter(v => v === 'blue').length;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue;
   
-  // Show results if finished manually OR if all voted AND 5s grace period passed
   const gracePeriodPassed = activeMatch.allVotesCastAt ? (now - activeMatch.allVotesCastAt > 5000) : false;
-  const showResults = activeMatch.status === 'finished' || (totalVotes >= state.juryCount && gracePeriodPassed);
-  const winner = showResults ? (redVotes > blueVotes ? redP : blueP) : null;
+  
+  // In ROUND mode, the score is the number of rounds won (from match object)
+  // In MATCH mode, the score is the jury vote count
+  const redScore = activeMatch.votingMode === 'round' 
+    ? activeMatch.redVotes 
+    : (activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed) ? currentVotesRed : 0);
+  
+  const blueScore = activeMatch.votingMode === 'round' 
+    ? activeMatch.blueVotes 
+    : (activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed) ? currentVotesBlue : 0);
+
+  const showResults = activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed);
+  const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   return (
     <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col overflow-hidden relative">
@@ -991,7 +1088,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
               <div className="w-48 h-48 bg-brand-red flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20 uppercase">
-                {showResults ? (activeMatch.status === 'finished' ? activeMatch.redVotes : redVotes) : 0}
+                {redScore}
               </div>
             </div>
             <div className="bg-brand-red font-black italic text-4xl px-10 py-6 flex items-center justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
@@ -1006,7 +1103,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
           <div className="space-y-8">
             <div className="flex justify-start gap-8 items-end">
               <div className="w-48 h-48 bg-brand-blue flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20 uppercase">
-                {showResults ? (activeMatch.status === 'finished' ? activeMatch.blueVotes : blueVotes) : 0}
+                {blueScore}
               </div>
               <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {blueP?.photo ? (
@@ -1040,13 +1137,39 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
                  );
                })}
             </div>
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex gap-2">
+                {activeMatch.votingMode === 'round' ? (
+                  Array.from({ length: activeMatch.roundCount }).map((_, i) => {
+                    const result = activeMatch.roundResults?.[i];
+                    return (
+                      <div key={i} className="flex flex-col gap-1 items-center">
+                        <div className={`w-8 h-8 flex items-center justify-center border ${result ? (result.red > result.blue ? 'bg-brand-red border-brand-red' : (result.blue > result.red ? 'bg-brand-blue border-brand-blue' : 'bg-white/20 border-white/40')) : 'bg-white/5 border-white/10'}`}>
+                          {result && <span className="text-[10px] font-black italic">{result.red > result.blue ? 'R' : (result.blue > result.red ? 'B' : '=')}</span>}
+                        </div>
+                        <span className="text-[8px] font-black opacity-20 uppercase">R{i+1}</span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-[10px] font-black italic opacity-20 uppercase tracking-[1em] mb-4 text-center">
+                    DECISION UNIQUE
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] font-black italic opacity-30 uppercase tracking-[1em] mt-4 mb-2 text-center w-full">
+                VOTES JURY ({totalCurrentVotes}/{state.juryCount})
+              </div>
+            </div>
+
             <div 
               className="grid h-16"
               style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
             >
                {state.juryAccounts.map((jury, i) => {
                  const allVoted = Object.keys(state.juryVotes).length >= state.juryAccounts.length;
-                 const vote = allVoted ? state.juryVotes[jury.id] : null;
+                 const showVotes = allVoted && gracePeriodPassed;
+                 const vote = showVotes ? state.juryVotes[jury.id] : null;
                  return (
                    <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-2 relative overflow-hidden">
                       <div 
