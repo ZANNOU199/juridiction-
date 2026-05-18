@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  
+  --color-brand-red: #E11D48;
+  --color-brand-blue: #2563EB;
+  --color-surface-dark: #050505;
+  --color-surface-container: #1E293B;
+}
+
+@layer base {
+  body {
+    @apply bg-surface-dark text-white font-sans antialiased;
+  }
+}
+
+@layer components {
+  .broadcast-mesh {
+    background-image: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(5, 5, 5, 1) 100%);
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s linear infinite;
+}
