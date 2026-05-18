@@ -917,10 +917,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
           </span>
           {view === 'vote' && (
             <button 
-              onClick={() => setView('list')}
+              onClick={myVote ? finalizeMatch : () => setView('list')}
               className="text-[9px] font-black uppercase text-white/40 hover:text-white border-l border-white/10 pl-4 transition-colors"
             >
-              RETOUR LISTE
+              {myVote ? 'VALIDER & QUITTER' : 'RETOUR LISTE'}
             </button>
           )}
         </div>
@@ -1017,65 +1017,37 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               <motion.div 
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-30"
+                className="absolute inset-0 flex flex-col items-center justify-center z-30 px-6"
               >
-                <div className="bg-black/80 backdrop-blur-xl border border-white/20 p-8 rounded-[3rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,0.8)] pointer-events-auto">
-                    <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 border-4 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-[0_0_30_rgba(225,29,72,0.4)]' : 'border-brand-blue bg-brand-blue/20 shadow-[0_0_30_rgba(37,99,235,0.4)]'}`}>
-                       <CheckCircle2 size={40} className="text-white" />
+                <div className="bg-black/90 backdrop-blur-2xl border border-white/20 p-8 md:p-12 rounded-[3.5rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] pointer-events-auto max-w-lg w-full">
+                    <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-8 border-4 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]' : 'border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]'}`}>
+                       <CheckCircle2 size={48} className="text-white" />
                     </div>
-                    <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-2">VOTE ENREGISTRÉ</p>
-                    <h3 className="text-4xl font-black italic tracking-tighter uppercase mb-2">
+                    <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-3">VOTE ENREGISTRÉ</p>
+                    <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase mb-2">
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
-                    <p className="text-xs text-white/30 font-bold uppercase tracking-widest mb-8">
-                       SÉLECTION BIEN TRANSMISE
+                    <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest mb-10 italic">
+                       SÉLECTION BIEN TRANSMISE AU SYSTÈME
                     </p>
                     
-                    <div className="flex flex-col gap-3 w-full mb-6">
+                    <div className="flex flex-col gap-4 w-full max-w-xs">
                        <button 
                          onClick={finalizeMatch}
-                         className="flex items-center justify-center gap-3 px-8 py-4 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group pointer-events-auto"
+                         className="flex items-center justify-center gap-3 px-10 py-6 bg-white text-black font-black italic uppercase text-sm tracking-widest hover:scale-105 active:scale-95 transition-all rounded-full group pointer-events-auto shadow-[0_10px_50px_rgba(255,255,255,0.4)]"
                        >
-                         <LogOut size={14} className="opacity-40" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Fermer la console</span>
+                         <LogOut size={18} className="text-black" />
+                         <span>VALIDER & FERMER</span>
                        </button>
-
-                       {currentMatch.votingMode === 'round' && (
-                         <button 
-                           onClick={confirmRound}
-                           className="flex items-center justify-center gap-3 px-8 py-4 bg-green-600 hover:bg-green-500 text-white border border-green-500/50 transition-all rounded-full group pointer-events-auto shadow-[0_10px_20px_rgba(22,163,74,0.3)]"
-                         >
-                           <SkipForward size={16} className="group-hover:translate-x-1 duration-300" />
-                           <span className="text-[11px] font-black uppercase tracking-widest">
-                             {currentMatch.currentRound < currentMatch.roundCount ? 'Passer au round suivant' : 'Terminer le match'}
-                           </span>
-                         </button>
-                       )}
-
-                       {currentMatch.votingMode === 'match' && totalCurrentVotes >= state.juryCount && (
-                         <div className="flex flex-col gap-3 w-full mb-2">
-                           <div className="py-4 px-8 bg-white/5 border border-white/10 rounded-full">
-                              <span className="text-[10px] font-black uppercase tracking-widest text-white/40 italic">Votes Terminés - Attente clôture...</span>
-                           </div>
-                           <button 
-                             onClick={() => setView('list')}
-                             className="flex items-center justify-center gap-3 px-8 py-3 bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-all rounded-full group"
-                           >
-                             <Users size={14} className="opacity-40 group-hover:scale-110 transition-transform" />
-                             <span className="text-[10px] font-black uppercase tracking-widest">Liste des battles</span>
-                           </button>
-                         </div>
-                       )}
-                    </div>
 
                        <button 
                          onClick={() => setIsChanging(true)}
-                         className="flex items-center justify-center gap-3 px-8 py-3 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group pointer-events-auto"
+                         className="flex items-center justify-center gap-3 px-8 py-3 text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
                        >
-                         <RotateCcw size={14} className="group-hover:rotate-180 duration-500" />
-                         <span className="text-[10px] font-black uppercase tracking-widest">Changer mon vote</span>
+                         Changer mon vote
                        </button>
                     </div>
+                </div>
               </motion.div>
             )}
 
