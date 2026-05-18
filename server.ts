@@ -23,6 +23,7 @@ interface Match {
   roundCount: number;
   currentRound: number;
   roundResults: { red: number; blue: number }[]; // Index matches round index (0-based)
+  finishedJuries: string[]; // List of juryIds who finalized this match
 }
 
 interface JuryAccount {
@@ -121,7 +122,8 @@ app.post("/api/admin/configure", (req, res) => {
     redVotes: 0,
     blueVotes: 0,
     winnerId: null,
-    status: 'pending'
+    status: 'pending',
+    finishedJuries: []
   }));
 
   tournamentState = {
@@ -197,6 +199,7 @@ app.post("/api/admin/select-match", (req, res) => {
 
     tournamentState.currentMatchId = matchId;
     match.status = 'active';
+    match.finishedJuries = [];
     tournamentState.juryVotes = {};
     res.json({ success: true, state: tournamentState });
   } else {
@@ -212,6 +215,7 @@ app.post("/api/admin/next-match", (req, res) => {
     if (next) {
       tournamentState.currentMatchId = next.id;
       next.status = 'active';
+      next.finishedJuries = [];
       tournamentState.juryVotes = {}; 
     } else {
       tournamentState.currentMatchId = null;
@@ -232,6 +236,20 @@ app.post("/api/jury/vote", (req, res) => {
   }
 
   res.json({ success: true, state: tournamentState });
+});
+
+app.post("/api/jury/finalize", (req, res) => {
+  const { juryId, matchId } = req.body;
+  const match = tournamentState.matches.find(m => m.id === matchId);
+  if (match) {
+    if (!match.finishedJuries) match.finishedJuries = [];
+    if (!match.finishedJuries.includes(juryId)) {
+      match.finishedJuries.push(juryId);
+    }
+    res.json({ success: true, state: tournamentState });
+  } else {
+    res.status(404).json({ error: "Match non trouvé" });
+  }
 });
 
 app.post("/api/admin/reset", (req, res) => {

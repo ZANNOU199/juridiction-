@@ -41,6 +41,7 @@ interface Match {
   roundCount: number;
   currentRound: number;
   roundResults: { red: number; blue: number }[];
+  finishedJuries: string[];
 }
 
 interface JuryAccount {
@@ -332,7 +333,8 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
         votingMode,
         roundCount: votingMode === 'round' ? roundCount : 1,
         currentRound: 1,
-        roundResults: []
+        roundResults: [],
+        finishedJuries: []
       };
       setMatches([...matches, m]);
       setNewMatchRound("");
@@ -837,6 +839,23 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
     }
   };
 
+  const finalizeMatch = async () => {
+    if (!state.currentMatchId) return;
+    try {
+      const res = await fetch('/api/jury/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ juryId, matchId: state.currentMatchId })
+      });
+      if (res.ok) {
+        setView('list');
+      }
+    } catch (e) {
+      console.warn("Server sync failed during finalizeMatch");
+      setView('list');
+    }
+  };
+
   const castVote = async (vote: 'red' | 'blue') => {
     const newVotes = { ...state.juryVotes, [juryId]: vote };
     const currentMatchRef = state.matches.find(m => m.id === state.currentMatchId);
@@ -1008,7 +1027,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                     
                     <div className="flex flex-col gap-3 w-full mb-6">
                        <button 
-                         onClick={() => setView('list')}
+                         onClick={finalizeMatch}
                          className="flex items-center justify-center gap-3 px-8 py-4 bg-white/10 hover:bg-white text-white hover:text-black border border-white/20 transition-all rounded-full group pointer-events-auto"
                        >
                          <LogOut size={14} className="opacity-40" />
@@ -1082,13 +1101,15 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const red = state.participants.find(p => p.id === m.redTeamId);
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
-                  const isFinished = m.status === 'finished';
+                  const isFinishedGlobal = m.status === 'finished';
+                  const isFinishedByMe = m.finishedJuries?.includes(juryId);
+                  const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
                     <div 
                       key={m.id}
                       className={`w-full group p-6 flex flex-col md:flex-row justify-between items-center gap-6 transition-all border 
-                        ${isActive ? 'bg-white/10 border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]' : 'bg-white/5 border-white/5'}
+                        ${isActive && !isFinishedByMe ? 'bg-white/10 border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]' : 'bg-white/5 border-white/5'}
                         ${isFinished ? 'opacity-30' : ''}
                       `}
                     >
@@ -1097,15 +1118,15 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                         <div className="flex flex-col">
                           <span className="text-[8px] font-black uppercase text-white/30 mb-1">{m.round}</span>
                           <div className="flex flex-1 items-center gap-4 text-xl italic font-black uppercase">
-                              <span className={isFinished && m.winnerId === m.redTeamId ? 'text-brand-red' : ''}>{red?.name}</span>
+                              <span className={isFinishedGlobal && m.winnerId === m.redTeamId ? 'text-brand-red' : ''}>{red?.name}</span>
                               <span className="text-white/10 text-[10px] not-italic font-bold">VS</span>
-                              <span className={isFinished && m.winnerId === m.blueTeamId ? 'text-brand-blue' : ''}>{blue?.name}</span>
+                              <span className={isFinishedGlobal && m.winnerId === m.blueTeamId ? 'text-brand-blue' : ''}>{blue?.name}</span>
                           </div>
                         </div>
                       </div>
                       
                       <div className="flex items-center gap-4 w-full md:w-auto">
-                         {isActive ? (
+                         {isActive && !isFinishedByMe ? (
                            <button 
                              onClick={() => setView('vote')}
                              className="w-full md:w-auto px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 transition-all flex items-center justify-center gap-2"
@@ -1299,14 +1320,7 @@ function PublicView({ state }: { state: TournamentState }) {
                       </div>
                     );
                   })
-                ) : (
-                  <div className="text-[10px] font-black italic opacity-20 uppercase tracking-[1em] mb-4 text-center">
-                    DECISION UNIQUE
-                  </div>
-                )}
-              </div>
-              <div className="text-[10px] font-black italic opacity-30 uppercase tracking-[1em] mt-4 mb-2 text-center w-full">
-                VOTES JURY ({totalCurrentVotes}/{state.juryCount})
+                ) : null}
               </div>
             </div>
 
