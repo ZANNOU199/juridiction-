@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, 
@@ -60,13 +61,6 @@ interface TournamentState {
   configured: boolean;
 }
 
-enum UserRole {
-  SELECT = 'select',
-  ADMIN = 'admin',
-  JURY = 'jury',
-  PUBLIC = 'public'
-}
-
 const DEFAULT_STATE: TournamentState = {
   competitionName: "ARENA CHAMPIONSHIP",
   competitionLogo: "",
@@ -84,108 +78,49 @@ const STORAGE_KEY = 'arena_tournament_state';
 // --- Main App ---
 
 export default function App() {
-  const [role, setRole] = useState<UserRole>(UserRole.SELECT);
-  const [juryId, setJuryId] = useState<string | null>(sessionStorage.getItem('juryId'));
   const [state, setState] = useState<TournamentState>(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved ? JSON.parse(saved) : DEFAULT_STATE;
   });
-  const [error, setError] = useState<string | null>(null);
 
   const saveStateLocal = (newState: TournamentState) => {
     setState(newState);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   };
 
-  useEffect(() => {
-    // Check URL parameters for direct view access
-    const params = new URLSearchParams(window.location.search);
-    const view = params.get('view');
-    if (view === 'admin') setRole(UserRole.ADMIN);
-    if (view === 'public') setRole(UserRole.PUBLIC);
-    if (view === 'jury' && juryId) setRole(UserRole.JURY);
-  }, [juryId]);
-
-  // Sync state with server
   const fetchState = async () => {
     try {
       const res = await fetch('/api/state');
       if (res.ok) {
         const data = await res.json();
         saveStateLocal(data);
-        setError(null);
       }
     } catch (err) {
       console.warn("Fetch failed, using local storage", err);
-      // We don't set error here because we are using localStorage for now
     }
   };
 
   useEffect(() => {
     fetchState();
-    const interval = setInterval(fetchState, 1000); // Poll every 1s
+    const interval = setInterval(fetchState, 1000);
     return () => clearInterval(interval);
   }, []);
 
-  // --- View Switcher ---
-
-  if (role === UserRole.SELECT) {
-    return <RoleSelection state={state} onSelect={(r, id) => { setRole(r); if (id) setJuryId(id); }} />;
-  }
-
-  if (role === UserRole.ADMIN) {
-    return <AdminView state={state} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
-  }
-
-  if (role === UserRole.JURY && juryId) {
-    return <JuryView state={state} juryId={juryId} onSave={saveStateLocal} onBack={() => setRole(UserRole.SELECT)} />;
-  }
-
-  if (role === UserRole.PUBLIC) {
-    return <PublicView state={state} onBack={() => setRole(UserRole.SELECT)} />;
-  }
-
-  return null;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PublicView state={state} />} />
+        <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
+        <Route path="/jury" element={<JuryGateway state={state} onSave={saveStateLocal} />} />
+        <Route path="/select" element={<RoleSelection state={state} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-// --- sub-components ---
-
-function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?: string) => void, state: TournamentState }) {
-  const [showJuryLogin, setShowJuryLogin] = useState(false);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [loginError, setLoginError] = useState("");
-
-  const handleJuryLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError("");
-
-    // Local Login first
-    const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
-    if (jury) {
-      sessionStorage.setItem('juryId', jury.id);
-      onSelect(UserRole.JURY, jury.id);
-      return;
-    }
-
-    try {
-      const res = await fetch('/api/jury/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (data.success) {
-        sessionStorage.setItem('juryId', data.juryId);
-        onSelect(UserRole.JURY, data.juryId);
-      } else {
-        setLoginError(data.error);
-      }
-    } catch (err) {
-      setLoginError("Identifiants incorrects (Mode Local)");
-    }
-  };
-
+function RoleSelection({ state }: { state: TournamentState }) {
+  const navigate = useNavigate();
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)]">
       <div className="text-center mb-16 px-4">
@@ -195,7 +130,7 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl">
         <button 
-          onClick={() => onSelect(UserRole.ADMIN)}
+          onClick={() => navigate('/admin')}
           className="group p-8 md:p-12 bg-white/5 border border-white/10 hover:border-white transition-all flex flex-col items-center gap-6"
         >
           <Settings className="w-12 h-12 md:w-16 md:h-16 text-white/40 group-hover:text-white transition-colors" />
@@ -205,57 +140,19 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
           </div>
         </button>
 
-        <div className="group p-8 md:p-12 bg-white/5 border border-white/10 flex flex-col items-center gap-6">
-          {!showJuryLogin ? (
-            <>
-              <Lock className="w-12 h-12 md:w-16 md:h-16 text-white/40 group-hover:text-white transition-colors" />
-              <div className="text-center mb-4">
-                <h2 className="text-xl md:text-2xl font-black italic">CONSOLES JURY</h2>
-                <button 
-                  onClick={() => setShowJuryLogin(true)}
-                  className="mt-6 px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 transition-all"
-                >
-                  Se Connecter
-                </button>
-              </div>
-            </>
-          ) : (
-            <form onSubmit={handleJuryLogin} className="w-full space-y-4">
-              <h2 className="text-xl font-black italic text-center mb-4">LOGIN JURY</h2>
-              <input 
-                type="text" 
-                placeholder="Username" 
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 px-4 py-2 font-black focus:border-white transition-all outline-none italic text-sm"
-              />
-              <input 
-                type="password" 
-                placeholder="Password" 
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="w-full bg-black/40 border border-white/10 px-4 py-2 font-black focus:border-white transition-all outline-none italic text-sm"
-              />
-              {loginError && <p className="text-brand-red text-[10px] font-bold uppercase text-center">{loginError}</p>}
-              <button 
-                type="submit"
-                className="w-full py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest"
-              >
-                Accéder
-              </button>
-              <button 
-                type="button"
-                onClick={() => setShowJuryLogin(false)}
-                className="w-full text-white/20 hover:text-white text-[9px] font-black uppercase tracking-widest"
-              >
-                Retour
-              </button>
-            </form>
-          )}
-        </div>
+        <button 
+          onClick={() => navigate('/jury')}
+          className="group p-8 md:p-12 bg-white/5 border border-white/10 hover:border-white transition-all flex flex-col items-center gap-6"
+        >
+          <Lock className="w-12 h-12 md:w-16 md:h-16 text-white/40 group-hover:text-white transition-colors" />
+          <div className="text-center">
+            <h2 className="text-xl md:text-2xl font-black italic">CONSOLES JURY</h2>
+            <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest mt-2 group-hover:text-white/40">Log in to vote</p>
+          </div>
+        </button>
 
         <button 
-          onClick={() => onSelect(UserRole.PUBLIC)}
+          onClick={() => navigate('/')}
           className="group p-8 md:p-12 bg-white/5 border border-white/10 hover:border-white transition-all flex flex-col items-center gap-6"
         >
           <Monitor className="w-12 h-12 md:w-16 md:h-16 text-white/40 group-hover:text-white transition-colors" />
@@ -269,7 +166,95 @@ function RoleSelection({ onSelect, state }: { onSelect: (role: UserRole, juryId?
   );
 }
 
-function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: (s: TournamentState) => void, onBack: () => void }) {
+function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: TournamentState) => void }) {
+  const [juryId, setJuryId] = useState<string | null>(sessionStorage.getItem('juryId'));
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const navigate = useNavigate();
+
+  const handleJuryLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+
+    const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
+    if (jury) {
+      sessionStorage.setItem('juryId', jury.id);
+      setJuryId(jury.id);
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/jury/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        sessionStorage.setItem('juryId', data.juryId);
+        setJuryId(data.juryId);
+      } else {
+        setLoginError(data.error);
+      }
+    } catch (err) {
+      setLoginError("Identifiants incorrects");
+    }
+  };
+
+  if (juryId) {
+    return <JuryView state={state} juryId={juryId} onSave={onSave} onLogout={() => { sessionStorage.removeItem('juryId'); setJuryId(null); }} />;
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark">
+      <div className="w-full max-w-sm bg-white/5 border border-white/10 p-8">
+        <form onSubmit={handleJuryLogin} className="w-full space-y-4">
+          <div className="text-center mb-8">
+            <h1 className="text-3xl font-black italic uppercase tracking-tighter mb-2">LOGIN JURY</h1>
+            <p className="text-[10px] font-black uppercase text-white/20 tracking-widest leading-loose">Veuillez entrer vos identifiants pour accéder à la console de vote</p>
+          </div>
+          <div className="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Nom d'utilisateur" 
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
+            />
+            <input 
+              type="password" 
+              placeholder="Mot de passe" 
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
+            />
+          </div>
+          
+          {loginError && <p className="text-brand-red text-[10px] font-bold uppercase text-center pt-2">{loginError}</p>}
+          
+          <button 
+            type="submit"
+            className="w-full py-4 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
+          >
+            Accéder au Vote
+          </button>
+          
+          <button 
+            type="button"
+            onClick={() => navigate('/')}
+            className="w-full text-white/20 hover:text-white text-[9px] font-black uppercase tracking-widest pt-4"
+          >
+            Retour à l'affichage
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: TournamentState) => void }) {
+  const navigate = useNavigate();
   const [competitionName, setCompetitionName] = useState(state.competitionName || "");
   const [competitionLogo, setCompetitionLogo] = useState(state.competitionLogo || "");
   const [participants, setParticipants] = useState<Participant[]>(state.participants || []);
@@ -453,7 +438,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
       <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-6xl mx-auto font-sans text-white">
         <header className="w-full flex justify-between items-center mb-12">
           <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">Configuration du Tournoi</h2>
-          <button onClick={onBack} className="text-white/40 hover:text-white"><LogOut /></button>
+          <button onClick={() => navigate('/select')} className="text-white/40 hover:text-white"><LogOut /></button>
         </header>
 
         <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
@@ -674,7 +659,7 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
                Live System
             </div>
           </div>
-          <button onClick={onBack} className="text-white/40 hover:text-white transition-colors"><LogOut /></button>
+          <button onClick={() => navigate('/select')} className="text-white/40 hover:text-white transition-colors"><LogOut /></button>
         </header>
 
         <div className="w-full max-w-6xl flex flex-col lg:grid lg:grid-cols-3 gap-8">
@@ -790,11 +775,12 @@ function AdminView({ state, onSave, onBack }: { state: TournamentState, onSave: 
   );
 }
 
-function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onBack: () => void }) {
+function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onLogout: () => void }) {
   const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
   const [isChanging, setIsChanging] = useState(false);
   const [showMatchList, setShowMatchList] = useState(false);
   const myVote = state.juryVotes[juryId];
+  const navigate = useNavigate();
 
   // Reset local state when round or match changes
   useEffect(() => {
@@ -901,6 +887,22 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
 
   return (
     <div className="fixed inset-0 flex flex-col bg-black overflow-hidden select-none font-sans text-white">
+      {/* Header for Jury Console */}
+      <header className="fixed top-4 left-4 right-4 flex justify-between items-center z-[100] pointer-events-none">
+        <div className="flex bg-black/40 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full pointer-events-auto">
+          <span className="text-[10px] font-black uppercase tracking-widest text-white italic">
+            CONSOLE JURY : <span className="text-white/60 ml-2">{state.juryAccounts.find(j => j.id === juryId)?.username}</span>
+          </span>
+        </div>
+        <button 
+          onClick={onLogout}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest rounded-full hover:scale-105 transition-all pointer-events-auto"
+        >
+          <LogOut size={12} />
+          SORTIE
+        </button>
+      </header>
+
       {/* Dynamic Palette */}
       <AnimatePresence mode="wait">
         {currentMatch && currentMatch.status === 'active' ? (
@@ -1100,7 +1102,7 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
            </div>
         </div>
         <button 
-          onClick={onBack}
+          onClick={onLogout}
           className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest"
         >
           QUITTER
@@ -1184,7 +1186,8 @@ function JuryView({ state, juryId, onSave, onBack }: { state: TournamentState, j
   );
 }
 
-function PublicView({ state, onBack }: { state: TournamentState, onBack: () => void }) {
+function PublicView({ state }: { state: TournamentState }) {
+  const navigate = useNavigate();
   const activeMatch = state.matches.find(m => m.id === state.currentMatchId);
   const redP = activeMatch ? state.participants.find(p => p.id === activeMatch.redTeamId) : null;
   const blueP = activeMatch ? state.participants.find(p => p.id === activeMatch.blueTeamId) : null;
@@ -1203,7 +1206,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
         </h1>
         <div className="w-16 h-16 border-2 border-white/5 border-t-white/40 rounded-full animate-spin mb-6" />
         <p className="text-white/10 font-bold uppercase tracking-[0.4em] text-[10px]">System Interlink Pending • Waiting for Active Battle</p>
-        <button onClick={onBack} className="mt-12 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all underline underline-offset-8">Hub System</button>
+        <button onClick={() => navigate('/select')} className="mt-12 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all underline underline-offset-8">Hub System</button>
       </div>
     );
   }
@@ -1241,7 +1244,7 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
           <div className="bg-white/10 border border-white/20 px-4 py-1 text-[11px] font-black italic uppercase tracking-widest text-white/80">
             {activeMatch.round}
           </div>
-          <button onClick={onBack} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
+          <button onClick={() => navigate('/select')} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
         </div>
         
         <div className="absolute left-1/2 -translate-x-1/2 text-center top-8">
@@ -1250,7 +1253,6 @@ function PublicView({ state, onBack }: { state: TournamentState, onBack: () => v
         </div>
 
         <div className="text-right">
-          <p className="text-[11px] font-black tracking-widest text-white/40 uppercase">CREW 5VS5 CATEGORY</p>
           <div className="h-[2px] w-full bg-gradient-to-l from-white/20 to-transparent mt-2" />
         </div>
       </header>
