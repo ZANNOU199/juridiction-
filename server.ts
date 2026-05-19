@@ -102,7 +102,13 @@ app.get("/api/state", (req, res) => {
 
 app.post("/api/jury/login", (req, res) => {
   const { username, password } = req.body;
-  const jury = tournamentState.juryAccounts.find(j => j.username === username && j.password === password);
+  const normalizedUser = (username || "").trim().toLowerCase();
+  const normalizedPass = (password || "").trim();
+
+  const jury = tournamentState.juryAccounts.find(j => 
+    j.username.trim().toLowerCase() === normalizedUser && 
+    j.password.trim() === normalizedPass
+  );
   if (jury) {
     res.json({ success: true, juryId: jury.id });
   } else {

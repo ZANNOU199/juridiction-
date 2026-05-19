@@ -199,7 +199,13 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
     e.preventDefault();
     setLoginError("");
 
-    const jury = state.juryAccounts.find(j => j.username === username && j.password === password);
+    const normalizedUser = username.trim().toLowerCase();
+    const normalizedPass = password.trim();
+
+    const jury = state.juryAccounts.find(j => 
+      j.username.trim().toLowerCase() === normalizedUser && 
+      j.password.trim() === normalizedPass
+    );
     if (jury) {
       sessionStorage.setItem('juryId', jury.id);
       setJuryId(jury.id);
@@ -210,7 +216,7 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
       const res = await fetch('/api/jury/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password })
+        body: JSON.stringify({ username: username.trim(), password: password.trim() })
       });
       const data = await res.json();
       if (data.success) {
@@ -270,7 +276,7 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
             <button 
               type="submit"
               className="w-full py-4 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-              disabled={!username || !password}
+              disabled={!username}
             >
               Accéder au Vote
             </button>
@@ -282,6 +288,27 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
             >
               Retour à l'affichage
             </button>
+
+            {state?.juryAccounts && state.juryAccounts.length > 0 && (
+              <div className="pt-4 mt-4 border-t border-white/5 space-y-2">
+                <p className="text-[8px] font-black uppercase text-white/30 tracking-widest text-center">Raccourcis de connexion (Clic pour remplir)</p>
+                <div className="flex flex-wrap gap-1 justify-center">
+                  {state.juryAccounts.map((j) => (
+                    <button
+                      key={j.id}
+                      type="button"
+                      onClick={() => {
+                        setUsername(j.username);
+                        setPassword(j.password || "");
+                      }}
+                      className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-sm text-[8px] font-mono tracking-tight transition-all uppercase border border-white/5 hover:border-white/10"
+                    >
+                      {j.username}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </form>
         )}
       </div>
