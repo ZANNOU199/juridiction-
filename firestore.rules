@@ -1,0 +1,108 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- Primitives ---
+    
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isEmailVerified() {
+      return request.auth.token.email_verified == true;
+    }
+    
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() {
+      return request.resource.data;
+    }
+    
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Helpers ---
+
+    function isValidCompetition(data) {
+      return data.keys().hasAll(['name', 'juryCount', 'configured']) &&
+             data.name is string && data.name.size() <= 100 &&
+             data.juryCount is number && data.juryCount >= 1 &&
+             data.configured is bool;
+    }
+
+    function isValidParticipant(data) {
+      return data.keys().hasAll(['name']) &&
+             data.name is string && data.name.size() <= 100;
+    }
+
+    function isValidMatch(data) {
+      return data.keys().hasAll(['redTeamId', 'blueTeamId', 'status', 'order']) &&
+             data.redTeamId is string && data.blueTeamId is string &&
+             data.status in ['pending', 'active', 'finished'] &&
+             data.order is number;
+    }
+
+    function isValidVote(data) {
+      return data.keys().hasAll(['juryId', 'matchId', 'vote']) &&
+             data.juryId == request.auth.uid &&
+             data.vote in ['red', 'blue'];
+    }
+
+    // --- Routes ---
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /admins/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow write: if false; // Only manageable via console
+    }
+
+    match /settings/competition {
+      allow read: if true;
+      allow write: if isAdmin() && isValidCompetition(incoming());
+    }
+
+    match /participants/{participantId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidParticipant(incoming());
+    }
+
+    match /matches/{matchId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidMatch(incoming());
+      allow update: if (
+        (isAdmin() && isValidMatch(incoming())) ||
+        (isSignedIn() && 
+         // Action: Finalize (Jury adding themselves to finishedJuries)
+         incoming().diff(existing()).affectedKeys().hasOnly(['finishedJuries']) &&
+         incoming().finishedJuries.size() > existing().finishedJuries.size() &&
+         request.auth.uid in incoming().finishedJuries
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /matches/{matchId}/votes/{voteId} {
+      allow read: if true;
+      allow create: if isSignedIn() && 
+                      isValidVote(incoming()) && 
+                      get(/databases/$(database)/documents/matches/$(matchId)).data.status == 'active' &&
+                      voteId == request.auth.uid;
+      allow update: if isSignedIn() && 
+                      isValidVote(incoming()) && 
+                      get(/databases/$(database)/documents/matches/$(matchId)).data.status == 'active' &&
+                      voteId == request.auth.uid &&
+                      incoming().diff(existing()).affectedKeys().hasOnly(['vote', 'timestamp']);
+      allow delete: if isAdmin();
+    }
+  }
+}
