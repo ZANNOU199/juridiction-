@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Shield, 
@@ -7,7 +7,7 @@ import {
   Trophy, 
   CheckCircle2, 
   LogOut, 
-  Vote as VoteIcon, 
+  Vote, 
   Users, 
   Settings,
   Monitor,
@@ -18,22 +18,6 @@ import {
   SkipForward,
   RotateCcw
 } from 'lucide-react';
-import { auth } from './lib/firebase';
-import { onAuthStateChanged, signInAnonymously } from 'firebase/auth';
-import { 
-  subscribeToSettings, 
-  subscribeToMatches, 
-  subscribeToParticipants,
-  testConnection,
-  subscribeToVotes,
-  updateCompetitionSettings,
-  updateParticipants,
-  updateMatches,
-  updateMatchStatus,
-  deleteVotesForMatch,
-  castVote as firestoreCastVote,
-  finalizeMatchByJury as firestoreFinalizeMatch
-} from './services/firebaseService';
 
 // --- Types ---
 
@@ -90,67 +74,45 @@ const DEFAULT_STATE: TournamentState = {
   configured: false
 };
 
+const STORAGE_KEY = 'arena_tournament_state';
+
 // --- Main App ---
 
 export default function App() {
-  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<TournamentState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_STATE;
+  });
 
-  useEffect(() => {
-    testConnection();
-    
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      if (!u) {
-        signInAnonymously(auth).catch(console.error);
+  const saveStateLocal = (newState: TournamentState) => {
+    setState(newState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
+  };
+
+  const fetchState = async () => {
+    try {
+      const res = await fetch('/api/state');
+      if (res.ok) {
+        const data = await res.json();
+        saveStateLocal(data);
       }
-      setLoading(false);
-    });
-
-    const unsubSettings = subscribeToSettings((data) => {
-      setState(prev => ({ ...prev, ...data }));
-    });
-
-    const unsubParticipants = subscribeToParticipants((data) => {
-      setState(prev => ({ ...prev, participants: data }));
-    });
-
-    const unsubMatches = subscribeToMatches((data) => {
-      setState(prev => ({ ...prev, matches: data }));
-    });
-
-    return () => {
-      unsubscribeAuth();
-      unsubSettings();
-      unsubParticipants();
-      unsubMatches();
-    };
-  }, []);
-
-  // Sync juryVotes separately for the active match
-  useEffect(() => {
-    if (state.currentMatchId) {
-      const unsubVotes = subscribeToVotes(state.currentMatchId, (votes) => {
-        setState(prev => ({ ...prev, juryVotes: votes as any }));
-      });
-      return () => unsubVotes();
+    } catch (err) {
+      console.warn("Fetch failed, using local storage", err);
     }
-  }, [state.currentMatchId]);
+  };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center font-black p-6 text-center">
-        <div className="animate-spin w-16 h-16 border-4 border-white/10 border-t-white rounded-full mb-8" />
-        <h2 className="text-2xl italic tracking-tighter opacity-50 uppercase mb-4 text-white">Initialisation...</h2>
-      </div>
-    );
-  }
+  useEffect(() => {
+    fetchState();
+    const interval = setInterval(fetchState, 1000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
-        <Route path="/admin" element={<AdminView state={state} onSave={setState} />} />
-        <Route path="/jury" element={<JuryGateway state={state} onSave={setState} />} />
+        <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
+        <Route path="/jury" element={<JuryGateway state={state} onSave={saveStateLocal} />} />
         <Route path="/select" element={<RoleSelection state={state} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
@@ -223,7 +185,22 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
       return;
     }
 
-    setLoginError("Identifiants incorrects");
+    try {
+      const res = await fetch('/api/jury/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+      const data = await res.json();
+      if (data.success) {
+        sessionStorage.setItem('juryId', data.juryId);
+        setJuryId(data.juryId);
+      } else {
+        setLoginError(data.error);
+      }
+    } catch (err) {
+      setLoginError("Identifiants incorrects");
+    }
   };
 
   if (juryId) {
@@ -369,105 +346,91 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const removeMatch = (id: string) => { setMatches(matches.filter(m => m.id !== id)); };
 
   const configure = async () => {
-    const processedMatches = matches.map((m, i) => ({
-      ...m,
-      status: i === 0 ? 'active' : 'pending',
-      order: i
-    }));
-
-    const settings = {
+    const newState: TournamentState = {
+      ...state,
       competitionName,
       competitionLogo,
+      participants,
+      juryAccounts,
       juryCount: juryAccounts.length,
-      currentMatchId: processedMatches.length > 0 ? processedMatches[0].id : null,
+      currentMatchId: matches.length > 0 ? matches[0].id : null,
+      matches: matches.map((m, i) => i === 0 ? { ...m, status: 'active' } : m),
       configured: true,
-      juryAccounts // Storing jury info in settings for simplified login
+      juryVotes: {}
     };
+    onSave(newState);
 
     try {
-      await updateCompetitionSettings(settings);
-      await updateParticipants(participants);
-      await updateMatches(processedMatches);
+      await fetch('/api/admin/configure', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches })
+      });
     } catch (e) {
-      console.error("Configuration failed", e);
+      console.warn("Server sync failed during configure");
     }
   };
 
   const nextMatch = async () => {
     const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
     if (activeIdx !== -1) {
-      const currentId = state.matches[activeIdx].id;
-      await updateMatchStatus(currentId, 'finished');
+      const newMatches = [...state.matches];
+      newMatches[activeIdx] = { ...newMatches[activeIdx], status: 'finished' };
       
-      const next = state.matches.find((m, i) => i > activeIdx && m.status === 'pending');
-      if (next) {
-        await updateMatchStatus(next.id, 'active');
-        await updateCompetitionSettings({ ...state, currentMatchId: next.id });
-      } else {
-        await updateCompetitionSettings({ ...state, currentMatchId: null });
+      const nextIdx = newMatches.findIndex((m, i) => i > activeIdx && m.status === 'pending');
+      let nextId = null;
+      if (nextIdx !== -1) {
+        newMatches[nextIdx] = { ...newMatches[nextIdx], status: 'active' };
+        nextId = newMatches[nextIdx].id;
       }
+
+      const newState: TournamentState = {
+        ...state,
+        matches: newMatches,
+        currentMatchId: nextId,
+        juryVotes: {}
+      };
+      onSave(newState);
+    }
+
+    try {
+      await fetch('/api/admin/next-match', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during nextMatch");
     }
   };
 
   const confirmRound = async () => {
-    const match = state.matches.find(m => m.id === state.currentMatchId);
-    if (!match || match.status !== 'active') return;
-
-    const voteList = Object.values(state.juryVotes).filter(v => v !== null && v !== undefined);
-    if (voteList.length < state.juryCount) return;
-
-    const redCount = voteList.filter(v => v === 'red').length;
-    const blueCount = voteList.filter(v => v === 'blue').length;
-
-    if (match.votingMode === 'round') {
-      const newRoundResults = [...(match.roundResults || [])];
-      newRoundResults[match.currentRound - 1] = { red: redCount, blue: blueCount };
-
-      let nextRedVotes = match.redVotes;
-      let nextBlueVotes = match.blueVotes;
-      if (redCount > blueCount) nextRedVotes += 1;
-      else if (blueCount > redCount) nextBlueVotes += 1;
-
-      if (match.currentRound < match.roundCount) {
-        await updateMatchStatus(match.id, 'active', {
-          currentRound: match.currentRound + 1,
-          roundResults: newRoundResults,
-          redVotes: nextRedVotes,
-          blueVotes: nextBlueVotes
-        });
-        await deleteVotesForMatch(match.id);
-      } else {
-        // Final round
-        let winnerId = null;
-        if (nextRedVotes > nextBlueVotes) winnerId = match.redTeamId;
-        else if (nextBlueVotes > nextRedVotes) winnerId = match.blueTeamId;
-
-        await updateMatchStatus(match.id, 'finished', {
-          roundResults: newRoundResults,
-          redVotes: nextRedVotes,
-          blueVotes: nextBlueVotes,
-          winnerId
-        });
-        await updateCompetitionSettings({ ...state, currentMatchId: null });
+    try {
+      const res = await fetch('/api/admin/confirm-round', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
       }
+    } catch (e) {
+      console.warn("Server sync failed during confirmRound");
     }
   };
 
   const selectMatch = async (matchId: string) => {
-    const match = state.matches.find(m => m.id === matchId);
-    if (match) {
-      if (state.currentMatchId) {
-        await updateMatchStatus(state.currentMatchId, 'finished');
-      }
-      await updateMatchStatus(matchId, 'active', { finishedJuries: [] });
-      await deleteVotesForMatch(matchId);
-      await updateCompetitionSettings({ ...state, currentMatchId: matchId });
+    try {
+      await fetch('/api/admin/select-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId })
+      });
+    } catch (e) {
+      console.warn("Server sync failed during selectMatch");
     }
   };
 
   const reset = async () => {
-    // This is more complex with Firebase, but let's just clear configuration
-    await updateCompetitionSettings(DEFAULT_STATE);
+    onSave(DEFAULT_STATE);
+    try {
+      await fetch('/api/admin/reset', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during reset");
+    }
   };
 
   const activeMatch = state.matches.find(m => m.id === state.currentMatchId);
@@ -861,10 +824,21 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   };
 
   const selectMatch = async (matchId: string) => {
+    const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (localFinished.includes(matchId)) return;
+
     try {
-      setView('vote');
+      const res = await fetch('/api/admin/select-match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId })
+      });
+      if (res.ok) {
+        // setShowMatchList(false);
+        setView('vote');
+      }
     } catch (e) {
-      console.warn("View change failed", e);
+      console.warn("Server sync failed during selectMatch");
     }
   };
 
@@ -875,23 +849,70 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
       return;
     }
     
+    // Optimistic UI update: local storage and state
+    const juryFinishedMatches = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (!juryFinishedMatches.includes(cid)) {
+      juryFinishedMatches.push(cid);
+      localStorage.setItem(`finished_${juryId}`, JSON.stringify(juryFinishedMatches));
+    }
+    
     setView('list'); 
     
     try {
-      await firestoreFinalizeMatch(cid, juryId, currentMatch?.finishedJuries || []);
+      const res = await fetch('/api/jury/finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ juryId, matchId: cid })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
     } catch (e) {
-      console.error("Finalization failed", e);
+      console.warn("Server sync failed during finalizeMatch");
     }
   };
 
   const castVote = async (vote: 'red' | 'blue') => {
-    if (!state.currentMatchId) return;
+    const newVotes = { ...state.juryVotes, [juryId]: vote };
+    const currentMatchRef = state.matches.find(m => m.id === state.currentMatchId);
     
-    try {
-      await firestoreCastVote(state.currentMatchId, juryId, vote);
+    if (currentMatchRef) {
+      const redVotes = Object.values(newVotes).filter(v => v === 'red').length;
+      const blueVotes = Object.values(newVotes).filter(v => v === 'blue').length;
+      const totalVotes = redVotes + blueVotes;
+      
+      const newMatches = state.matches.map(m => {
+        if (m.id === state.currentMatchId) {
+          const allVoted = totalVotes >= state.juryCount;
+          return {
+            ...m,
+            redVotes: m.votingMode === 'match' ? redVotes : m.redVotes,
+            blueVotes: m.votingMode === 'match' ? blueVotes : m.blueVotes,
+            allVotesCastAt: allVoted ? Date.now() : undefined,
+            winnerId: allVoted && m.votingMode === 'match' ? (redVotes > blueVotes ? m.redTeamId : m.blueTeamId) : m.winnerId
+          };
+        }
+        return m;
+      });
+
+      const newState: TournamentState = {
+        ...state,
+        juryVotes: newVotes,
+        matches: newMatches
+      };
+      onSave(newState);
       setIsChanging(false);
+    }
+
+    try {
+      await fetch('/api/jury/vote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ juryId, vote })
+      });
     } catch (err) {
-      console.error("Vote failed", err);
+      console.warn("Server sync failed during vote");
     }
   };
 
@@ -1078,7 +1099,8 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
                   const isFinishedGlobal = m.status === 'finished';
-                  const isFinishedByMe = m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId);
+                  const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+                  const isFinishedByMe = (m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId)) || localFinished.includes(m.id);
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
