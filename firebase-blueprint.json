@@ -8,6 +8,7 @@
         "name": { "type": "string" },
         "logo": { "type": "string" },
         "juryCount": { "type": "number" },
+        "juryAccounts": { "type": "array" },
         "currentMatchId": { "type": "string" },
         "configured": { "type": "boolean" }
       },

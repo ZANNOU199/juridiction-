@@ -32,8 +32,8 @@ service cloud.firestore {
 
     function isValidCompetition(data) {
       return data.keys().hasAll(['name', 'juryCount', 'configured']) &&
-             data.name is string && data.name.size() <= 100 &&
-             data.juryCount is number && data.juryCount >= 1 &&
+             data.name is string &&
+             data.juryCount is number &&
              data.configured is bool;
     }
 
