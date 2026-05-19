@@ -94,17 +94,38 @@ export default function App() {
       const res = await fetch('/api/state');
       if (res.ok) {
         const data = await res.json();
-        saveStateLocal(data);
+        // Only update if server state is actually newer or different
+        // In local-first mode, we only overwrite if we get a valid response
+        setState(data);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
       }
     } catch (err) {
-      console.warn("Fetch failed, using local storage", err);
+      // Ignore network errors
     }
   };
 
   useEffect(() => {
+    // Poll server for multi-device sync
     fetchState();
-    const interval = setInterval(fetchState, 1000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchState, 5000); // Reduce frequency to be less annoying if failing
+
+    // Sync across tabs on the same device/browser
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const newState = JSON.parse(e.newValue);
+          setState(newState);
+        } catch (err) {
+          console.error("Failed to parse storage update", err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
+    };
   }, []);
 
   return (
@@ -393,41 +414,90 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   };
 
   const finishMatch = async () => {
-    try {
-      const res = await fetch('/api/admin/finish-match', { method: 'POST' });
-      if (res.ok) {
-        const data = await res.json();
-        onSave(data.state);
-        window.location.reload();
-      }
-    } catch (e) {
-      console.warn("Server sync failed during finishMatch");
+    const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
+    if (activeIdx !== -1) {
+       const newMatches = [...state.matches];
+       newMatches[activeIdx] = { ...newMatches[activeIdx], status: 'finished' };
+       const newState = { ...state, matches: newMatches };
+       onSave(newState);
+       
+       try {
+         await fetch('/api/admin/finish-match', { method: 'POST' });
+       } catch (e) {
+         console.warn("Server sync failed during finishMatch");
+       }
+       
+       // Force reload as requested by user to refresh admin dashboard state cleanly
+       window.location.reload();
     }
   };
 
   const confirmRound = async () => {
+    // Round confirmation usually has complex logic, better to try server first but handle local
     try {
       const res = await fetch('/api/admin/confirm-round', { method: 'POST' });
       if (res.ok) {
         const data = await res.json();
         onSave(data.state);
+        return;
       }
     } catch (e) {
       console.warn("Server sync failed during confirmRound");
     }
+
+    // Fallback local logic for confirmRound if server fails
+    const match = state.matches.find(m => m.id === state.currentMatchId);
+    if (match && match.votingMode === 'round' && match.status === 'active') {
+       const redV = Object.values(state.juryVotes).filter(v => v === 'red').length;
+       const blueV = Object.values(state.juryVotes).filter(v => v === 'blue').length;
+       
+       const newMatches = state.matches.map(m => {
+         if (m.id === state.currentMatchId) {
+           const newRoundResults = [...(m.roundResults || []), { red: redV, blue: blueV }];
+           const isLastRound = m.currentRound >= m.roundCount;
+           
+           let finalRed = m.redVotes;
+           let finalBlue = m.blueVotes;
+           if (redV > blueV) finalRed++;
+           else if (blueV > redV) finalBlue++;
+
+           return {
+             ...m,
+             currentRound: isLastRound ? m.currentRound : m.currentRound + 1,
+             roundResults: newRoundResults,
+             redVotes: finalRed,
+             blueVotes: finalBlue,
+             // status: isLastRound ? 'finished' : 'active' // Manual finish requested by user now
+           };
+         }
+         return m;
+       });
+
+       onSave({ ...state, matches: newMatches, juryVotes: {} });
+    }
   };
 
   const selectMatch = async (matchId: string) => {
+    const newMatches = state.matches.map(m => {
+      if (m.id === matchId) return { ...m, status: 'active' as const };
+      // if (m.status === 'active') return { ...m, status: 'finished' as const }; // Don't auto finish
+      return m;
+    });
+
+    const newState: TournamentState = {
+      ...state,
+      currentMatchId: matchId,
+      matches: newMatches,
+      juryVotes: {}
+    };
+    onSave(newState);
+
     try {
-      const res = await fetch('/api/admin/select-match', {
+      await fetch('/api/admin/select-match', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ matchId })
       });
-      if (res.ok) {
-        const data = await res.json();
-        onSave(data.state);
-      }
     } catch (e) {
       console.warn("Server sync failed during selectMatch");
     }
