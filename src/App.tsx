@@ -1334,9 +1334,8 @@ function PublicView({ state }: { state: TournamentState }) {
           <button onClick={() => navigate('/select')} className="px-3 py-1 bg-white/5 border border-white/10 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/10 transition-all text-left">HUB SYSTEM</button>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-3 md:top-8 w-full max-w-[60%] pointer-events-none flex flex-col items-center">
-          <p className="text-[7px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-0.5 md:mb-1">PRESENTED BY</p>
-          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-3">{state.competitionName}</h1>
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-6 md:top-14 w-full max-w-[60%] pointer-events-none flex flex-col items-center">
+          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate mb-3 md:mb-8">{state.competitionName}</h1>
           <div className="text-sm md:text-3xl font-black italic uppercase tracking-wider text-brand-red bg-brand-red/10 border border-brand-red/30 py-1 md:py-2 px-4 md:px-6 inline-block">
             {activeMatch.round}
           </div>
