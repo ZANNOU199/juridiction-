@@ -426,9 +426,6 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
        } catch (e) {
          console.warn("Server sync failed during finishMatch");
        }
-       
-       // Force reload as requested by user to refresh admin dashboard state cleanly
-       window.location.reload();
     }
   };
 
