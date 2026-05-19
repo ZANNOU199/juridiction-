@@ -16,34 +16,8 @@ import {
   Trash2,
   Play,
   SkipForward,
-  RotateCcw,
-  Smartphone,
-  RefreshCw
+  RotateCcw
 } from 'lucide-react';
-
-// --- Components ---
-
-function OrientationWarning() {
-  return (
-    <div className="orientation-warning">
-      <motion.div
-        animate={{ rotate: 90 }}
-        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        className="mb-8"
-      >
-        <Smartphone size={64} className="text-white/20" />
-      </motion.div>
-      <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-4 text-white">MODE PAYSAGE REQUIS</h2>
-      <p className="text-white/40 text-[10px] font-black uppercase tracking-widest leading-loose max-w-[200px]">
-        Veuillez faire pivoter votre appareil pour utiliser la console de vote.
-      </p>
-      <div className="mt-8 flex items-center gap-2 text-white/20">
-        <RefreshCw size={14} className="animate-spin" />
-        <span className="text-[8px] font-black uppercase tracking-widest">Attente de rotation...</span>
-      </div>
-    </div>
-  );
-}
 
 // --- Types ---
 
@@ -131,23 +105,35 @@ export default function App() {
     fetchState();
     const interval = setInterval(fetchState, 1000);
 
-    // Attempt to lock orientation to landscape (works better on some mobile browsers if installed as PWA)
-    try {
-      if (screen.orientation && (screen.orientation as any).lock) {
-        (screen.orientation as any).lock('landscape').catch(() => {
-          // Silent fail - usually needs full screen or PWA
-        });
+    const lockOrientation = async () => {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          // Fullscreen often required for orientation lock
+          // await document.documentElement.requestFullscreen();
+        }
+        if (screen.orientation && (screen.orientation as any).lock) {
+          await (screen.orientation as any).lock('landscape');
+        }
+      } catch (e) {
+        // Silent fail - needs user gesture or PWA
       }
-    } catch (e) {
-      // Ignore errors
-    }
+    };
 
-    return () => clearInterval(interval);
+    // Add a one-time click listener to try and lock orientation
+    const handleFirstClick = () => {
+      lockOrientation();
+      window.removeEventListener('click', handleFirstClick);
+    };
+    window.addEventListener('click', handleFirstClick);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('click', handleFirstClick);
+    };
   }, []);
 
   return (
     <BrowserRouter>
-      <OrientationWarning />
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
         <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />

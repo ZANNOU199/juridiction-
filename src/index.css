@@ -31,10 +31,22 @@
   animation: shimmer 2s linear infinite;
 }
 
-/* Force Landscape Warning */
+/* Force Landscape via Rotation Hack */
 @media screen and (max-width: 1024px) and (orientation: portrait) {
+  #root {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+    transform-origin: center;
+    overflow: hidden;
+  }
+
+  /* Hide the rotation warning since we are forcing it now */
   .orientation-warning {
-    display: flex !important;
+    display: none !important;
   }
 }
 
