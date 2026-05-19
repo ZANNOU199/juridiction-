@@ -960,7 +960,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`flex-1 flex flex-col sm:flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-2 sm:p-4 gap-2 sm:gap-4' : ''}`}
+            className={`flex-1 flex flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-2 sm:p-4 gap-2 sm:gap-4' : ''}`}
           >
             <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-50 pointer-events-none">
                <h3 className="text-[8px] sm:text-[10px] font-black tracking-[0.5em] text-white/40 uppercase">
@@ -983,23 +983,23 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none relative overflow-hidden group
                 ${isChanging && myVote === 'red' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]' : ''}
-                ${myVote && !isChanging ? (myVote === 'red' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-8 active:scale-95 active:brightness-90'}
+                ${myVote && !isChanging ? (myVote === 'red' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-4 active:scale-95 active:brightness-90'}
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
               {redP?.photo && (
-                <div className={`absolute inset-0 flex items-center justify-center p-4 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
-                  <div className={`w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
+                <div className={`absolute inset-0 flex items-center justify-center p-2 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
+                  <div className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
                     <img src={redP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
-                <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{redP?.name}</h2>
-                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl short-screen-text-sm">
-                  {myVote === 'red' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE')}
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-4 py-3 sm:px-6 sm:py-4'}`}>
+                <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md`}>{redP?.name}</h2>
+                <div className="px-3 py-1 bg-white text-black font-black italic uppercase text-[8px] sm:text-[10px] tracking-widest shadow-xl short-screen-text-sm">
+                  {myVote === 'red' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'ROUGE')}
                 </div>
               </div>
             </button>
@@ -1010,23 +1010,23 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
                 ${isChanging && myVote === 'blue' ? 'ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]' : ''}
-                ${myVote && !isChanging ? (myVote === 'blue' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-8 active:scale-95 active:brightness-90 border-t-2 sm:border-t-0 sm:border-l-2'}
+                ${myVote && !isChanging ? (myVote === 'blue' ? 'opacity-100 rounded-3xl' : 'opacity-20 scale-90 rounded-3xl') : 'p-4 active:scale-95 active:brightness-90 border-l-2'}
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
               {blueP?.photo && (
-                <div className={`absolute inset-0 flex items-center justify-center p-4 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
-                  <div className={`w-full h-full max-w-[75%] max-h-[75%] rounded-[2rem] overflow-hidden border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
+                <div className={`absolute inset-0 flex items-center justify-center p-2 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
+                  <div className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
                     <img src={blueP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
-                <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{blueP?.name}</h2>
-                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl short-screen-text-sm">
-                   {myVote === 'blue' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU')}
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-4 py-3 sm:px-6 sm:py-4'}`}>
+                <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md`}>{blueP?.name}</h2>
+                <div className="px-3 py-1 bg-white text-black font-black italic uppercase text-[8px] sm:text-[10px] tracking-widest shadow-xl short-screen-text-sm">
+                   {myVote === 'blue' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'BLEU')}
                 </div>
               </div>
             </button>
@@ -1225,67 +1225,69 @@ function PublicView({ state }: { state: TournamentState }) {
       </div>
 
       {/* Header Bar */}
-      <header className="px-6 md:px-12 py-4 md:py-8 flex justify-between items-start z-10">
-        <div className="flex flex-col gap-2">
-          <div className="bg-white/10 border border-white/20 px-4 py-1 text-[9px] md:text-[11px] font-black italic uppercase tracking-widest text-white/80">
+      <header className="px-4 md:px-12 py-3 md:py-8 flex justify-between items-start z-20">
+        <div className="flex flex-col gap-1 md:gap-2">
+          <div className="bg-white/10 border border-white/20 px-3 py-1 text-[8px] md:text-[11px] font-black italic uppercase tracking-widest text-white/80">
             {activeMatch.round}
           </div>
-          <button onClick={() => navigate('/select')} className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
+          <button onClick={() => navigate('/select')} className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">HUB</button>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-4 md:top-8 w-full px-4 pointer-events-none">
-          <p className="text-[8px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-1 md:mb-2">INSTAX PRESENTED BY</p>
-          <h1 className="text-2xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate">{state.competitionName}</h1>
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-3 md:top-8 w-full max-w-[50%] pointer-events-none">
+          <p className="text-[7px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-0.5 md:mb-2">PRESENTED BY</p>
+          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate">{state.competitionName}</h1>
         </div>
 
         <div className="text-right">
-          <div className="h-[2px] w-full bg-gradient-to-l from-white/20 to-transparent mt-2" />
+          <div className="h-[20px] md:h-auto flex items-center">
+            <div className={`w-2 h-2 rounded-full ${activeMatch.status === 'active' ? 'bg-red-600 animate-pulse' : 'bg-white/20'}`} />
+          </div>
         </div>
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-12 z-10 -mt-8 md:-mt-16 overflow-y-auto">
-        <div className="w-full max-w-7xl flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-12 relative py-8">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-12 z-10 -mt-2 md:-mt-16 overflow-y-auto">
+        <div className="w-full max-w-7xl flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] items-center gap-4 md:gap-12 relative py-4 md:py-8">
           
           {/* Red Side */}
-          <div className="space-y-4 md:space-y-8 w-full lg:w-auto">
-            <div className="flex justify-center lg:justify-end gap-4 md:gap-8 items-end">
-              <div className="w-40 h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+          <div className="space-y-3 md:space-y-8 w-full lg:w-auto">
+            <div className="flex justify-center lg:justify-end gap-3 md:gap-8 items-end">
+              <div className="w-32 h-24 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-1 md:p-2 relative group overflow-hidden">
                 {redP?.photo ? (
                   <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  <span className="text-[8px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
-              <div className="w-32 h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-6xl md:text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20 uppercase">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-5xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b-4 md:border-b-8 border-black/20 uppercase">
                 {redScore}
               </div>
             </div>
-            <div className="bg-brand-red font-black italic text-2xl md:text-4xl px-6 md:px-10 py-4 md:py-6 flex items-center justify-center lg:justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
+            <div className="bg-brand-red font-black italic text-xl sm:text-2xl md:text-4xl px-4 md:px-10 py-3 md:py-6 flex items-center justify-center lg:justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
               <span className="truncate uppercase tracking-tighter">{redP?.name || "???"}</span>
             </div>
           </div>
 
           {/* VS Divider */}
-          <div className="text-4xl md:text-6xl font-black italic text-white/5 px-4 pt-4 lg:pt-24 select-none">VS</div>
+          <div className="text-2xl md:text-6xl font-black italic text-white/5 px-4 pt-2 lg:pt-24 select-none">VS</div>
 
           {/* Blue Side */}
-          <div className="space-y-4 md:space-y-8 w-full lg:w-auto">
-            <div className="flex flex-row-reverse lg:flex-row justify-center lg:justify-start gap-4 md:gap-8 items-end">
-              <div className="w-32 h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-6xl md:text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20 uppercase">
+          <div className="space-y-3 md:space-y-8 w-full lg:w-auto">
+            <div className="flex flex-row-reverse lg:flex-row justify-center lg:justify-start gap-3 md:gap-8 items-end">
+              <div className="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-5xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b-4 md:border-b-8 border-black/20 uppercase">
                 {blueScore}
               </div>
-              <div className="w-40 h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+              <div className="w-32 h-24 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-1 md:p-2 relative group overflow-hidden">
                 {blueP?.photo ? (
                   <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  <span className="text-[8px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
             </div>
-            <div className="bg-brand-blue font-black italic text-2xl md:text-4xl px-6 md:px-10 py-4 md:py-6 flex items-center justify-center lg:justify-end border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
+            <div className="bg-brand-blue font-black italic text-xl sm:text-2xl md:text-4xl px-4 md:px-10 py-3 md:py-6 flex items-center justify-center lg:justify-end border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
               <span className="truncate uppercase tracking-tighter">{blueP?.name || "???"}</span>
             </div>
           </div>
