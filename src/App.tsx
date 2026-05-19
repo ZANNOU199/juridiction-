@@ -210,45 +210,59 @@ function JuryGateway({ state, onSave }: { state: TournamentState, onSave: (s: To
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark">
       <div className="w-full max-w-sm bg-white/5 border border-white/10 p-8">
-        <form onSubmit={handleJuryLogin} className="w-full space-y-4">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-black italic uppercase tracking-tighter mb-2">LOGIN JURY</h1>
-            <p className="text-[10px] font-black uppercase text-white/20 tracking-widest leading-loose">Veuillez entrer vos identifiants pour accéder à la console de vote</p>
+        {!state.configured ? (
+          <div className="text-center space-y-4">
+             <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full mx-auto" />
+             <p className="text-[10px] font-black uppercase text-white/40 tracking-widest leading-loose">Système en attente de configuration par l'administrateur...</p>
+             <button 
+               onClick={() => navigate('/')}
+               className="w-full text-white/20 hover:text-white text-[9px] font-black uppercase tracking-widest pt-4"
+             >
+               Retour
+             </button>
           </div>
-          <div className="space-y-4">
-            <input 
-              type="text" 
-              placeholder="Nom d'utilisateur" 
-              value={username}
-              onChange={e => setUsername(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
-            />
-            <input 
-              type="password" 
-              placeholder="Mot de passe" 
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
-            />
-          </div>
-          
-          {loginError && <p className="text-brand-red text-[10px] font-bold uppercase text-center pt-2">{loginError}</p>}
-          
-          <button 
-            type="submit"
-            className="w-full py-4 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all"
-          >
-            Accéder au Vote
-          </button>
-          
-          <button 
-            type="button"
-            onClick={() => navigate('/')}
-            className="w-full text-white/20 hover:text-white text-[9px] font-black uppercase tracking-widest pt-4"
-          >
-            Retour à l'affichage
-          </button>
-        </form>
+        ) : (
+          <form onSubmit={handleJuryLogin} className="w-full space-y-4">
+            <div className="text-center mb-8">
+              <h1 className="text-3xl font-black italic uppercase tracking-tighter mb-2">LOGIN JURY</h1>
+              <p className="text-[10px] font-black uppercase text-white/20 tracking-widest leading-loose">Entrez vos identifiants pour accéder à la console</p>
+            </div>
+            <div className="space-y-4">
+              <input 
+                type="text" 
+                placeholder="Utilisateur" 
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
+              />
+              <input 
+                type="password" 
+                placeholder="Mot de passe" 
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic text-sm text-white"
+              />
+            </div>
+            
+            {loginError && <p className="text-brand-red text-[10px] font-bold uppercase text-center pt-2">{loginError}</p>}
+            
+            <button 
+              type="submit"
+              className="w-full py-4 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
+              disabled={!username || !password}
+            >
+              Accéder au Vote
+            </button>
+            
+            <button 
+              type="button" 
+              onClick={() => navigate('/')}
+              className="w-full text-white/20 hover:text-white text-[9px] font-black uppercase tracking-widest pt-4"
+            >
+              Retour à l'affichage
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );
