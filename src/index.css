@@ -30,3 +30,40 @@
 .animate-shimmer {
   animation: shimmer 2s linear infinite;
 }
+
+/* Force Landscape Warning */
+@media screen and (max-width: 1024px) and (orientation: portrait) {
+  .orientation-warning {
+    display: flex !important;
+  }
+}
+
+.orientation-warning {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: black;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+/* Optimization for small height (landscape mobile) */
+@media screen and (max-height: 500px) {
+  .short-screen-hide {
+    display: none !important;
+  }
+  .short-screen-text-sm {
+    font-size: 0.875rem !important; /* text-xs/sm */
+    line-height: 1.25rem !important;
+  }
+  .short-screen-p-sm {
+    padding: 0.5rem !important;
+  }
+  .short-screen-gap-sm {
+    gap: 0.25rem !important;
+  }
+}

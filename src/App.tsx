@@ -16,8 +16,34 @@ import {
   Trash2,
   Play,
   SkipForward,
-  RotateCcw
+  RotateCcw,
+  Smartphone,
+  RefreshCw
 } from 'lucide-react';
+
+// --- Components ---
+
+function OrientationWarning() {
+  return (
+    <div className="orientation-warning">
+      <motion.div
+        animate={{ rotate: 90 }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+        className="mb-8"
+      >
+        <Smartphone size={64} className="text-white/20" />
+      </motion.div>
+      <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-4 text-white">MODE PAYSAGE REQUIS</h2>
+      <p className="text-white/40 text-[10px] font-black uppercase tracking-widest leading-loose max-w-[200px]">
+        Veuillez faire pivoter votre appareil pour utiliser la console de vote.
+      </p>
+      <div className="mt-8 flex items-center gap-2 text-white/20">
+        <RefreshCw size={14} className="animate-spin" />
+        <span className="text-[8px] font-black uppercase tracking-widest">Attente de rotation...</span>
+      </div>
+    </div>
+  );
+}
 
 // --- Types ---
 
@@ -104,11 +130,24 @@ export default function App() {
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, 1000);
+
+    // Attempt to lock orientation to landscape (works better on some mobile browsers if installed as PWA)
+    try {
+      if (screen.orientation && (screen.orientation as any).lock) {
+        (screen.orientation as any).lock('landscape').catch(() => {
+          // Silent fail - usually needs full screen or PWA
+        });
+      }
+    } catch (e) {
+      // Ignore errors
+    }
+
     return () => clearInterval(interval);
   }, []);
 
   return (
     <BrowserRouter>
+      <OrientationWarning />
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
         <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
@@ -960,10 +999,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`flex-1 flex flex-col sm:flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-4 gap-4' : ''}`}
+            className={`flex-1 flex flex-col sm:flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-2 sm:p-4 gap-2 sm:gap-4' : ''}`}
           >
-            <div className="flex flex-col items-center gap-2 mb-4">
-               <h3 className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase">
+            <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-50 pointer-events-none">
+               <h3 className="text-[8px] sm:text-[10px] font-black tracking-[0.5em] text-white/40 uppercase">
                  {currentMatch.votingMode === 'round' ? `ROUND ${currentMatch.currentRound} / ${currentMatch.roundCount}` : currentMatch.round}
                </h3>
                {currentMatch.votingMode === 'round' && (
@@ -971,7 +1010,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                    {Array.from({ length: currentMatch.roundCount }).map((_, i) => (
                      <div 
                        key={i} 
-                       className={`w-12 h-1 ${i < currentMatch.currentRound - 1 ? 'bg-green-500' : (i === currentMatch.currentRound - 1 ? 'bg-white/40' : 'bg-white/5')}`} 
+                       className={`w-8 sm:w-12 h-1 ${i < currentMatch.currentRound - 1 ? 'bg-green-500' : (i === currentMatch.currentRound - 1 ? 'bg-white/40' : 'bg-white/5')}`} 
                      />
                    ))}
                  </div>
@@ -995,10 +1034,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
-                <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{redP?.name}</h2>
-                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+                <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{redP?.name}</h2>
+                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl short-screen-text-sm">
                   {myVote === 'red' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'VOTER ROUGE')}
                 </div>
               </div>
@@ -1022,10 +1061,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   </div>
                 </div>
               )}
-              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
-                <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{blueP?.name}</h2>
-                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl">
+              <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-6 py-4'}`}>
+                <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-12 h-12 md:w-16 md:h-16 mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
+                <h2 className={`${myVote && !isChanging ? 'text-xl' : 'text-2xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-2 drop-shadow-md`}>{blueP?.name}</h2>
+                <div className="px-4 py-1 bg-white text-black font-black italic uppercase text-[10px] tracking-widest shadow-xl short-screen-text-sm">
                    {myVote === 'blue' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'VOTER BLEU')}
                 </div>
               </div>
@@ -1038,32 +1077,32 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                 animate={{ opacity: 1, scale: 1 }}
                 className="absolute inset-0 flex flex-col items-center justify-center z-30 px-6"
               >
-                <div className="bg-black/90 backdrop-blur-2xl border border-white/20 p-8 md:p-12 rounded-[3.5rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] pointer-events-auto max-w-lg w-full">
-                    <div className={`w-24 h-24 rounded-full flex items-center justify-center mb-8 border-4 ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]' : 'border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]'}`}>
-                       <CheckCircle2 size={48} className="text-white" />
+                <div className="bg-black/90 backdrop-blur-2xl border border-white/20 p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] pointer-events-auto max-w-lg w-full short-screen-p-sm">
+                    <div className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 md:mb-8 border-4 short-screen-hide ${myVote === 'red' ? 'border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]' : 'border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]'}`}>
+                       <CheckCircle2 size={32} className="text-white md:w-12 md:h-12" />
                     </div>
-                    <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-3">VOTE ENREGISTRÉ</p>
-                    <h3 className="text-4xl md:text-5xl font-black italic tracking-tighter uppercase mb-2">
+                    <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-2 md:mb-3 short-screen-text-sm">VOTE ENREGISTRÉ</p>
+                    <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm">
                        {myVote === 'red' ? redP?.name : blueP?.name}
                     </h3>
-                    <p className="text-[11px] text-white/30 font-bold uppercase tracking-widest mb-10 italic">
+                    <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-widest mb-6 md:mb-10 italic short-screen-hide">
                        SÉLECTION BIEN TRANSMISE AU SYSTÈME
                     </p>
                     
-                    <div className="flex flex-col gap-4 w-full max-w-xs">
+                    <div className="flex flex-col md:flex-row gap-2 md:gap-4 w-full max-w-xs md:max-w-md">
                        <button 
                          onClick={finalizeMatch}
-                         className="flex items-center justify-center gap-3 px-10 py-6 bg-white text-black font-black italic uppercase text-sm tracking-widest hover:scale-105 active:scale-95 transition-all rounded-full group pointer-events-auto shadow-[0_10px_50px_rgba(255,255,255,0.4)]"
+                         className="flex-1 flex items-center justify-center gap-3 px-6 py-4 md:px-10 md:py-6 bg-white text-black font-black italic uppercase text-xs md:text-sm tracking-widest hover:scale-105 transition-all rounded-full shadow-[0_10px_30px_rgba(255,255,255,0.2)] short-screen-p-sm"
                        >
-                         <LogOut size={18} className="text-black" />
-                         <span>VALIDER & FERMER</span>
+                         <LogOut size={16} />
+                         <span>VALIDER</span>
                        </button>
 
                        <button 
                          onClick={() => setIsChanging(true)}
-                         className="flex items-center justify-center gap-3 px-8 py-3 text-white/30 hover:text-white text-[10px] font-black uppercase tracking-widest transition-all"
+                         className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
                        >
-                         Changer mon vote
+                         Changer
                        </button>
                     </div>
                 </div>
@@ -1151,18 +1190,18 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
         )}
       </AnimatePresence>
 
-      <footer className="h-20 bg-black/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-6 z-50">
+      <footer className="h-16 md:h-20 bg-black/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-6 z-50">
         <div className="flex items-center gap-4">
            <div className={`w-2 h-2 rounded-full ${myVote ? 'bg-green-500' : 'bg-white/20 animate-pulse'}`} />
            <div className="flex flex-col">
-             <span className="text-[10px] font-black tracking-widest uppercase opacity-40 leading-none mb-1">
+             <span className="text-[10px] font-black tracking-widest uppercase opacity-40 leading-none mb-1 short-screen-text-sm">
                CONTRÔLE: {state.juryAccounts.find(j => j.id === juryId)?.username || "GUEST"}
              </span>
            </div>
         </div>
         <button 
           onClick={onLogout}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest"
+          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest short-screen-text-sm"
         >
           QUITTER
         </button>
@@ -1225,17 +1264,17 @@ function PublicView({ state }: { state: TournamentState }) {
       </div>
 
       {/* Header Bar */}
-      <header className="px-12 py-8 flex justify-between items-start z-10">
+      <header className="px-6 md:px-12 py-4 md:py-8 flex justify-between items-start z-10">
         <div className="flex flex-col gap-2">
-          <div className="bg-white/10 border border-white/20 px-4 py-1 text-[11px] font-black italic uppercase tracking-widest text-white/80">
+          <div className="bg-white/10 border border-white/20 px-4 py-1 text-[9px] md:text-[11px] font-black italic uppercase tracking-widest text-white/80">
             {activeMatch.round}
           </div>
-          <button onClick={() => navigate('/select')} className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
+          <button onClick={() => navigate('/select')} className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">BACK TO HUB</button>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-8">
-          <p className="text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-2">INSTAX PRESENTED BY</p>
-          <h1 className="text-5xl font-black tracking-tighter leading-none italic uppercase">{state.competitionName}</h1>
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-4 md:top-8 w-full px-4 pointer-events-none">
+          <p className="text-[8px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-1 md:mb-2">INSTAX PRESENTED BY</p>
+          <h1 className="text-2xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate">{state.competitionName}</h1>
         </div>
 
         <div className="text-right">
@@ -1244,13 +1283,13 @@ function PublicView({ state }: { state: TournamentState }) {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-12 z-10 -mt-16">
-        <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-center gap-12 relative">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 md:px-12 z-10 -mt-8 md:-mt-16 overflow-y-auto">
+        <div className="w-full max-w-7xl flex flex-col lg:grid lg:grid-cols-[1fr_auto_1fr] items-center gap-6 md:gap-12 relative py-8">
           
           {/* Red Side */}
-          <div className="space-y-8">
-            <div className="flex justify-end gap-8 items-end">
-              <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+          <div className="space-y-4 md:space-y-8 w-full lg:w-auto">
+            <div className="flex justify-center lg:justify-end gap-4 md:gap-8 items-end">
+              <div className="w-40 h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {redP?.photo ? (
                   <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
@@ -1258,25 +1297,25 @@ function PublicView({ state }: { state: TournamentState }) {
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
-              <div className="w-48 h-48 bg-brand-red flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20 uppercase">
+              <div className="w-32 h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-6xl md:text-8xl font-black italic shadow-[0_0_100px_rgba(225,29,72,0.4)] border-b-8 border-black/20 uppercase">
                 {redScore}
               </div>
             </div>
-            <div className="bg-brand-red font-black italic text-4xl px-10 py-6 flex items-center justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
+            <div className="bg-brand-red font-black italic text-2xl md:text-4xl px-6 md:px-10 py-4 md:py-6 flex items-center justify-center lg:justify-start border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
               <span className="truncate uppercase tracking-tighter">{redP?.name || "???"}</span>
             </div>
           </div>
 
           {/* VS Divider */}
-          <div className="text-6xl font-black italic text-white/5 px-4 pt-24 select-none">VS</div>
+          <div className="text-4xl md:text-6xl font-black italic text-white/5 px-4 pt-4 lg:pt-24 select-none">VS</div>
 
           {/* Blue Side */}
-          <div className="space-y-8">
-            <div className="flex justify-start gap-8 items-end">
-              <div className="w-48 h-48 bg-brand-blue flex items-center justify-center text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20 uppercase">
+          <div className="space-y-4 md:space-y-8 w-full lg:w-auto">
+            <div className="flex flex-row-reverse lg:flex-row justify-center lg:justify-start gap-4 md:gap-8 items-end">
+              <div className="w-32 h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-6xl md:text-8xl font-black italic shadow-[0_0_100px_rgba(37,99,235,0.4)] border-b-8 border-black/20 uppercase">
                 {blueScore}
               </div>
-              <div className="w-64 h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
+              <div className="w-40 h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-2 relative group overflow-hidden">
                 {blueP?.photo ? (
                   <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
@@ -1285,14 +1324,14 @@ function PublicView({ state }: { state: TournamentState }) {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-all" />
               </div>
             </div>
-            <div className="bg-brand-blue font-black italic text-4xl px-10 py-6 flex items-center justify-end border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
+            <div className="bg-brand-blue font-black italic text-2xl md:text-4xl px-6 md:px-10 py-4 md:py-6 flex items-center justify-center lg:justify-end border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
               <span className="truncate uppercase tracking-tighter">{blueP?.name || "???"}</span>
             </div>
           </div>
         </div>
 
         {/* Jury Table */}
-        <div className="w-full max-w-7xl mt-20 relative">
+        <div className="w-full max-w-7xl mt-8 md:mt-20 relative px-4 md:px-0 mb-8">
           <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl">
             <div 
               className="grid border-b border-white/10"

@@ -1,0 +1,10 @@
+{
+  "short_name": "ArenaJudge",
+  "name": "Arena Judge Pro",
+  "icons": [],
+  "start_url": "/",
+  "background_color": "#050505",
+  "display": "standalone",
+  "theme_color": "#050505",
+  "orientation": "landscape"
+}
