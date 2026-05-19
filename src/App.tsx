@@ -696,7 +696,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                       </div>
                       
                       <div className="flex items-center gap-6 w-full md:w-auto justify-between md:justify-end">
-                        {m.status === 'pending' && !state.currentMatchId && (
+                        {m.status === 'pending' && (!state.currentMatchId || state.matches.find(ex => ex.id === state.currentMatchId)?.status === 'finished') && (
                           <button 
                             onClick={() => selectMatch(m.id)}
                             className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
@@ -767,7 +767,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                   {activeMatch && activeMatch.status === 'active' && (
                     <button 
                       onClick={finishMatch}
-                      className="w-full py-4 bg-red-600 text-white font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:scale-[1.02] shadow-[0_4px_20px_rgba(220,38,38,0.3)] mb-2"
+                      className="w-full py-4 bg-brand-red text-white font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:scale-[1.02] shadow-[0_4px_20px_rgba(225,29,72,0.3)] mb-2"
                     >
                       <CheckCircle2 size={18} /> MARQUER TERMINER
                     </button>
@@ -781,10 +781,10 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                     </button>
                   )}
                   <button 
-                    disabled={state.currentMatchId !== null || !state.matches.some(m => m.status === 'pending')}
+                    disabled={(state.currentMatchId !== null && state.matches.find(m => m.id === state.currentMatchId)?.status === 'active') || !state.matches.some(m => m.status === 'pending')}
                     onClick={nextMatch} 
                     className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm
-                      ${(state.currentMatchId !== null || !state.matches.some(m => m.status === 'pending')) ? 'bg-white/5 text-white/10' : 'bg-white text-black hover:scale-[1.02] cursor-pointer'}`}
+                      ${((state.currentMatchId !== null && state.matches.find(m => m.id === state.currentMatchId)?.status === 'active') || !state.matches.some(m => m.status === 'pending')) ? 'bg-white/5 text-white/10' : 'bg-white text-black hover:scale-[1.02] cursor-pointer'}`}
                   >
                     <SkipForward size={18} /> MATCH SUIVANT
                   </button>
@@ -1150,10 +1150,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                          {isActive && !isFinishedByMe ? (
                            <button 
                              onClick={() => setView('vote')}
-                             className="w-full md:w-auto px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                             className="w-full md:w-auto px-8 py-3 bg-brand-red text-white font-black italic uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(225,29,72,0.4)] animate-pulse"
                            >
                              <Play size={14} className="fill-current" />
-                             ENTRER
+                             JUGER LA BATTLE
                            </button>
                          ) : isFinishedByMe ? (
                             <div className="flex flex-col items-end opacity-40">

@@ -182,7 +182,7 @@ app.post("/api/admin/confirm-round", (req, res) => {
         match.winnerId = null; // Absolute tie
       }
       match.status = 'finished';
-      tournamentState.currentMatchId = null;
+      // tournamentState.currentMatchId = null; 
     }
   }
 
@@ -193,7 +193,7 @@ app.post("/api/admin/finish-match", (req, res) => {
   const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (match) {
     match.status = 'finished';
-    tournamentState.currentMatchId = null;
+    // tournamentState.currentMatchId = null;
     res.json({ success: true, state: tournamentState });
   } else {
     res.status(404).json({ error: "Aucun match actif" });
