@@ -934,14 +934,6 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
           <span className="text-[10px] font-black uppercase tracking-widest text-white italic">
             CONSOLE JURY : <span className="text-white/60 ml-2">{state.juryAccounts.find(j => j.id === juryId)?.username}</span>
           </span>
-          {view === 'vote' && (
-            <button 
-              onClick={myVote ? finalizeMatch : () => setView('list')}
-              className="text-[9px] font-black uppercase text-white/40 hover:text-white border-l border-white/10 pl-4 transition-colors"
-            >
-              {myVote ? 'VALIDER & QUITTER' : 'RETOUR LISTE'}
-            </button>
-          )}
         </div>
         <button 
           onClick={onLogout}
@@ -1150,24 +1142,6 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
           </motion.div>
         )}
       </AnimatePresence>
-
-      <footer className="h-16 md:h-20 bg-black/80 backdrop-blur-xl border-t border-white/10 flex items-center justify-between px-6 z-50">
-        <div className="flex items-center gap-4">
-           <div className={`w-2 h-2 rounded-full ${myVote ? 'bg-green-500' : 'bg-white/20 animate-pulse'}`} />
-           <div className="flex flex-col">
-             <span className="text-[10px] font-black tracking-widest uppercase opacity-40 leading-none mb-1 short-screen-text-sm">
-               CONTRÔLE: {state.juryAccounts.find(j => j.id === juryId)?.username || "GUEST"}
-             </span>
-           </div>
-        </div>
-        <button 
-          onClick={onLogout}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] font-black uppercase tracking-widest short-screen-text-sm"
-        >
-          QUITTER
-        </button>
-      </footer>
-
     </div>
   );
 }
