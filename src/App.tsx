@@ -1200,7 +1200,7 @@ function PublicView({ state }: { state: TournamentState }) {
   const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   return (
-    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative">
+    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative overflow-x-hidden">
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-red blur-[150px] opacity-10" />
@@ -1229,64 +1229,64 @@ function PublicView({ state }: { state: TournamentState }) {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-2 md:px-12 z-10 -mt-4 md:-mt-16 overflow-y-auto">
-        <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-stretch gap-2 md:gap-12 relative py-4">
+      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 -mt-4 md:-mt-16 overflow-y-auto w-full">
+        <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-12 relative py-4">
           
           {/* Red Side */}
-          <div className="space-y-2 md:space-y-8 flex flex-col">
-            <div className="flex justify-end gap-2 md:gap-8 items-end flex-1">
-              <div className="w-24 h-16 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden">
+          <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
+            <div className="flex justify-end gap-1.5 md:gap-8 items-end flex-1">
+              <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
                 {redP?.photo ? (
                   <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-[6px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
-              <div className="w-16 h-16 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-3xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b-2 md:border-b-8 border-black/20 uppercase">
+              <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
                 {redScore}
               </div>
             </div>
-            <div className="bg-brand-red font-black italic text-sm sm:text-2xl md:text-4xl px-3 md:px-10 py-2 md:py-6 flex items-center justify-start border-l-[4px] md:border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)]">
+            <div className="bg-brand-red font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-start border-l-[3px] md:border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
               <span className="truncate uppercase tracking-tighter">{redP?.name || "???"}</span>
             </div>
           </div>
 
           {/* VS Divider */}
-          <div className="text-xl md:text-6xl font-black italic text-white/5 px-2 pt-8 md:pt-24 select-none self-center">VS</div>
+          <div className="text-lg md:text-6xl font-black italic text-white/5 px-1 pt-4 md:pt-24 select-none self-center shrink-0">VS</div>
 
           {/* Blue Side */}
-          <div className="space-y-2 md:space-y-8 flex flex-col">
-            <div className="flex justify-start gap-2 md:gap-8 items-end flex-1">
-              <div className="w-16 h-16 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-3xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b-2 md:border-b-8 border-black/20 uppercase">
+          <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
+            <div className="flex justify-start gap-1.5 md:gap-8 items-end flex-1">
+              <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
                 {blueScore}
               </div>
-              <div className="w-24 h-16 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden">
+              <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
                 {blueP?.photo ? (
                   <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                 ) : (
-                  <span className="text-[6px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               </div>
             </div>
-            <div className="bg-brand-blue font-black italic text-sm sm:text-2xl md:text-4xl px-3 md:px-10 py-2 md:py-6 flex items-center justify-end border-r-[4px] md:border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)]">
-              <span className="truncate uppercase tracking-tighter">{blueP?.name || "???"}</span>
+            <div className="bg-brand-blue font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-end border-r-[3px] md:border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+              <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "???"}</span>
             </div>
           </div>
         </div>
 
         {/* Jury Table */}
-        <div className="w-full max-w-7xl mt-8 md:mt-20 relative px-4 md:px-0 mb-8">
-          <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl">
+        <div className="w-full max-w-7xl mt-4 md:mt-20 relative px-1 md:px-0 mb-8 overflow-hidden">
+          <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
             <div 
-              className="grid border-b border-white/10"
-              style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
+              className="grid border-b border-white/10 min-w-full"
+              style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, minmax(50px, 1fr))` }}
             >
                {state.juryAccounts.map((jury, i) => {
                  return (
-                   <div key={jury.id} className="py-3 text-center border-r border-white/5 last:border-r-0">
-                     <span className="text-[10px] font-black uppercase tracking-widest italic text-white/50">
+                   <div key={jury.id} className="py-2 md:py-3 text-center border-r border-white/5 last:border-r-0 overflow-hidden">
+                     <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest italic text-white/50 block truncate px-0.5">
                        {jury.username}
                      </span>
                    </div>
