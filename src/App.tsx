@@ -1331,15 +1331,15 @@ function PublicView({ state }: { state: TournamentState }) {
       {/* Header Bar */}
       <header className="px-4 md:px-12 py-3 md:py-8 flex justify-between items-start z-20">
         <div className="flex flex-col gap-1 md:gap-2">
-          <div className="bg-white/10 border border-white/20 px-3 py-1 text-[8px] md:text-[11px] font-black italic uppercase tracking-widest text-white/80">
-            {activeMatch.round}
-          </div>
-          <button onClick={() => navigate('/select')} className="text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all text-left">HUB</button>
+          <button onClick={() => navigate('/select')} className="px-3 py-1 bg-white/5 border border-white/10 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/10 transition-all text-left">HUB SYSTEM</button>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-3 md:top-8 w-full max-w-[50%] pointer-events-none">
-          <p className="text-[7px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-0.5 md:mb-2">PRESENTED BY</p>
-          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate">{state.competitionName}</h1>
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-3 md:top-8 w-full max-w-[60%] pointer-events-none flex flex-col items-center">
+          <p className="text-[7px] md:text-[10px] font-black tracking-[0.45em] text-white/30 uppercase mb-0.5 md:mb-1">PRESENTED BY</p>
+          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-3">{state.competitionName}</h1>
+          <div className="text-sm md:text-3xl font-black italic uppercase tracking-wider text-brand-red bg-brand-red/10 border border-brand-red/30 py-1 md:py-2 px-4 md:px-6 inline-block">
+            {activeMatch.round}
+          </div>
         </div>
 
         <div className="text-right">
@@ -1350,7 +1350,7 @@ function PublicView({ state }: { state: TournamentState }) {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 -mt-4 md:-mt-16 overflow-y-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 mt-6 md:mt-12 overflow-y-auto w-full">
         <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-12 relative py-4">
           
           {/* Red Side */}
@@ -1481,17 +1481,10 @@ function PublicView({ state }: { state: TournamentState }) {
       </main>
 
       {/* Admin Quick Links (Discreet) */}
-      <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
+      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
           <a href="/admin" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Console Admin</a>
           <a href="/" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Affichage Public</a>
       </div>
-
-      {/* Footer Info */}
-      <footer className="px-12 py-10 flex justify-center gap-16 border-t border-white/5 mt-auto bg-black/40 backdrop-blur-md">
-        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">INSTAX</span>
-        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">ARENA JUDGE PRO</span>
-        <span className="text-[10px] font-black tracking-[0.4em] text-white/20 uppercase">WDSF OFFICIATING SYSTEM</span>
-      </footer>
     </div>
   );
 }
