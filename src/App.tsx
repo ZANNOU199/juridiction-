@@ -936,11 +936,20 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
           </span>
         </div>
         <button 
-          onClick={onLogout}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest rounded-full hover:scale-105 transition-all pointer-events-auto"
+          onClick={view === 'vote' ? () => setView('list') : onLogout}
+          className="flex items-center gap-2 px-4 py-2 bg-white text-black font-black italic uppercase text-[10px] tracking-widest rounded-full hover:scale-105 transition-all pointer-events-auto shadow-xl"
         >
-          <LogOut size={12} />
-          SORTIE
+          {view === 'vote' ? (
+            <>
+              <RotateCcw size={12} />
+              BATTLES
+            </>
+          ) : (
+            <>
+              <LogOut size={12} />
+              SORTIE
+            </>
+          )}
         </button>
       </header>
 
@@ -952,7 +961,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`flex-1 flex flex-row h-full relative transition-all duration-700 ${myVote && !isChanging ? 'p-2 sm:p-4 gap-2 sm:gap-4' : ''}`}
+            className={`flex-1 flex flex-row h-full relative transition-all duration-700 p-4 sm:p-8 md:p-12 gap-4 sm:gap-8`}
           >
             <div className="absolute top-2 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1 z-50 pointer-events-none">
                <h3 className="text-[8px] sm:text-[10px] font-black tracking-[0.5em] text-white/40 uppercase">
