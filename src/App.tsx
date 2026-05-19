@@ -1107,40 +1107,48 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   return (
                     <div 
                       key={m.id}
-                      className={`w-full group p-6 flex flex-col md:flex-row justify-between items-center gap-6 transition-all border 
-                        ${isActive && !isFinishedByMe ? 'bg-white/10 border-white shadow-[0_0_40px_rgba(255,255,255,0.1)]' : 'bg-white/5 border-white/5'}
+                      className={`w-full group p-6 flex flex-col md:flex-row justify-between items-center gap-6 transition-all border relative overflow-hidden
+                        ${isActive && !isFinishedByMe ? 'bg-white/10 border-white shadow-[0_0_40px_rgba(255,255,255,0.1)] ring-2 ring-white/20' : 'bg-white/5 border-white/5'}
                         ${isFinished ? 'opacity-30' : ''}
                       `}
                     >
-                      <div className="flex items-center gap-6 w-full md:w-auto">
+                      {isActive && !isFinishedByMe && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-red-600/10 via-white/5 to-blue-600/10 animate-pulse pointer-events-none" />
+                      )}
+                      <div className="flex items-center gap-6 w-full md:w-auto relative z-10">
                         <span className="text-xs font-black text-white/20 w-6">0{i+1}</span>
                         <div className="flex flex-col">
-                          <span className="text-[8px] font-black uppercase text-white/30 mb-1">{m.round}</span>
+                          <span className={`text-[8px] font-black uppercase mb-1 ${isActive ? 'text-white' : 'text-white/30'}`}>
+                            {m.round} {isActive && <span className="ml-2 text-red-500 animate-pulse">● LIVE</span>}
+                          </span>
                           <div className="flex flex-1 items-center gap-4 text-xl italic font-black uppercase">
-                              <span className={isFinishedGlobal && m.winnerId === m.redTeamId ? 'text-brand-red' : ''}>{red?.name}</span>
+                              <span className={isFinishedGlobal && m.winnerId === m.redTeamId ? 'text-brand-red' : (isActive ? 'text-white' : 'text-white/60')}>{red?.name}</span>
                               <span className="text-white/10 text-[10px] not-italic font-bold">VS</span>
-                              <span className={isFinishedGlobal && m.winnerId === m.blueTeamId ? 'text-brand-blue' : ''}>{blue?.name}</span>
+                              <span className={isFinishedGlobal && m.winnerId === m.blueTeamId ? 'text-brand-blue' : (isActive ? 'text-white' : 'text-white/60')}>{blue?.name}</span>
                           </div>
                         </div>
                       </div>
                       
-                      <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className="flex items-center gap-4 w-full md:w-auto relative z-10">
                          {isActive && !isFinishedByMe ? (
                            <button 
                              onClick={() => setView('vote')}
-                             className="w-full md:w-auto px-8 py-3 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2"
+                             className="w-full md:w-auto px-8 py-4 bg-white text-black font-black italic uppercase text-sm tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 shadow-[0_0_30px_rgba(255,255,255,0.3)] animate-bounce-subtle"
                            >
-                             <Play size={14} className="fill-current" />
-                             ENTRER
+                             <Play size={16} className="fill-current" />
+                             LANCER LE VOTE
                            </button>
                          ) : isFinishedByMe ? (
                             <div className="flex flex-col items-end opacity-40">
-                               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 border border-white/10 px-4 py-2 bg-white/5">TERMINÉ</span>
+                               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-white/40 border border-white/10 px-4 py-2 bg-white/5">DÉJÀ VOTÉ</span>
                             </div>
                          ) : isFinishedGlobal ? (
-                           <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2">BATTLE TERMINÉ</span>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white/20 border border-white/5 px-3 py-2">BATTLE TERMINÉ</span>
                          ) : (
-                           <span className="text-[8px] font-black uppercase tracking-widest text-white/10 italic">EN ATTENTE...</span>
+                            <span className="text-[8px] font-black uppercase tracking-widest text-white/10 italic flex items-center gap-2">
+                              <div className="w-1 h-1 rounded-full bg-white/20" />
+                              EN ATTENTE...
+                            </span>
                          )}
                       </div>
                     </div>
