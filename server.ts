@@ -113,7 +113,7 @@ app.post("/api/jury/login", (req, res) => {
 app.post("/api/admin/configure", (req, res) => {
   const { competitionName, competitionLogo, participants, juryAccounts, matches } = req.body;
   
-  const processedMatches = (matches || []).map((m: any) => ({
+  const processedMatches = (matches || []).map((m: any, i: number) => ({
     ...m,
     votingMode: m.votingMode || 'match',
     roundCount: m.roundCount || 1,
@@ -122,7 +122,7 @@ app.post("/api/admin/configure", (req, res) => {
     redVotes: 0,
     blueVotes: 0,
     winnerId: null,
-    status: 'pending',
+    status: i === 0 ? 'active' : 'pending',
     finishedJuries: []
   }));
 
@@ -181,8 +181,7 @@ app.post("/api/admin/confirm-round", (req, res) => {
       } else {
         match.winnerId = null; // Absolute tie
       }
-      match.status = 'finished';
-      // tournamentState.currentMatchId = null; 
+      // Manual finish required
     }
   }
 
@@ -193,7 +192,6 @@ app.post("/api/admin/finish-match", (req, res) => {
   const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (match) {
     match.status = 'finished';
-    // tournamentState.currentMatchId = null;
     res.json({ success: true, state: tournamentState });
   } else {
     res.status(404).json({ error: "Aucun match actif" });
