@@ -32,8 +32,8 @@
 }
 
 /* Force Landscape via Rotation Hack */
-@media screen and (max-width: 1024px) and (orientation: portrait) {
-  #root {
+.force-landscape-layout {
+  @media screen and (max-width: 1024px) and (orientation: portrait) {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -41,12 +41,8 @@
     height: 100vw;
     transform: translate(-50%, -50%) rotate(90deg);
     transform-origin: center;
-    overflow: hidden;
-  }
-
-  /* Hide the rotation warning since we are forcing it now */
-  .orientation-warning {
-    display: none !important;
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 }
 

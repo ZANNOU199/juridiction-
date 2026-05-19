@@ -104,32 +104,7 @@ export default function App() {
   useEffect(() => {
     fetchState();
     const interval = setInterval(fetchState, 1000);
-
-    const lockOrientation = async () => {
-      try {
-        if (document.documentElement.requestFullscreen) {
-          // Fullscreen often required for orientation lock
-          // await document.documentElement.requestFullscreen();
-        }
-        if (screen.orientation && (screen.orientation as any).lock) {
-          await (screen.orientation as any).lock('landscape');
-        }
-      } catch (e) {
-        // Silent fail - needs user gesture or PWA
-      }
-    };
-
-    // Add a one-time click listener to try and lock orientation
-    const handleFirstClick = () => {
-      lockOrientation();
-      window.removeEventListener('click', handleFirstClick);
-    };
-    window.addEventListener('click', handleFirstClick);
-
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('click', handleFirstClick);
-    };
+    return () => clearInterval(interval);
   }, []);
 
   return (
@@ -952,7 +927,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-black overflow-hidden select-none font-sans text-white">
+    <div className="force-landscape-layout fixed inset-0 flex flex-col bg-black overflow-y-auto select-none font-sans text-white">
       {/* Header for Jury Console */}
       <header className="fixed top-4 left-4 right-4 flex justify-between items-center z-[100] pointer-events-none">
         <div className="flex bg-black/40 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full pointer-events-auto items-center gap-4">
@@ -1242,7 +1217,7 @@ function PublicView({ state }: { state: TournamentState }) {
   const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   return (
-    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col overflow-hidden relative">
+    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative">
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-red blur-[150px] opacity-10" />
