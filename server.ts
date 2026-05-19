@@ -189,6 +189,17 @@ app.post("/api/admin/confirm-round", (req, res) => {
   res.json({ success: true, state: tournamentState });
 });
 
+app.post("/api/admin/finish-match", (req, res) => {
+  const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
+  if (match) {
+    match.status = 'finished';
+    tournamentState.currentMatchId = null;
+    res.json({ success: true, state: tournamentState });
+  } else {
+    res.status(404).json({ error: "Aucun match actif" });
+  }
+});
+
 app.post("/api/admin/select-match", (req, res) => {
   const { matchId } = req.body;
   const match = tournamentState.matches.find(m => m.id === matchId);
