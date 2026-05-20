@@ -86,14 +86,10 @@ const STORAGE_KEY = 'arena_tournament_state';
 // --- Main App ---
 
 export default function App() {
-  const [state, setState] = useState<TournamentState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_STATE;
-  });
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
 
   const saveStateLocal = (newState: TournamentState) => {
     setState(newState);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   };
 
   const fetchState = async () => {
@@ -104,7 +100,6 @@ export default function App() {
         // Check if data is valid before updating
         if (data && typeof data === 'object' && data.matches) {
           setState(data);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
       }
     } catch (err) {
@@ -117,22 +112,8 @@ export default function App() {
     fetchState();
     const interval = setInterval(fetchState, 1500); // Fast polling (1.5s) for snappy real-time multi-device sync
 
-    // Sync across tabs on the same device/browser
-    const handleStorage = (e: StorageEvent) => {
-      if (e.key === STORAGE_KEY && e.newValue) {
-        try {
-          const newState = JSON.parse(e.newValue);
-          setState(newState);
-        } catch (err) {
-          console.error("Failed to parse storage update", err);
-        }
-      }
-    };
-    window.addEventListener('storage', handleStorage);
-
     return () => {
       clearInterval(interval);
-      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -1300,8 +1281,8 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   };
 
   const selectMatch = async (matchId: string) => {
-    const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
-    if (localFinished.includes(matchId)) return;
+    const targetMatch = state.matches?.find(m => m.id === matchId);
+    if (targetMatch?.finishedJuries?.includes(juryId)) return;
 
     try {
       const res = await fetch('/api/admin/select-match', {
@@ -1325,12 +1306,18 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
       return;
     }
     
-    // Optimistic UI update: local storage and state
-    const juryFinishedMatches = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
-    if (!juryFinishedMatches.includes(cid)) {
-      juryFinishedMatches.push(cid);
-      localStorage.setItem(`finished_${juryId}`, JSON.stringify(juryFinishedMatches));
-    }
+    // Optimistic state update: add jury to finishedJuries locally
+    const newMatches = state.matches.map(m => {
+      if (m.id === cid) {
+        const finished = m.finishedJuries || [];
+        return {
+          ...m,
+          finishedJuries: finished.includes(juryId) ? finished : [...finished, juryId]
+        };
+      }
+      return m;
+    });
+    onSave({ ...state, matches: newMatches });
     
     setView('list'); 
     
@@ -1596,8 +1583,7 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
                   const isFinishedGlobal = m.status === 'finished';
-                  const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
-                  const isFinishedByMe = (m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId)) || localFinished.includes(m.id);
+                  const isFinishedByMe = !!(m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId));
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (

@@ -150,26 +150,40 @@ const stateDocRef = doc(db, "state", "current");
 
 // Persistence Helpers
 async function loadTournamentState(): Promise<TournamentState> {
+  console.log("[Firestore] Attempting to load state from state/current...");
   try {
     const docSnap = await getDoc(stateDocRef);
     if (docSnap.exists()) {
       const data = docSnap.data() as TournamentState;
       tournamentState = { ...tournamentState, ...data };
+      console.log("[Firestore] State successfully loaded from Firestore:", {
+        competitionName: tournamentState.competitionName,
+        configured: tournamentState.configured,
+        matchesCount: tournamentState.matches?.length || 0
+      });
     } else {
+      console.log("[Firestore] State document does not exist, initializing with current in-memory state...");
       await setDoc(stateDocRef, tournamentState);
+      console.log("[Firestore] Initial state saved successfully.");
     }
   } catch (error) {
-    console.error("Failed to load state from Firestore:", error);
+    console.error("[Firestore ERROR] Failed to load state from Firestore:", error);
   }
   return tournamentState;
 }
 
 async function saveTournamentState(state: TournamentState) {
+  console.log("[Firestore] Attempting to save state to state/current...");
   try {
     tournamentState = state;
     await setDoc(stateDocRef, state);
+    console.log("[Firestore] State successfully saved to Firestore:", {
+      competitionName: state.competitionName,
+      configured: state.configured,
+      matchesCount: state.matches?.length || 0
+    });
   } catch (error) {
-    console.error("Failed to save state to Firestore:", error);
+    console.error("[Firestore ERROR] Failed to save state to Firestore:", error);
   }
 }
 
@@ -179,6 +193,39 @@ const PORT = 3000;
 app.use(express.json());
 
 // --- API Routes ---
+
+app.get("/api/debug/firebase", async (req, res) => {
+  try {
+    console.log("[Debug] Fetching live Firestore document status...");
+    const docSnap = await getDoc(stateDocRef);
+    if (docSnap.exists()) {
+      res.json({
+        success: true,
+        exists: true,
+        databaseId: firebaseConfig.firestoreDatabaseId,
+        projectId: firebaseConfig.projectId,
+        data: docSnap.data()
+      });
+    } else {
+      res.json({
+        success: true,
+        exists: false,
+        databaseId: firebaseConfig.firestoreDatabaseId,
+        projectId: firebaseConfig.projectId,
+        message: "Document '/state/current' does not exist in collection."
+      });
+    }
+  } catch (error: any) {
+    console.error("[Debug ERROR] Firestore query error:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message || String(error),
+      stack: error.stack,
+      databaseId: firebaseConfig.firestoreDatabaseId,
+      projectId: firebaseConfig.projectId
+    });
+  }
+});
 
 // --- API Routes ---
 
