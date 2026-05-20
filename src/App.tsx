@@ -824,16 +824,52 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                  
                  <div className="pt-4">
                    <p className="text-[9px] font-black uppercase text-white/40 mb-3 tracking-widest">Configuration des Juges</p>
-                   <div className="flex gap-2 mb-6">
-                     {[3, 5].map(n => (
+                   {/* Presets */}
+                   <div className="grid grid-cols-4 gap-2 mb-3">
+                     {[2, 3, 5, 7].map(n => (
                        <button 
+                         type="button"
                          key={n}
                          onClick={() => handleJuryCountChange(n)}
-                         className={`flex-1 py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${juryCount === n ? 'bg-white border-white text-black' : 'border-white/10 text-white/40'}`}
+                         className={`py-3 font-black italic border-2 transition-all text-[9px] tracking-widest ${juryCount === n ? 'bg-white border-white text-black' : 'border-white/10 text-white/40 hover:border-white/30'}`}
                        >
                          {n} JUGES
                        </button>
                      ))}
+                   </div>
+
+                   {/* Ajusteur personnalisé de juges */}
+                   <div className="flex items-center gap-2 mb-6 bg-black/30 p-2 border border-white/5 rounded-sm">
+                     <button
+                       type="button"
+                       onClick={() => handleJuryCountChange(Math.max(1, juryCount - 1))}
+                       className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all font-black text-sm rounded-sm"
+                       title="Réduire le nombre de juges"
+                     >
+                       -
+                     </button>
+                     <input 
+                       type="number" 
+                       min={1} 
+                       max={30}
+                       value={juryCount} 
+                       onChange={e => {
+                         const val = parseInt(e.target.value, 10);
+                         if (!isNaN(val) && val >= 1) {
+                           handleJuryCountChange(val);
+                         }
+                       }}
+                       className="flex-1 bg-black/40 border border-white/10 h-10 font-black text-center text-xs focus:border-white transition-all outline-none italic text-white"
+                       placeholder="NB"
+                     />
+                     <button
+                       type="button"
+                       onClick={() => handleJuryCountChange(juryCount + 1)}
+                       className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all font-black text-sm rounded-sm"
+                       title="Augmenter le nombre de juges"
+                     >
+                       +
+                     </button>
                    </div>
                    
                    <div className="space-y-2">
