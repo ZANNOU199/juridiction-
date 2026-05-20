@@ -339,6 +339,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const previewMeasureRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  const [isAlerting, setIsAlerting] = useState(false);
 
   const updateMatchTeam = (matchId: string, side: 'red' | 'blue', pId: string) => {
     setMatches(prev => prev.map(m => {
@@ -579,16 +580,16 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const revealResults = async () => {
     const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
     if (activeIdx !== -1) {
-      const newMatches = [...state.matches];
-      newMatches[activeIdx] = { ...newMatches[activeIdx], revealed: true };
-      onSave({ ...state, matches: newMatches });
-      
       try {
-        await fetch('/api/admin/reveal', {
+        const res = await fetch('/api/admin/reveal', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ matchId: state.currentMatchId })
         });
+        if (res.ok) {
+          const data = await res.json();
+          onSave(data.state);
+        }
       } catch (e) {
         console.warn("Server sync failed during reveal");
       }
@@ -648,11 +649,17 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   };
 
   const alertJuries = async () => {
-    onSave({ ...state, lastAlertAt: Date.now() });
+    setIsAlerting(true);
     try {
-      await fetch('/api/admin/alert-juries', { method: 'POST' });
+      const res = await fetch('/api/admin/alert-juries', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
     } catch (e) {
       console.warn("Server sync failed during alertJuries");
+    } finally {
+      setTimeout(() => setIsAlerting(false), 2000);
     }
   };
 
@@ -1134,11 +1141,13 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
                       <button 
                         onClick={alertJuries}
-                        disabled={activeMatch.revealed}
-                        className={`w-full py-3 bg-white/5 border border-white/10 text-white/80 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:bg-brand-red/10 group
+                        disabled={activeMatch.revealed || isAlerting}
+                        className={`w-full py-3 border border-white/10 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm group
+                          ${isAlerting ? 'bg-brand-red text-white' : 'bg-white/5 text-white/80 hover:bg-brand-red/10'}
                           ${activeMatch.revealed ? 'opacity-30 cursor-not-allowed' : ''}`}
                       >
-                        <Bell className="w-4 h-4 group-hover:animate-bounce" /> AVERTIR JUGES
+                        <Bell className={`w-4 h-4 ${isAlerting ? 'animate-bounce' : 'group-hover:animate-bounce'}`} /> 
+                        {isAlerting ? "ALERTE ENVOYÉE !" : "AVERTIR JUGES"}
                       </button>
 
                       <button 
@@ -1339,10 +1348,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   return (
     <div className="force-landscape-layout fixed inset-0 flex flex-col bg-black overflow-y-auto select-none font-sans text-white">
       {/* Header for Jury Console */}
-      {state.lastAlertAt && Date.now() - state.lastAlertAt < 10000 && (
-        <div className="fixed top-0 left-0 right-0 z-[200] bg-brand-red py-2 flex items-center justify-center gap-4 animate-pulse">
+      {state.lastAlertAt && Math.abs(Date.now() - state.lastAlertAt) < 15000 && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-brand-red py-3 flex items-center justify-center gap-4 animate-pulse shadow-[0_4px_30px_rgba(225,29,72,0.5)]">
            <Bell className="w-5 h-5 text-white animate-bounce" />
-           <span className="text-white font-black italic uppercase text-sm tracking-tighter">VOTE ATTENDU ! VEUILLEZ CHOISIR MAINTENANT</span>
+           <span className="text-white font-black italic uppercase text-base tracking-tighter">VOTE ATTENDU ! VEUILLEZ CHOISIR MAINTENANT</span>
         </div>
       )}
       <header className="fixed top-4 left-4 right-4 flex justify-between items-center z-[100] pointer-events-none">
