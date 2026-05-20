@@ -44,6 +44,7 @@ interface TournamentState {
   juryVotes: Record<string, 'red' | 'blue' | null>;
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
+  lastAlertAt?: number;
 }
 
 // Helper to check if a match is finished and update winner
@@ -241,6 +242,11 @@ app.post("/api/admin/confirm-round", (req, res) => {
   res.json({ success: true, state: tournamentState });
 });
 
+app.post("/api/admin/alert-juries", (req, res) => {
+  tournamentState.lastAlertAt = Date.now();
+  res.json({ success: true, state: tournamentState });
+});
+
 app.post("/api/admin/reveal", (req, res) => {
   const { matchId } = req.body;
   const match = tournamentState.matches.find(m => m.id === matchId);
@@ -250,6 +256,11 @@ app.post("/api/admin/reveal", (req, res) => {
   } else {
     res.status(404).json({ error: "Match non trouvé" });
   }
+});
+
+app.post("/api/admin/alert-juries", (req, res) => {
+  tournamentState.lastAlertAt = Date.now();
+  res.json({ success: true, state: tournamentState });
 });
 
 app.post("/api/admin/cancel-match", (req, res) => {

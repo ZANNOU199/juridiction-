@@ -17,7 +17,8 @@ import {
   Play,
   SkipForward,
   RotateCcw,
-  XCircle
+  XCircle,
+  Bell
 } from 'lucide-react';
 
 // --- Types ---
@@ -63,6 +64,7 @@ interface TournamentState {
   juryVotes: Record<string, 'red' | 'blue' | null>;
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
+  lastAlertAt?: number;
 }
 
 const DEFAULT_STATE: TournamentState = {
@@ -645,6 +647,15 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     }
   };
 
+  const alertJuries = async () => {
+    onSave({ ...state, lastAlertAt: Date.now() });
+    try {
+      await fetch('/api/admin/alert-juries', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during alertJuries");
+    }
+  };
+
   const cancelMatch = async () => {
     if (!confirm("Voulez-vous vraiment annuler ce match ? Les votes seront perdus.")) return;
     
@@ -1122,6 +1133,15 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                       </button>
 
                       <button 
+                        onClick={alertJuries}
+                        disabled={activeMatch.revealed}
+                        className={`w-full py-3 bg-white/5 border border-white/10 text-white/80 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:bg-brand-red/10 group
+                          ${activeMatch.revealed ? 'opacity-30 cursor-not-allowed' : ''}`}
+                      >
+                        <Bell className="w-4 h-4 group-hover:animate-bounce" /> AVERTIR JUGES
+                      </button>
+
+                      <button 
                         onClick={cancelMatch}
                         className="w-full py-3 bg-white/5 border border-white/10 text-white/60 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:bg-white/10"
                       >
@@ -1319,6 +1339,12 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   return (
     <div className="force-landscape-layout fixed inset-0 flex flex-col bg-black overflow-y-auto select-none font-sans text-white">
       {/* Header for Jury Console */}
+      {state.lastAlertAt && Date.now() - state.lastAlertAt < 10000 && (
+        <div className="fixed top-0 left-0 right-0 z-[200] bg-brand-red py-2 flex items-center justify-center gap-4 animate-pulse">
+           <Bell className="w-5 h-5 text-white animate-bounce" />
+           <span className="text-white font-black italic uppercase text-sm tracking-tighter">VOTE ATTENDU ! VEUILLEZ CHOISIR MAINTENANT</span>
+        </div>
+      )}
       <header className="fixed top-4 left-4 right-4 flex justify-between items-center z-[100] pointer-events-none">
         <div className="flex bg-black/40 backdrop-blur-md px-4 py-2 border border-white/10 rounded-full pointer-events-auto items-center gap-4">
           <span className="text-[10px] font-black uppercase tracking-widest text-white italic">
