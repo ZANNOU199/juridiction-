@@ -16,7 +16,8 @@ import {
   Trash2,
   Play,
   SkipForward,
-  RotateCcw
+  RotateCcw,
+  XCircle
 } from 'lucide-react';
 
 // --- Types ---
@@ -644,6 +645,29 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     }
   };
 
+  const cancelMatch = async () => {
+    if (!confirm("Voulez-vous vraiment annuler ce match ? Les votes seront perdus.")) return;
+    
+    const newState = { 
+      ...state, 
+      currentMatchId: null, 
+      juryVotes: {},
+      matches: state.matches.map(m => {
+        if (m.id === state.currentMatchId) {
+          return { ...m, status: 'pending' as const, revealed: false, allVotesCastAt: null };
+        }
+        return m;
+      })
+    };
+    onSave(newState);
+
+    try {
+      await fetch('/api/admin/cancel-match', { method: 'POST' });
+    } catch (e) {
+      console.warn("Server sync failed during cancelMatch");
+    }
+  };
+
   const confirmRound = async () => {
     // Round confirmation usually has complex logic, better to try server first but handle local
     try {
@@ -1095,6 +1119,13 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                             : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
                       >
                         <Monitor size={18} /> {activeMatch.revealed ? "RÉSULTATS AFFICHÉS" : "AFFICHER RÉSULTAT DU BATTLE"}
+                      </button>
+
+                      <button 
+                        onClick={cancelMatch}
+                        className="w-full py-3 bg-white/5 border border-white/10 text-white/60 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:bg-white/10"
+                      >
+                        <XCircle size={18} /> ANNULER LE MATCH
                       </button>
 
                       <button 

@@ -252,6 +252,18 @@ app.post("/api/admin/reveal", (req, res) => {
   }
 });
 
+app.post("/api/admin/cancel-match", (req, res) => {
+  tournamentState.currentMatchId = null;
+  tournamentState.juryVotes = {};
+  tournamentState.matches = tournamentState.matches.map(m => {
+    if (m.status === 'active') {
+      return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
+    }
+    return m;
+  });
+  res.json({ success: true, state: tournamentState });
+});
+
 app.post("/api/admin/finish-match", (req, res) => {
   const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (match) {
