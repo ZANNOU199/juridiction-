@@ -267,9 +267,6 @@ app.post("/api/admin/select-match", (req, res) => {
   const { matchId } = req.body;
   const match = tournamentState.matches.find(m => m.id === matchId);
   if (match) {
-    if (!match.redTeamId || !match.blueTeamId) {
-      return res.status(400).json({ error: "Match incomplet (adversaire manquant)" });
-    }
     // Finish current if exists
     const current = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
     if (current && current.status !== 'finished') current.status = 'finished';
