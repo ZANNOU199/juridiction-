@@ -1,6 +1,7 @@
 import express from "express";
 import path from "path";
-import { createServer as createViteServer } from "vite";
+import { createRequire } from "module";
+const require = createRequire(import.meta.url);
 
 interface Participant {
   id: string;
@@ -46,6 +47,19 @@ interface TournamentState {
   tournamentSize: 16 | 8 | 4 | 2;
   lastAlertAt?: number;
 }
+
+let tournamentState: TournamentState = {
+  competitionName: "ARENA CHAMPIONSHIP",
+  competitionLogo: "",
+  participants: [],
+  juryAccounts: [],
+  juryCount: 3,
+  currentMatchId: null,
+  matches: [],
+  juryVotes: {},
+  configured: false,
+  tournamentSize: 16
+};
 
 // Helper to check if a match is finished and update winner
 function advanceWinner(finishedMatch: Match, state: TournamentState) {
@@ -121,19 +135,6 @@ function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | 
     // But we can store temporary current round votes if needed
   }
 }
-
-let tournamentState: TournamentState = {
-  competitionName: "ARENA CHAMPIONSHIP",
-  competitionLogo: "",
-  participants: [],
-  juryAccounts: [],
-  juryCount: 3,
-  currentMatchId: null,
-  matches: [],
-  juryVotes: {},
-  configured: false,
-  tournamentSize: 16
-};
 
 const app = express();
 const PORT = 3000;
@@ -243,36 +244,45 @@ app.post("/api/admin/confirm-round", (req, res) => {
 });
 
 app.post("/api/admin/alert-juries", (req, res) => {
-  tournamentState.lastAlertAt = Date.now();
-  res.json({ success: true, state: tournamentState });
-});
-
-app.post("/api/admin/reveal", (req, res) => {
-  const { matchId } = req.body;
-  const match = tournamentState.matches.find(m => m.id === matchId);
-  if (match) {
-    match.revealed = true;
+  try {
+    tournamentState.lastAlertAt = Date.now();
+    console.log("Alerting juries at:", tournamentState.lastAlertAt);
     res.json({ success: true, state: tournamentState });
-  } else {
-    res.status(404).json({ error: "Match non trouvé" });
+  } catch (error: any) {
+    console.error("Alert juries error:", error);
+    res.status(500).json({ error: "Erreur lors de l'alerte des juges", message: error.message });
   }
 });
 
-app.post("/api/admin/alert-juries", (req, res) => {
-  tournamentState.lastAlertAt = Date.now();
-  res.json({ success: true, state: tournamentState });
+app.post("/api/admin/reveal", (req, res) => {
+  try {
+    const { matchId } = req.body;
+    const match = tournamentState.matches.find(m => m.id === matchId);
+    if (match) {
+      match.revealed = true;
+      res.json({ success: true, state: tournamentState });
+    } else {
+      res.status(404).json({ error: "Match non trouvé" });
+    }
+  } catch (error: any) {
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
+  }
 });
 
 app.post("/api/admin/cancel-match", (req, res) => {
-  tournamentState.currentMatchId = null;
-  tournamentState.juryVotes = {};
-  tournamentState.matches = tournamentState.matches.map(m => {
-    if (m.status === 'active') {
-      return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
-    }
-    return m;
-  });
-  res.json({ success: true, state: tournamentState });
+  try {
+    tournamentState.currentMatchId = null;
+    tournamentState.juryVotes = {};
+    tournamentState.matches = tournamentState.matches.map(m => {
+      if (m.status === 'active') {
+        return { ...m, status: 'pending', revealed: false, allVotesCastAt: undefined };
+      }
+      return m;
+    });
+    res.json({ success: true, state: tournamentState });
+  } catch (error: any) {
+    res.status(500).json({ error: "Internal Server Error", message: error.message });
+  }
 });
 
 app.post("/api/admin/finish-match", (req, res) => {
@@ -369,35 +379,64 @@ app.post("/api/admin/reset", (req, res) => {
 
 async function setupVite() {
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
-    app.use(vite.middlewares);
+    try {
+      const { createServer: createViteServer } = await import("vite");
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: "spa",
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.warn("Vite failed to load in development:", e);
+    }
   } else {
     const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    if (require('fs').existsSync(distPath)) {
+      app.use(express.static(distPath));
+      app.get('*', (req, res) => {
+        const indexPath = path.join(distPath, 'index.html');
+        if (require('fs').existsSync(indexPath)) {
+          res.sendFile(indexPath);
+        } else {
+          res.status(404).send("Index files not found. Please build the app.");
+        }
+      });
+    } else {
+      console.warn("Dist directory not found. Static files serving disabled.");
+    }
   }
 }
 
-if (process.env.NODE_ENV !== "production") {
-  setupVite().then(() => {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+// --- Start Server ---
+
+const startServer = async () => {
+  try {
+    await setupVite();
+    
+    // Global Error Handler
+    app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+      console.error("Unhandled Exception:", err);
+      res.status(500).json({ 
+        error: "Internal Server Error", 
+        message: err.message,
+        stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+      });
     });
-  });
-} else {
-  // In production (Vercel/CloudRun), setup handles static files
-  setupVite();
-  // Listen only if not on Vercel (Vercel uses the exported app)
-  if (!process.env.VERCEL) {
+
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`Server running on port ${PORT}`);
     });
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
   }
+};
+
+if (!process.env.VERCEL) {
+  startServer();
+} else {
+  // On Vercel, we just export the app, but we still want Vite in production for static files
+  setupVite();
 }
 
 export default app;
