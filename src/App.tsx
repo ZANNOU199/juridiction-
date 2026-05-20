@@ -1399,7 +1399,7 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={bracketContainerRef} 
           className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '650px' }}
+          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '800px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
@@ -1456,7 +1456,7 @@ function MatchNode({ match, participants, className = "", side = 'left' }: Match
                  <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
              )}
-             <span className={`text-[10px] md:text-[13px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+             <span className={`text-[10px] md:text-[15px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
                {p?.name || "-"}
              </span>
           </div>
@@ -1484,14 +1484,14 @@ function BracketContent({ state }: { state: TournamentState }) {
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
   return (
-    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[850px] gap-12">
+    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[1000px] gap-12">
       
       {/* LEFT SIDE FLOW */}
       <div className="flex items-center gap-12">
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-14">
            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
-        <div className="flex flex-col gap-40">
+        <div className="flex flex-col gap-56">
            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col">
@@ -1533,10 +1533,10 @@ function BracketContent({ state }: { state: TournamentState }) {
 
       {/* RIGHT SIDE FLOW */}
       <div className="flex items-center gap-12 flex-row-reverse">
-        <div className="flex flex-col gap-10">
+        <div className="flex flex-col gap-14">
            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
-        <div className="flex flex-col gap-40">
+        <div className="flex flex-col gap-56">
            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col">
