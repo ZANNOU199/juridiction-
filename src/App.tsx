@@ -1620,11 +1620,11 @@ function PublicView({ state }: { state: TournamentState }) {
       if (containerRef.current && contentRef.current) {
         const containerWidth = containerRef.current.offsetWidth;
         const containerHeight = containerRef.current.offsetHeight;
-        const contentWidth = 1200; // Base width for max-7xl
+        const contentWidth = 1280; // Correct base width for max-w-7xl (1280px)
         const contentHeight = contentRef.current.offsetHeight;
         
-        const scaleW = (containerWidth - 40) / contentWidth;
-        const scaleH = (containerHeight - 40) / contentHeight;
+        const scaleW = (containerWidth - 60) / contentWidth;
+        const scaleH = (containerHeight - 60) / contentHeight;
         setScale(Math.min(1, scaleW, scaleH));
       }
     };
@@ -1674,17 +1674,14 @@ function PublicView({ state }: { state: TournamentState }) {
       </div>
 
       {/* Header Bar */}
-      <header className="px-4 md:px-12 py-3 md:py-8 flex justify-between items-start z-20">
-        <div className="flex flex-col gap-1 md:gap-4">
-          <button onClick={() => navigate('/select')} className="px-3 py-1 bg-white/5 border border-white/10 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/10 transition-all text-left">HUB SYSTEM</button>
-          <button onClick={() => navigate('/bracket')} className="px-3 py-1 bg-primary/10 border border-primary/20 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-primary hover:text-white hover:bg-primary transition-all text-left italic">VIEW BRACKET</button>
-        </div>
+      <header className="px-4 md:px-12 py-3 md:py-6 flex justify-between items-start z-20">
+        <div className="w-20 hidden md:block"></div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-6 md:top-10 w-full max-w-[80%] pointer-events-none flex flex-col items-center">
-          <h1 className="text-2xl md:text-7xl font-black tracking-tighter leading-none italic uppercase truncate mb-4 md:mb-10 text-white/95 text-luxury-glow">
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-2 md:top-4 w-full max-w-[80%] pointer-events-none flex flex-col items-center">
+          <h1 className="text-lg md:text-2xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-2 text-white/90">
             {state.competitionName}
           </h1>
-          <div className="text-lg md:text-5xl font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x-2 border-primary/40 py-2 md:py-4 px-8 md:px-16 inline-block transform -skew-x-12">
+          <div className="text-[10px] md:text-sm font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x border-primary/40 py-1 px-4 md:px-8 inline-block transform -skew-x-12">
             {activeMatch.round}
           </div>
         </div>
@@ -1731,7 +1728,7 @@ function PublicView({ state }: { state: TournamentState }) {
             </div>
 
             {/* VS Divider */}
-            <div className="text-lg md:text-5xl font-black italic text-white/80 px-1 pt-4 md:pt-20 select-none self-center shrink-0">VS</div>
+            <div className="text-lg md:text-5xl font-black italic text-white/95 px-1 pt-4 md:pt-20 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">VS</div>
 
             {/* Blue Side */}
             <div className="space-y-1 md:space-y-4 flex flex-col min-w-0">
@@ -1837,12 +1834,6 @@ function PublicView({ state }: { state: TournamentState }) {
         </AnimatePresence>
       </div>
     </main>
-
-      {/* Admin Quick Links (Discreet) */}
-      <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
-          <a href="/admin" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Console Admin</a>
-          <a href="/" className="text-[10px] font-black italic uppercase tracking-[0.2em] border-b border-transparent hover:border-white pb-1">Affichage Public</a>
-      </div>
     </div>
   );
 }
