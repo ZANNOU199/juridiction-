@@ -615,10 +615,9 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
   if (!state.configured) {
     return (
-      <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-7xl mx-auto font-sans text-white bg-background-dark urban-texture">
+      <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-7xl mx-auto font-sans text-white bg-surface-dark">
         <header className="w-full flex justify-between items-center mb-12 border-b border-white/5 pb-8">
           <div className="flex flex-col">
-            <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-2">Arena System Pro</p>
             <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter">Configuration</h2>
           </div>
           <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-all"><LogOut /></button>
@@ -627,25 +626,24 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
         <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
           {/* Left: Settings */}
           <div className="lg:col-span-4 space-y-8">
-            <div className="bg-white/5 p-8 border border-white/10 relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 -rotate-45 translate-x-16 -translate-y-16 group-hover:bg-primary/10 transition-all"></div>
+            <div className="bg-white/5 p-8 border border-white/10">
                <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                 <Settings size={14} className="text-primary" /> 1. Paramètres Généraux
+                 <Settings size={14} /> 1. Paramètres Généraux
                </h3>
-               <div className="space-y-4 relative z-10">
+               <div className="space-y-4">
                  <input 
                    type="text" 
                    value={competitionName} 
                    onChange={e => setCompetitionName(e.target.value)}
                    placeholder="NOM DE L'ÉVÉNEMENT"
-                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-black focus:border-primary transition-all outline-none italic uppercase text-sm tracking-widest"
+                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-black focus:border-white transition-all outline-none italic uppercase text-sm"
                  />
                  <input 
                    type="text" 
                    value={competitionLogo} 
                    onChange={e => setCompetitionLogo(e.target.value)}
                    placeholder="URL LOGO (OPTIONNEL)"
-                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-bold focus:border-primary transition-all outline-none italic text-xs"
+                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-bold focus:border-white transition-all outline-none italic text-xs"
                  />
                  
                  <div className="pt-4">
@@ -655,7 +653,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                        <button 
                          key={n}
                          onClick={() => handleJuryCountChange(n)}
-                         className={`flex-1 py-3 font-black italic border transition-all text-[10px] tracking-widest ${juryCount === n ? 'bg-primary border-primary text-black' : 'border-white/10 text-white/40 hover:border-white/30'}`}
+                         className={`flex-1 py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${juryCount === n ? 'bg-white border-white text-black' : 'border-white/10 text-white/40'}`}
                        >
                          {n} JUGES
                        </button>
@@ -669,13 +667,13 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                            type="text" 
                            value={jury.username} 
                            onChange={e => updateJuryAccount(i, 'username', e.target.value)}
-                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-primary transition-all outline-none italic text-[10px] uppercase tracking-tighter"
+                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px] uppercase"
                          />
                          <input 
                            type="text" 
                            value={jury.password} 
                            onChange={e => updateJuryAccount(i, 'password', e.target.value)}
-                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-primary transition-all outline-none italic text-[10px] uppercase tracking-tighter"
+                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px] uppercase"
                          />
                        </div>
                      ))}
@@ -689,20 +687,20 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-white/5 p-8 border border-white/10">
                <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                 <Users size={14} className="text-primary" /> 2. TOP 16 Participants
+                 <Users size={14} /> 2. TOP 16 Participants
                </h3>
                <div className="grid grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
                   {participants.map((p, i) => (
                     <div key={p.id} className="relative group">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-primary/40 group-hover:text-primary transition-colors italic">
-                        #{String(i + 1).padStart(2, '0')}
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 italic">
+                        {String(i + 1).padStart(2, '0')}
                       </span>
                       <input 
                         type="text" 
                         value={p.name} 
                         onChange={e => updateParticipant(i, 'name', e.target.value)}
                         placeholder={`NOM PARTICIPANT ${i + 1}`}
-                        className="w-full bg-black/40 border border-white/5 pl-12 pr-4 py-3 font-black focus:border-primary transition-all outline-none italic text-xs uppercase tracking-tight"
+                        className="w-full bg-black/40 border border-white/5 pl-12 pr-4 py-3 font-black focus:border-white transition-all outline-none italic text-xs uppercase"
                       />
                     </div>
                   ))}
@@ -715,19 +713,19 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
             <div className="bg-white/5 p-8 border border-white/10">
                <div className="flex justify-between items-center mb-6">
                  <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 flex items-center gap-2">
-                   <Trophy size={14} className="text-primary" /> 3. Structure du Tableau
+                   <Trophy size={14} /> 3. Structure du Tableau
                  </h3>
                  <button 
                   onClick={generateTop16Bracket}
-                  className="text-[9px] font-black text-primary hover:text-white transition-colors uppercase italic border-b border-primary/30"
+                  className="text-[9px] font-black hover:text-white transition-colors uppercase italic border-b border-white/20"
                  >
-                   Reset Bracket
+                   Reset
                  </button>
                </div>
 
                {matches.length === 0 ? (
-                 <div className="py-20 text-center border-2 border-dashed border-white/5 hover:border-primary/20 transition-all group flex flex-col items-center">
-                    <p className="text-[11px] font-black italic uppercase text-white/20 mb-6 max-w-[200px]">Initialisez le tableau officiel Top 16</p>
+                 <div className="py-20 text-center border-2 border-dashed border-white/5 flex flex-col items-center">
+                    <p className="text-[11px] font-black italic uppercase text-white/20 mb-6 max-w-[200px]">Initialiser le tableau Top 16</p>
                     <button 
                       onClick={generateTop16Bracket}
                       className="px-6 py-3 bg-white text-black font-black italic uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all"
@@ -737,7 +735,6 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                  </div>
                ) : (
                  <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                    {/* Simplified selection for bracket matches */}
                     {['TOP 16', 'TOP 8', 'SEMI FINALE', 'FINALE'].map(roundName => (
                         <div key={roundName} className="space-y-2">
                             <h4 className="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase border-b border-white/5 pb-1">{roundName}</h4>
@@ -746,7 +743,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                                     <select 
                                         value={m.redTeamId} 
                                         onChange={e => updateMatchParticipant(m.id, 'red', e.target.value)}
-                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none focus:border-brand-red/50"
+                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                                     >
                                         <option value="">ROUGE</option>
                                         {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -754,7 +751,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                                     <select 
                                         value={m.blueTeamId} 
                                         onChange={e => updateMatchParticipant(m.id, 'blue', e.target.value)}
-                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none focus:border-brand-blue/50"
+                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                                     >
                                         <option value="">BLEU</option>
                                         {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -773,13 +770,13 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
           <button 
             disabled={matches.length === 0 || !competitionName}
             onClick={configure}
-            className="btn-luxury-primary w-full max-w-2xl text-lg md:text-xl shadow-[0_20px_50px_rgba(211,95,23,0.2)]"
+            className="w-full max-w-2xl py-6 bg-white text-black font-black italic uppercase text-xl md:text-2xl tracking-tighter shadow-[0_20px_50px_rgba(255,255,255,0.05)] hover:scale-[1.01] transition-all disabled:opacity-20"
           >
             Lancer l'Événement Officiel
           </button>
           <div className="flex gap-4 items-center opacity-40">
              <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
-             <p className="text-[9px] font-black uppercase tracking-[0.3em] italic">Judge System Ready</p>
+             <p className="text-[9px] font-black uppercase tracking-[0.3em] italic">System Ready</p>
           </div>
         </div>
       </div>
@@ -787,12 +784,11 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   }
 
   return (
-    <div className="min-h-screen p-6 md:p-12 flex flex-col items-center bg-background-dark font-sans text-white urban-texture selection:bg-primary/30">
+    <div className="min-h-screen p-6 md:p-12 flex flex-col items-center bg-surface-dark font-sans text-white">
        <header className="w-full flex justify-between items-center mb-12 max-w-7xl border-b border-white/5 pb-8">
           <div className="flex flex-col gap-1">
-            <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em]">Arena Control Center</p>
             <div className="flex items-center gap-4 md:gap-6">
-              <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
+              <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">{state.competitionName} - ADMIN</h2>
               <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-500 text-[9px] font-black uppercase tracking-[0.2em]">
                  <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
                  Live System
@@ -800,7 +796,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
             </div>
           </div>
           <div className="flex items-center gap-8">
-            <button onClick={() => navigate('/bracket')} className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-white transition-all border-b border-primary/20 hover:border-white pb-1 italic">View Bracket</button>
+            <button onClick={() => navigate('/bracket')} className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all border-b border-white/10 hover:border-white pb-1 italic">View Bracket</button>
             <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors"><LogOut size={20} /></button>
           </div>
         </header>
@@ -1325,19 +1321,25 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const contentWidth = 1200; // Fixed width for bracket layout
-        const scale = Math.min(1, (containerWidth - 40) / contentWidth);
+        const contentWidth = 1200; 
+        // On mobile we prefer scrolling over extreme scaling
+        const isMobile = window.innerWidth < 768;
+        const minScale = isMobile ? 0.6 : 0.5;
+        const scale = Math.max(minScale, Math.min(1, (containerWidth - 20) / contentWidth));
         setBracketScale(scale);
         
-        // Update height based on scaled content
         const contentHeight = measureRef.current.offsetHeight;
         setBracketHeight(contentHeight);
       }
     };
 
     updateScale();
+    const timer = setTimeout(updateScale, 100); // Ensure layout is settled
     window.addEventListener('resize', updateScale);
-    return () => window.removeEventListener('resize', updateScale);
+    return () => {
+      window.removeEventListener('resize', updateScale);
+      clearTimeout(timer);
+    };
   }, [state.matches]);
 
   const stats = [
@@ -1347,39 +1349,38 @@ function BracketView({ state }: { state: TournamentState }) {
   ];
 
   return (
-    <div className="min-h-screen bg-background-dark overflow-x-hidden selection:bg-primary/30">
+    <div className="min-h-screen bg-black overflow-x-hidden selection:bg-primary/30">
       {/* Header for Bracket Page */}
-      <header className="px-6 md:px-12 py-6 flex justify-between items-center border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
+      <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-4">
            <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors">
-             <Rocket size={20} />
+             <Rocket size={18} />
            </button>
-           <div className="h-4 w-px bg-white/10"></div>
-           <h2 className="text-sm md:text-xl font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
+           <h2 className="text-xs md:text-lg font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
         </div>
         <div className="flex gap-4">
-           <button onClick={() => navigate('/')} className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Scoreboard</button>
+           <button onClick={() => navigate('/')} className="px-4 py-1.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all italic">Direct</button>
         </div>
       </header>
 
       {/* BRACKETS SECTION */}
-      <section id="brackets" className="py-12 md:py-32 bg-background-dark overflow-hidden relative">
-        <div className="absolute inset-0 pointer-events-none grain-texture z-0 opacity-5"></div>
-        <div className="absolute inset-0 pointer-events-none diagonal-lines z-0 opacity-10"></div>
+      <section id="brackets" className="py-12 md:py-24 bg-black overflow-hidden relative">
+        <div className="absolute inset-0 pointer-events-none diagonal-lines z-0 opacity-5"></div>
         
-        <div className="max-w-7xl mx-auto px-4 text-center mb-16 relative z-10">
-          <div className="inline-block px-4 py-1 border border-primary/30 bg-primary/10 rounded-full mb-6">
-            <span className="text-primary text-[10px] font-bold tracking-[0.2em] uppercase">Phase Finale</span>
+        <div className="max-w-7xl mx-auto px-4 text-center mb-12 relative z-10">
+          <div className="inline-block px-3 py-0.5 border border-primary/40 bg-primary/5 mb-4">
+            <span className="text-primary text-[8px] font-black tracking-[0.3em] uppercase">Tableau Officiel</span>
           </div>
-          <h1 className="font-heading text-4xl md:text-8xl text-white mb-4 tracking-tight uppercase">
-            TABLEAU DES BATTLES <span className="text-primary">-</span> TOP 16
+          <h1 className="font-heading text-4xl md:text-7xl text-white mb-2 tracking-tight uppercase italic">
+            BRACKET <span className="text-primary">-</span> TOP 16
           </h1>
-          <p className="text-slate-400 max-w-2xl mx-auto font-light text-sm md:text-lg italic">
-            Suivez en temps réel l'ascension des meilleurs B-Boys et B-Girls.
-          </p>
         </div>
 
-        <div ref={bracketContainerRef} className="w-full relative z-10 overflow-hidden px-4" style={{ height: `${bracketHeight * bracketScale + 40}px`, minHeight: '600px' }}>
+        <div 
+          ref={bracketContainerRef} 
+          className="w-full relative z-10 overflow-x-auto no-scrollbar pb-12 cursor-grab active:cursor-grabbing"
+          style={{ height: `${bracketHeight * bracketScale + 100}px` }}
+        >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
@@ -1394,10 +1395,10 @@ function BracketView({ state }: { state: TournamentState }) {
             style={{ 
               width: '1200px',
               position: 'absolute',
-              left: '50%',
+              left: bracketScale < 1 ? '1rem' : '50%',
               top: 0,
-              transform: `translateX(-50%) scale(${bracketScale})`,
-              transformOrigin: 'top center',
+              transform: bracketScale < 1 ? `scale(${bracketScale})` : 'translateX(-50%)',
+              transformOrigin: 'top left',
               transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
               willChange: 'transform'
             }}

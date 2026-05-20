@@ -27,7 +27,7 @@
 
 @layer base {
   body {
-    @apply bg-background-dark text-slate-100 font-display antialiased;
+    @apply bg-black text-white antialiased;
   }
 }
 
