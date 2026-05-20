@@ -42,6 +42,7 @@ interface TournamentState {
   currentMatchId: string | null;
   matches: Match[];
   juryVotes: Record<string, 'red' | 'blue' | null>;
+  warnedJuries: string[];
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
 }
@@ -130,6 +131,7 @@ let tournamentState: TournamentState = {
   currentMatchId: null,
   matches: [],
   juryVotes: {},
+  warnedJuries: [],
   configured: false,
   tournamentSize: 16
 };
@@ -186,6 +188,7 @@ app.post("/api/admin/configure", (req, res) => {
     currentMatchId: processedMatches.length > 0 ? processedMatches[0].id : null,
     matches: processedMatches,
     juryVotes: {},
+    warnedJuries: [],
     configured: true,
     tournamentSize: tournamentSize || 16
   };
@@ -255,12 +258,25 @@ app.post("/api/admin/reveal", (req, res) => {
 app.post("/api/admin/cancel-match", (req, res) => {
   tournamentState.currentMatchId = null;
   tournamentState.juryVotes = {};
+  tournamentState.warnedJuries = [];
   tournamentState.matches = tournamentState.matches.map(m => {
     if (m.status === 'active') {
       return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
     }
     return m;
   });
+  res.json({ success: true, state: tournamentState });
+});
+
+app.post("/api/admin/warn-judges", (req, res) => {
+  if (!tournamentState.currentMatchId) return res.status(400).json({ error: "No active match" });
+  
+  // Warn juries who haven't voted yet
+  const missingVotes = tournamentState.juryAccounts
+    .filter(j => !tournamentState.juryVotes[j.id])
+    .map(j => j.id);
+  
+  tournamentState.warnedJuries = missingVotes;
   res.json({ success: true, state: tournamentState });
 });
 
@@ -287,6 +303,7 @@ app.post("/api/admin/select-match", (req, res) => {
     match.status = 'active';
     match.finishedJuries = [];
     tournamentState.juryVotes = {};
+    tournamentState.warnedJuries = [];
     res.json({ success: true, state: tournamentState });
   } else {
     res.status(404).json({ error: "Match non trouvé" });
@@ -305,6 +322,7 @@ app.post("/api/admin/next-match", (req, res) => {
       next.status = 'active';
       next.finishedJuries = [];
       tournamentState.juryVotes = {}; 
+      tournamentState.warnedJuries = [];
     } else {
       tournamentState.currentMatchId = null;
     }
@@ -317,6 +335,9 @@ app.post("/api/jury/vote", (req, res) => {
   if (!tournamentState.currentMatchId) return res.status(400).json({ error: "No match active" });
 
   tournamentState.juryVotes[juryId] = vote;
+  
+  // Clear warning if they voted
+  tournamentState.warnedJuries = tournamentState.warnedJuries.filter(id => id !== juryId);
   
   const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (match) {
@@ -350,6 +371,7 @@ app.post("/api/admin/reset", (req, res) => {
     currentMatchId: null,
     matches: [],
     juryVotes: {},
+    warnedJuries: [],
     configured: false,
     tournamentSize: 16
   };

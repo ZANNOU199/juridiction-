@@ -17,7 +17,8 @@ import {
   Play,
   SkipForward,
   RotateCcw,
-  XCircle
+  XCircle,
+  Bell
 } from 'lucide-react';
 
 // --- Types ---
@@ -61,6 +62,7 @@ interface TournamentState {
   currentMatchId: string | null;
   matches: Match[];
   juryVotes: Record<string, 'red' | 'blue' | null>;
+  warnedJuries: string[];
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
 }
@@ -74,6 +76,7 @@ const DEFAULT_STATE: TournamentState = {
   currentMatchId: null,
   matches: [],
   juryVotes: {},
+  warnedJuries: [],
   configured: false,
   tournamentSize: 16
 };
@@ -645,6 +648,18 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     }
   };
 
+  const warnJudges = async () => {
+    try {
+      const res = await fetch('/api/admin/warn-judges', { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state);
+      }
+    } catch (e) {
+      console.warn("Server sync failed during warnJudges");
+    }
+  };
+
   const cancelMatch = async () => {
     if (!confirm("Voulez-vous vraiment annuler ce match ? Les votes seront perdus.")) return;
     
@@ -1121,6 +1136,22 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                         <Monitor size={18} /> {activeMatch.revealed ? "RÉSULTATS AFFICHÉS" : "AFFICHER RÉSULTAT DU BATTLE"}
                       </button>
 
+                      {(() => {
+                        const missingVotes = state.juryAccounts.some(j => !state.juryVotes[j.id]);
+                        return (
+                          <button 
+                            onClick={warnJudges}
+                            disabled={!missingVotes}
+                            className={`w-full py-3 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm 
+                              ${missingVotes 
+                                ? 'bg-yellow-500 text-black hover:bg-yellow-400 shadow-[0_4px_20px_rgba(234,179,8,0.3)]' 
+                                : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                          >
+                            <Bell size={18} /> AVERTIR LE JUGE
+                          </button>
+                        );
+                      })()}
+
                       <button 
                         onClick={cancelMatch}
                         className="w-full py-3 bg-white/5 border border-white/10 text-white/60 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm hover:bg-white/10"
@@ -1342,6 +1373,26 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
           )}
         </button>
       </header>
+
+      {/* Warning Alert */}
+      {state.warnedJuries?.includes(juryId) && !state.juryVotes[juryId] && (
+        <div 
+          className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center overflow-hidden"
+          style={{ background: 'rgba(234, 179, 8, 0.1)' }}
+        >
+          <div className="absolute inset-0 bg-yellow-400/20 animate-pulse pointer-events-none" />
+          <motion.div
+            initial={{ rotate: -25, scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1.2, opacity: 1 }}
+            className="bg-yellow-500 text-black font-black text-4xl sm:text-7xl italic py-10 px-24 border-y-[12px] border-black shadow-[0_0_150px_rgba(234,179,8,0.6)] whitespace-nowrap z-[201]"
+            style={{ 
+              transform: 'rotate(-25deg)',
+            }}
+          >
+            VOTEZ MAINTENANT !
+          </motion.div>
+        </div>
+      )}
 
       {/* Dynamic Palette / List Selection */}
       <AnimatePresence mode="wait">
