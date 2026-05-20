@@ -1357,8 +1357,8 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const contentWidth = 1800; 
-        const scale = Math.min(1, (containerWidth - 48) / contentWidth);
+        const contentWidth = 1900; 
+        const scale = Math.min(1, (containerWidth - 100) / contentWidth);
         const height = measureRef.current.offsetHeight;
         
         setBracketScale(scale);
@@ -1399,13 +1399,13 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={bracketContainerRef} 
           className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${(bracketHeight * bracketScale) + 160}px`, minHeight: '600px' }}
+          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '650px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
             className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1800px' }}
+            style={{ width: '1900px' }}
           >
             <BracketContent state={state} />
           </div>
@@ -1413,10 +1413,10 @@ function BracketView({ state }: { state: TournamentState }) {
           {/* Scaled visible content */}
           <div 
             style={{ 
-              width: '1800px',
+              width: '1900px',
               position: 'absolute',
               left: '50%',
-              top: 0,
+              top: '40px',
               transform: `translateX(-50%) scale(${bracketScale})`,
               transformOrigin: 'top center',
               transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
@@ -1484,7 +1484,7 @@ function BracketContent({ state }: { state: TournamentState }) {
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
   return (
-    <div className="flex justify-center items-center w-full px-12 py-20 relative min-h-[800px] gap-16">
+    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[850px] gap-12">
       
       {/* LEFT SIDE FLOW */}
       <div className="flex items-center gap-12">
