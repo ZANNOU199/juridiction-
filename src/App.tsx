@@ -1099,9 +1099,9 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
                       <button 
                         onClick={finishMatch}
-                        disabled={!state.juryAccounts.every(j => state.juryVotes[j.id])}
+                        disabled={!state.juryAccounts.every(j => state.juryVotes[j.id]) || !activeMatch.revealed}
                         className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm mb-2 shadow-[0_4px_20px_rgba(225,29,72,0.3)]
-                          ${state.juryAccounts.every(j => state.juryVotes[j.id]) 
+                          ${(state.juryAccounts.every(j => state.juryVotes[j.id]) && activeMatch.revealed) 
                             ? 'bg-brand-red text-white hover:scale-[1.02]' 
                             : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
                       >
