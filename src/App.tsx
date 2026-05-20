@@ -797,9 +797,10 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                ) : (
                  <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
                     {['TOP 16', 'TOP 8', 'SEMI FINALE', 'FINALE'].filter(r => {
+                      if (tournamentSize === 16) return r === 'TOP 16';
+                      if (tournamentSize === 8) return r === 'TOP 8';
+                      if (tournamentSize === 4) return r === 'SEMI FINALE';
                       if (tournamentSize === 2) return r === 'FINALE';
-                      if (tournamentSize === 4) return ['SEMI FINALE', 'FINALE'].includes(r);
-                      if (tournamentSize === 8) return ['TOP 8', 'SEMI FINALE', 'FINALE'].includes(r);
                       return true;
                     }).map(roundName => (
                         <div key={roundName} className="space-y-2">
