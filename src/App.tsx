@@ -331,6 +331,11 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const [matches, setMatches] = useState<Match[]>(state.matches || []);
   const [juryCount, setJuryCount] = useState(state.juryCount || 3);
   const [juryAccounts, setJuryAccounts] = useState<JuryAccount[]>(state.juryAccounts || []);
+  const [showBracketPreview, setShowBracketPreview] = useState(false);
+
+  const updateParticipantNameById = (id: string, newName: string) => {
+    setParticipants(prev => prev.map(p => p.id === id ? { ...p, name: newName } : p));
+  };
 
   useEffect(() => {
     if (juryAccounts.length === 0) {
@@ -833,6 +838,17 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                     ))}
                  </div>
                )}
+
+               {matches.length > 0 && (
+                 <div className="pt-4 border-t border-white/5">
+                   <button 
+                     onClick={() => setShowBracketPreview(!showBracketPreview)}
+                     className="w-full py-2 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all italic flex items-center justify-center gap-2"
+                   >
+                     {showBracketPreview ? 'CACHER LE BRACKET' : 'VOIR LE BRACKET'}
+                   </button>
+                 </div>
+               )}
             </div>
           </div>
         </div>
@@ -850,6 +866,22 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
              <p className="text-[9px] font-black uppercase tracking-[0.3em] italic">System Ready</p>
           </div>
         </div>
+
+        {showBracketPreview && (
+          <div className="w-full mt-8 p-4 bg-black/40 border-y border-white/5 overflow-x-auto no-scrollbar">
+            <div className="min-w-[1200px] py-10">
+              <BracketContent 
+                state={{ 
+                  ...state, 
+                  participants, 
+                  matches, 
+                  tournamentSize 
+                }} 
+                onUpdateName={updateParticipantNameById}
+              />
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1472,9 +1504,10 @@ interface MatchNodeProps {
   className?: string;
   side?: 'left' | 'right';
   key?: string | number;
+  onUpdateName?: (id: string, newName: string) => void;
 }
 
-function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
+function MatchNode({ match, participants, className = "", onUpdateName }: MatchNodeProps) {
   const getParticipant = (id: string) => participants.find(p => p.id === id);
   const red = match ? getParticipant(match.redTeamId) : null;
   const blue = match ? getParticipant(match.blueTeamId) : null;
@@ -1491,9 +1524,17 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
                  <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
              )}
-             <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
-               {p?.name || "-"}
-             </span>
+             {onUpdateName && p ? (
+               <input 
+                 value={p.name}
+                 onChange={(e) => onUpdateName(p.id, e.target.value)}
+                 className="bg-transparent text-[11px] md:text-[16px] font-black uppercase italic tracking-tight outline-none border-b border-primary/20 focus:border-primary w-full"
+               />
+             ) : (
+               <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+                 {p?.name || "-"}
+               </span>
+             )}
           </div>
           <div className="flex items-center gap-1 md:gap-2">
              <span className={`text-[10px] md:text-[13px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
@@ -1510,7 +1551,7 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
   );
 }
 
-function BracketContent({ state }: { state: TournamentState }) {
+function BracketContent({ state, onUpdateName }: { state: TournamentState; onUpdateName?: (id: string, name: string) => void }) {
   const getMatch = (round: string, index: number) => {
     const roundMatches = state.matches.filter(m => m.round === round);
     return roundMatches[index];
@@ -1529,19 +1570,19 @@ function BracketContent({ state }: { state: TournamentState }) {
       <div className="flex items-center gap-8 md:gap-12">
         {showTop16 && (
           <div className="flex flex-col gap-10 md:gap-14">
-            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} onUpdateName={onUpdateName} />)}
           </div>
         )}
         {showTop8 && (
           <div className="flex flex-col gap-40 md:gap-52">
-            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} onUpdateName={onUpdateName} />)}
           </div>
         )}
         {showSemi && (
           <div className="flex flex-col">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 left-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
-              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" onUpdateName={onUpdateName} />
             </div>
           </div>
         )}
@@ -1569,9 +1610,17 @@ function BracketContent({ state }: { state: TournamentState }) {
                 </div>
                 <div className="text-center space-y-2">
                     <p className="text-[11px] font-bold text-primary uppercase tracking-[0.3em] italic">Champion</p>
-                    <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
-                        {getWinner(getMatch("FINALE", 0))?.name || "-"}
-                    </h2>
+                    {onUpdateName && getWinner(getMatch("FINALE", 0)) ? (
+                      <input 
+                        value={getWinner(getMatch("FINALE", 0))?.name} 
+                        onChange={(e) => onUpdateName(getWinner(getMatch("FINALE", 0))!.id, e.target.value)}
+                        className="bg-transparent text-2xl font-black italic uppercase text-white tracking-tighter text-center outline-none border-b border-primary/20 focus:border-primary w-[220px]"
+                      />
+                    ) : (
+                      <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
+                          {getWinner(getMatch("FINALE", 0))?.name || "-"}
+                      </h2>
+                    )}
                 </div>
             </div>
             <div className="h-1.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
@@ -1582,19 +1631,19 @@ function BracketContent({ state }: { state: TournamentState }) {
       <div className="flex items-center gap-8 md:gap-12 flex-row-reverse">
         {showTop16 && (
           <div className="flex flex-col gap-10 md:gap-14">
-            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} onUpdateName={onUpdateName} />)}
           </div>
         )}
         {showTop8 && (
           <div className="flex flex-col gap-40 md:gap-52">
-            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} onUpdateName={onUpdateName} />)}
           </div>
         )}
         {showSemi && (
           <div className="flex flex-col">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 right-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
-              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" onUpdateName={onUpdateName} />
             </div>
           </div>
         )}
