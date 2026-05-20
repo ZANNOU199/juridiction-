@@ -336,6 +336,15 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const previewMeasureRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
 
+  const updateMatchTeam = (matchId: string, side: 'red' | 'blue', pId: string) => {
+    setMatches(prev => prev.map(m => {
+      if (m.id === matchId) {
+        return side === 'red' ? { ...m, redTeamId: pId } : { ...m, blueTeamId: pId };
+      }
+      return m;
+    }));
+  };
+
   useEffect(() => {
     if (!showBracketPreview) return;
     
@@ -346,8 +355,8 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     const updateScale = () => {
       if (previewContainerRef.current && previewMeasureRef.current) {
         const containerWidth = previewContainerRef.current.offsetWidth;
-        const contentWidth = 2000; 
-        const scale = (containerWidth - 40) / contentWidth;
+        const contentWidth = 2200; // Increased base width for better spacing
+        const scale = (containerWidth - 60) / contentWidth;
         setPreviewScale(Math.min(1, scale));
       }
     };
@@ -908,19 +917,19 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                 </button>
              </div>
              
-             <div className="relative w-full flex justify-center items-start overflow-hidden py-10" style={{ height: `${previewScale * 1000 + 100}px` }}>
+             <div className="relative w-full flex justify-center items-start overflow-hidden py-10" style={{ height: `${previewScale * 1100 + 100}px` }}>
                 {/* Hidden clone for measurement */}
                 <div 
                   ref={previewMeasureRef} 
                   className="absolute top-0 left-0 invisible pointer-events-none" 
-                  style={{ width: '2000px' }}
+                  style={{ width: '2200px' }}
                 >
                   <BracketContent state={{ ...state, participants, matches, tournamentSize }} />
                 </div>
 
                 <div 
                   style={{ 
-                    width: '2000px',
+                    width: '2200px',
                     transform: `scale(${previewScale})`,
                     transformOrigin: 'top center',
                     transition: 'transform 0.4s ease-out',
@@ -935,6 +944,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                       matches, 
                       tournamentSize 
                     }} 
+                    onUpdateMatchTeam={updateMatchTeam}
                   />
                 </div>
              </div>
@@ -1483,11 +1493,11 @@ function BracketView({ state }: { state: TournamentState }) {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
         const containerHeight = bracketContainerRef.current.offsetHeight;
-        const contentWidth = 2000; 
+        const contentWidth = 2200; 
         const contentHeight = measureRef.current.offsetHeight;
         
-        const scaleW = (containerWidth - 60) / contentWidth;
-        const scaleH = (containerHeight - 60) / contentHeight;
+        const scaleW = (containerWidth - 80) / contentWidth;
+        const scaleH = (containerHeight - 80) / contentHeight;
         const scale = Math.min(1, scaleW, scaleH);
         
         setBracketScale(scale);
@@ -1532,7 +1542,7 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={measureRef} 
           className="absolute top-0 left-0 invisible pointer-events-none" 
-          style={{ width: '2000px' }}
+          style={{ width: '2200px' }}
         >
           <BracketContent state={state} />
         </div>
@@ -1540,7 +1550,7 @@ function BracketView({ state }: { state: TournamentState }) {
         {/* Scaled visible content */}
         <div 
           style={{ 
-            width: '2000px',
+            width: '2200px',
             transform: `scale(${bracketScale})`,
             transformOrigin: 'center center',
             transition: 'transform 0.4s ease-out',
@@ -1562,9 +1572,10 @@ interface MatchNodeProps {
   className?: string;
   side?: 'left' | 'right';
   key?: string | number;
+  onUpdateMatchTeam?: (matchId: string, side: 'red' | 'blue', pId: string) => void;
 }
 
-function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
+function MatchNode({ match, participants, className = "", onUpdateMatchTeam }: MatchNodeProps) {
   const getParticipant = (id: string) => participants.find(p => p.id === id);
   const red = match ? getParticipant(match.redTeamId) : null;
   const blue = match ? getParticipant(match.blueTeamId) : null;
@@ -1573,26 +1584,44 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
 
   return (
     <div className={`bracket-card flex flex-col gap-1 group hover:border-primary/30 min-w-[180px] md:min-w-[240px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
-      {[red, blue].map((p, idx) => (
-        <div key={idx} className="flex justify-between items-center h-10 md:h-14 px-4 relative border-b border-white/5 last:border-b-0">
-          <div className="flex items-center gap-3 overflow-hidden">
-             {p?.photo && (
-               <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
-                 <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-               </div>
-             )}
-            <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
-              {p?.name || "-"}
-            </span>
+      {[red, blue].map((p, idx) => {
+        const side = idx === 0 ? 'red' : 'blue';
+        const teamId = side === 'red' ? match?.redTeamId : match?.blueTeamId;
+
+        return (
+          <div key={idx} className="flex justify-between items-center h-10 md:h-14 px-4 relative border-b border-white/5 last:border-b-0">
+            <div className="flex items-center gap-3 overflow-hidden w-full">
+               {p?.photo && (
+                 <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
+                   <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                 </div>
+               )}
+               {onUpdateMatchTeam && match ? (
+                 <select
+                   value={teamId || ""}
+                   onChange={(e) => onUpdateMatchTeam(match.id, side, e.target.value)}
+                   className="bg-transparent text-[11px] md:text-[16px] font-black uppercase italic tracking-tight outline-none border-b border-white/10 focus:border-primary w-full text-white cursor-pointer hover:text-primary transition-colors appearance-none"
+                 >
+                   <option value="" className="bg-[#0a0807]">-</option>
+                   {participants.map(part => (
+                     <option key={part.id} value={part.id} className="bg-[#0a0807]">{part.name}</option>
+                   ))}
+                 </select>
+               ) : (
+                <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+                  {p?.name || "-"}
+                </span>
+               )}
+            </div>
+            <div className="flex items-center gap-1 md:gap-2 shrink-0 ml-2">
+               <span className={`text-[10px] md:text-[13px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
+                 {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '-')) : '-'}
+               </span>
+            </div>
+            {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-5 md:h-7 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
           </div>
-          <div className="flex items-center gap-1 md:gap-2">
-             <span className={`text-[10px] md:text-[13px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
-               {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '-')) : '-'}
-             </span>
-          </div>
-          {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-5 md:h-7 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
-        </div>
-      ))}
+        );
+      })}
       <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[10px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5 whitespace-nowrap">
          {match?.id || ""}
       </div>
@@ -1600,7 +1629,7 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
   );
 }
 
-function BracketContent({ state }: { state: TournamentState }) {
+function BracketContent({ state, onUpdateMatchTeam }: { state: TournamentState; onUpdateMatchTeam?: (mId: string, s: 'red' | 'blue', pId: string) => void }) {
   const getMatch = (round: string, index: number) => {
     const roundMatches = state.matches.filter(m => m.round === round);
     return roundMatches[index];
@@ -1619,19 +1648,19 @@ function BracketContent({ state }: { state: TournamentState }) {
       <div className="flex items-center gap-8 md:gap-12">
         {showTop16 && (
           <div className="flex flex-col gap-10 md:gap-14">
-            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} onUpdateMatchTeam={onUpdateMatchTeam} />)}
           </div>
         )}
         {showTop8 && (
           <div className="flex flex-col gap-40 md:gap-52">
-            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} onUpdateMatchTeam={onUpdateMatchTeam} />)}
           </div>
         )}
         {showSemi && (
           <div className="flex flex-col">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 left-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
-              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" onUpdateMatchTeam={onUpdateMatchTeam} />
             </div>
           </div>
         )}
@@ -1672,19 +1701,19 @@ function BracketContent({ state }: { state: TournamentState }) {
       <div className="flex items-center gap-8 md:gap-12 flex-row-reverse">
         {showTop16 && (
           <div className="flex flex-col gap-10 md:gap-14">
-            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} onUpdateMatchTeam={onUpdateMatchTeam} />)}
           </div>
         )}
         {showTop8 && (
           <div className="flex flex-col gap-40 md:gap-52">
-            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} onUpdateMatchTeam={onUpdateMatchTeam} />)}
           </div>
         )}
         {showSemi && (
           <div className="flex flex-col">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 right-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
-              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" onUpdateMatchTeam={onUpdateMatchTeam} />
             </div>
           </div>
         )}
