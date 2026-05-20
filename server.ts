@@ -45,6 +45,47 @@ interface TournamentState {
 }
 
 // Helper to check if a match is finished and update winner
+function advanceWinner(finishedMatch: Match, state: TournamentState) {
+  const winnerId = finishedMatch.winnerId;
+  if (!winnerId) return;
+
+  const matches = state.matches;
+  const matchId = finishedMatch.id;
+
+  // Progression map: which match indices/IDs flow into which
+  const progression: Record<string, { nextMatchId: string; side: 'red' | 'blue' }> = {
+    // Round 1 (indices 0-7) -> Round 2 (indices 8-11)
+    't16-1': { nextMatchId: 't8-1', side: 'red' },
+    't16-2': { nextMatchId: 't8-1', side: 'blue' },
+    't16-3': { nextMatchId: 't8-2', side: 'red' },
+    't16-4': { nextMatchId: 't8-2', side: 'blue' },
+    't16-5': { nextMatchId: 't8-3', side: 'red' },
+    't16-6': { nextMatchId: 't8-3', side: 'blue' },
+    't16-7': { nextMatchId: 't8-4', side: 'red' },
+    't16-8': { nextMatchId: 't8-4', side: 'blue' },
+    // Round 2 (indices 8-11) -> Semi-Finals (indices 12-13)
+    't8-1': { nextMatchId: 'semi-1', side: 'red' },
+    't8-2': { nextMatchId: 'semi-1', side: 'blue' },
+    't8-3': { nextMatchId: 'semi-2', side: 'red' },
+    't8-4': { nextMatchId: 'semi-2', side: 'blue' },
+    // Semi-Finals (indices 12-13) -> Finale (index 14)
+    'semi-1': { nextMatchId: 'final-1', side: 'red' },
+    'semi-2': { nextMatchId: 'final-1', side: 'blue' },
+  };
+
+  const nextInfo = progression[matchId];
+  if (nextInfo) {
+    const nextMatch = matches.find(m => m.id === nextInfo.nextMatchId);
+    if (nextMatch) {
+      if (nextInfo.side === 'red') {
+        nextMatch.redTeamId = winnerId;
+      } else {
+        nextMatch.blueTeamId = winnerId;
+      }
+    }
+  }
+}
+
 function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | null>, juryCount: number) {
   const voteList = Object.values(votes).filter(v => v !== null && v !== undefined);
   
@@ -58,6 +99,7 @@ function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | 
     if (voteList.length >= juryCount) {
       match.allVotesCastAt = Date.now();
       match.winnerId = redCount > blueCount ? match.redTeamId : match.blueTeamId;
+      advanceWinner(match, tournamentState);
     } else {
       match.allVotesCastAt = undefined;
       match.winnerId = null;
@@ -187,6 +229,7 @@ app.post("/api/admin/confirm-round", (req, res) => {
       } else {
         match.winnerId = null; // Absolute tie
       }
+      advanceWinner(match, tournamentState);
       // Manual finish required
     }
   }
@@ -198,6 +241,7 @@ app.post("/api/admin/finish-match", (req, res) => {
   const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
   if (match) {
     match.status = 'finished';
+    advanceWinner(match, tournamentState);
     res.json({ success: true, state: tournamentState });
   } else {
     res.status(404).json({ error: "Aucun match actif" });
