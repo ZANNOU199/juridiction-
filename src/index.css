@@ -1,18 +1,33 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&family=Bebas+Neue&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Space Grotesk", sans-serif;
+  --font-heading: "Bebas Neue", cursive;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   
   --color-brand-red: #E11D48;
   --color-brand-blue: #2563EB;
+  --color-primary: #d35f17;
+  --color-primary-light: #f47d31;
+  --color-accent-red: #e11d48;
+  --color-background-dark: #0a0807;
   --color-surface-dark: #050505;
   --color-surface-container: #1E293B;
+  --color-surface-match: #16110e;
+
+  --animate-shimmer: shimmer 2s infinite linear;
+
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
 }
 
 @layer base {
   body {
-    @apply bg-surface-dark text-white font-sans antialiased;
+    @apply bg-background-dark text-slate-100 font-display antialiased;
   }
 }
 
@@ -20,15 +35,89 @@
   .broadcast-mesh {
     background-image: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(5, 5, 5, 1) 100%);
   }
+  
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10;
+  }
+
+  .glass-hover {
+    @apply hover:bg-white/10 transition-all duration-300;
+  }
+
+  .btn-luxury-primary {
+    @apply relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-light text-background-dark px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:scale-105 hover:shadow-[0_0_30px_rgba(211,95,23,0.4)] active:scale-95;
+    background-size: 200% 100%;
+  }
+
+  .btn-luxury-secondary {
+    @apply relative overflow-hidden rounded-xl border border-white/20 bg-white/5 backdrop-blur-md text-white px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:bg-white hover:text-background-dark hover:scale-105 active:scale-95;
+  }
+
+  .btn-luxury-vip {
+    @apply relative overflow-hidden rounded-xl bg-gradient-to-r from-accent-red to-primary text-white px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:scale-105 hover:shadow-[0_0_40px_rgba(225,29,72,0.5)] active:scale-95;
+  }
+
+  .bracket-match-card {
+    @apply bg-surface-match/80 backdrop-blur-sm p-4 rounded-xl border border-white/5 transition-all duration-500 hover:border-primary/50 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative z-10;
+  }
+
+  .bracket-round-tab {
+    @apply px-6 py-2 text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-300 border-b-2;
+  }
+
+  .bracket-round-tab-active {
+    @apply border-primary text-primary bg-primary/5;
+  }
+
+  .bracket-round-tab-inactive {
+    @apply border-transparent text-slate-500 hover:text-white;
+  }
 }
 
-@keyframes shimmer {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+.shimmer-effect::after {
+  content: "";
+  @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg];
+  animation: shimmer 3s infinite;
 }
 
-.animate-shimmer {
-  animation: shimmer 2s linear infinite;
+.grainy-bg {
+  background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
+  background-repeat: repeat;
+}
+
+.text-luxury-glow {
+  text-shadow: 0 0 20px rgba(211,95,23,0.3);
+}
+
+.diagonal-lines {
+  background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(211, 95, 23, 0.03) 40px, rgba(211, 95, 23, 0.03) 80px);
+}
+
+.bracket-connector-line {
+  @apply absolute border-slate-700 pointer-events-none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.urban-texture {
+  background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuBc47P6wSoVkZhCF6j5FZMV24bOP9S131NgbtHeOG_PxKLqRLDNmG3w4Yxufs_InlOlmbgsbNhiTd0oLR5rBUjyuLsbIty_cLNmkNmxMixl_FhGwh6nTL6pi1WoffY9NNTVmJnA25q0s9nXCvAgCKd-LC0eUVOEn_5Y1R-Rir2aBwgDqRLckcl9My23OR1FYyvxumiQ_dsAExUisZyMlm4wQE2tqVesKTQ3c5d5HGe1j3dYft0GiHxmU07xiRzmZ8e-6UHe2lVU3L7I");
+  background-repeat: repeat;
+}
+
+.gold-gradient {
+  background: linear-gradient(135deg, #f4d125 0%, #d4af37 100%);
+}
+
+.gold-gradient-text {
+  background: linear-gradient(to right, #f4d125, #fffbeb, #f4d125);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 /* Force Landscape via Rotation Hack */

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Navigate, useParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
@@ -65,7 +65,7 @@ interface TournamentState {
 const DEFAULT_STATE: TournamentState = {
   competitionName: "ARENA CHAMPIONSHIP",
   competitionLogo: "",
-  participants: [],
+  participants: Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" })),
   juryAccounts: [],
   juryCount: 3,
   currentMatchId: null,
@@ -132,6 +132,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
+        <Route path="/bracket" element={<BracketView state={state} />} />
         <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
         <Route path="/jury" element={<JuryGateway state={state} onSave={saveStateLocal} />} />
         <Route path="/select" element={<RoleSelection state={state} />} />
@@ -320,7 +321,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const navigate = useNavigate();
   const [competitionName, setCompetitionName] = useState(state.competitionName || "");
   const [competitionLogo, setCompetitionLogo] = useState(state.competitionLogo || "");
-  const [participants, setParticipants] = useState<Participant[]>(state.participants || []);
+  const [participants, setParticipants] = useState<Participant[]>(state.participants && state.participants.length === 16 ? state.participants : Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" })));
   const [matches, setMatches] = useState<Match[]>(state.matches || []);
   const [juryCount, setJuryCount] = useState(state.juryCount || 3);
   const [juryAccounts, setJuryAccounts] = useState<JuryAccount[]>(state.juryAccounts || []);
@@ -350,9 +351,6 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     setJuryAccounts(newAccounts);
   };
 
-  // Participant Form
-  const [participantCount, setParticipantCount] = useState(state.participants?.length || 0);
-
   // Match Form
   const [newMatchRound, setNewMatchRound] = useState("");
   const [redId, setRedId] = useState("");
@@ -360,25 +358,102 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const [votingMode, setVotingMode] = useState<'match' | 'round'>('match');
   const [roundCount, setRoundCount] = useState(1);
 
-  const handleParticipantCountChange = (count: number) => {
-    setParticipantCount(count);
-    let newParticipants = [...participants];
-    if (count > participants.length) {
-      for (let i = participants.length; i < count; i++) {
-        newParticipants.push({ id: `p-${i + 1}`, name: "", photo: "" });
-      }
-    } else if (count < participants.length) {
-      newParticipants = newParticipants.slice(0, count);
-      const remainingIds = new Set(newParticipants.map(p => p.id));
-      setMatches(matches.filter(m => remainingIds.has(m.redTeamId) && remainingIds.has(m.blueTeamId)));
-    }
-    setParticipants(newParticipants);
-  };
-
   const updateParticipant = (index: number, field: keyof Participant, value: string) => {
     const newParticipants = [...participants];
     newParticipants[index] = { ...newParticipants[index], [field]: value };
     setParticipants(newParticipants);
+  };
+
+  const generateTop16Bracket = () => {
+    const newMatches: Match[] = [];
+    
+    // Top 16 (8 matches)
+    for (let i = 0; i < 8; i++) {
+      newMatches.push({
+        id: `t16-${i + 1}`,
+        redTeamId: participants[i * 2]?.id || "",
+        blueTeamId: participants[i * 2 + 1]?.id || "",
+        redVotes: 0,
+        blueVotes: 0,
+        winnerId: null,
+        status: 'pending',
+        round: "TOP 16",
+        votingMode: 'match',
+        roundCount: 1,
+        currentRound: 1,
+        roundResults: [],
+        finishedJuries: []
+      });
+    }
+
+    // Top 8 (Empty containers for manual filling)
+    for (let i = 0; i < 4; i++) {
+        newMatches.push({
+          id: `t8-${i + 1}`,
+          redTeamId: "",
+          blueTeamId: "",
+          redVotes: 0,
+          blueVotes: 0,
+          winnerId: null,
+          status: 'pending',
+          round: "TOP 8",
+          votingMode: 'match',
+          roundCount: 1,
+          currentRound: 1,
+          roundResults: [],
+          finishedJuries: []
+        });
+      }
+
+    // Semi (2 matches)
+    for (let i = 0; i < 2; i++) {
+        newMatches.push({
+          id: `semi-${i + 1}`,
+          redTeamId: "",
+          blueTeamId: "",
+          redVotes: 0,
+          blueVotes: 0,
+          winnerId: null,
+          status: 'pending',
+          round: "SEMI FINALE",
+          votingMode: 'match',
+          roundCount: 1,
+          currentRound: 1,
+          roundResults: [],
+          finishedJuries: []
+        });
+      }
+
+    // Finale (1 match)
+    newMatches.push({
+        id: `final-1`,
+        redTeamId: "",
+        blueTeamId: "",
+        redVotes: 0,
+        blueVotes: 0,
+        winnerId: null,
+        status: 'pending',
+        round: "FINALE",
+        votingMode: 'match',
+        roundCount: 1,
+        currentRound: 1,
+        roundResults: [],
+        finishedJuries: []
+    });
+
+    setMatches(newMatches);
+  };
+
+  const updateMatchParticipant = (matchId: string, side: 'red' | 'blue', participantId: string) => {
+    setMatches(matches.map(m => {
+        if (m.id === matchId) {
+            return {
+                ...m,
+                [side === 'red' ? 'redTeamId' : 'blueTeamId']: participantId
+            };
+        }
+        return m;
+    }));
   };
 
   const addMatch = () => {
@@ -540,231 +615,194 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
   if (!state.configured) {
     return (
-      <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-6xl mx-auto font-sans text-white">
-        <header className="w-full flex justify-between items-center mb-12">
-          <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">Configuration du Tournoi</h2>
-          <button onClick={() => navigate('/select')} className="text-white/40 hover:text-white"><LogOut /></button>
+      <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-7xl mx-auto font-sans text-white bg-background-dark urban-texture">
+        <header className="w-full flex justify-between items-center mb-12 border-b border-white/5 pb-8">
+          <div className="flex flex-col">
+            <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em] mb-2">Arena System Pro</p>
+            <h2 className="text-3xl md:text-5xl font-black italic uppercase tracking-tighter">Configuration</h2>
+          </div>
+          <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-all"><LogOut /></button>
         </header>
 
-        <div className="w-full grid grid-cols-1 lg:grid-cols-3 gap-8 md:gap-12">
-          {/* Section 1: General Info */}
-          <div className="space-y-6 bg-white/5 p-6 border border-white/10">
-            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/40">1. Infos Compétition</h3>
-            <div className="space-y-4">
-              <input 
-                type="text" 
-                value={competitionName} 
-                onChange={e => setCompetitionName(e.target.value)}
-                placeholder="Nom de la compétition"
-                className="w-full bg-black/40 border border-white/10 px-4 py-3 font-black focus:border-white transition-all outline-none italic uppercase"
-              />
-              <input 
-                type="text" 
-                value={competitionLogo} 
-                onChange={e => setCompetitionLogo(e.target.value)}
-                placeholder="URL Logo (Optionnel)"
-                className="w-full bg-black/40 border border-white/10 px-4 py-3 font-bold focus:border-white transition-all outline-none italic"
-              />
-              <div>
-                <p className="text-[9px] font-black uppercase text-white/40 mb-2">Nombre de Juges</p>
-                <div className="flex gap-2">
-                  {[3, 5].map(n => (
-                    <button 
-                      key={n}
-                      onClick={() => handleJuryCountChange(n)}
-                      className={`flex-1 py-3 font-black italic border-2 transition-all text-xs ${juryCount === n ? 'border-white bg-white text-black' : 'border-white/10 text-white/40'}`}
-                    >
-                      {n} JUGES
-                    </button>
+        <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 md:gap-12">
+          {/* Left: Settings */}
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-white/5 p-8 border border-white/10 relative overflow-hidden group">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 -rotate-45 translate-x-16 -translate-y-16 group-hover:bg-primary/10 transition-all"></div>
+               <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
+                 <Settings size={14} className="text-primary" /> 1. Paramètres Généraux
+               </h3>
+               <div className="space-y-4 relative z-10">
+                 <input 
+                   type="text" 
+                   value={competitionName} 
+                   onChange={e => setCompetitionName(e.target.value)}
+                   placeholder="NOM DE L'ÉVÉNEMENT"
+                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-black focus:border-primary transition-all outline-none italic uppercase text-sm tracking-widest"
+                 />
+                 <input 
+                   type="text" 
+                   value={competitionLogo} 
+                   onChange={e => setCompetitionLogo(e.target.value)}
+                   placeholder="URL LOGO (OPTIONNEL)"
+                   className="w-full bg-black/40 border border-white/10 px-4 py-4 font-bold focus:border-primary transition-all outline-none italic text-xs"
+                 />
+                 
+                 <div className="pt-4">
+                   <p className="text-[9px] font-black uppercase text-white/40 mb-3 tracking-widest">Configuration des Juges</p>
+                   <div className="flex gap-2 mb-6">
+                     {[3, 5].map(n => (
+                       <button 
+                         key={n}
+                         onClick={() => handleJuryCountChange(n)}
+                         className={`flex-1 py-3 font-black italic border transition-all text-[10px] tracking-widest ${juryCount === n ? 'bg-primary border-primary text-black' : 'border-white/10 text-white/40 hover:border-white/30'}`}
+                       >
+                         {n} JUGES
+                       </button>
+                     ))}
+                   </div>
+                   
+                   <div className="space-y-2">
+                     {juryAccounts.map((jury, i) => (
+                       <div key={jury.id} className="flex gap-2">
+                         <input 
+                           type="text" 
+                           value={jury.username} 
+                           onChange={e => updateJuryAccount(i, 'username', e.target.value)}
+                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-primary transition-all outline-none italic text-[10px] uppercase tracking-tighter"
+                         />
+                         <input 
+                           type="text" 
+                           value={jury.password} 
+                           onChange={e => updateJuryAccount(i, 'password', e.target.value)}
+                           className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-primary transition-all outline-none italic text-[10px] uppercase tracking-tighter"
+                         />
+                       </div>
+                     ))}
+                   </div>
+                 </div>
+               </div>
+            </div>
+          </div>
+
+          {/* Center: Participants */}
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-white/5 p-8 border border-white/10">
+               <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
+                 <Users size={14} className="text-primary" /> 2. TOP 16 Participants
+               </h3>
+               <div className="grid grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
+                  {participants.map((p, i) => (
+                    <div key={p.id} className="relative group">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black font-mono text-primary/40 group-hover:text-primary transition-colors italic">
+                        #{String(i + 1).padStart(2, '0')}
+                      </span>
+                      <input 
+                        type="text" 
+                        value={p.name} 
+                        onChange={e => updateParticipant(i, 'name', e.target.value)}
+                        placeholder={`NOM PARTICIPANT ${i + 1}`}
+                        className="w-full bg-black/40 border border-white/5 pl-12 pr-4 py-3 font-black focus:border-primary transition-all outline-none italic text-xs uppercase tracking-tight"
+                      />
+                    </div>
                   ))}
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-4 border-t border-white/5">
-                <p className="text-[9px] font-black uppercase text-white/40 mb-2">Comptes Jury (Username / Password)</p>
-                {juryAccounts.map((jury, i) => (
-                  <div key={jury.id} className="flex gap-2">
-                    <input 
-                      type="text" 
-                      value={jury.username} 
-                      onChange={e => updateJuryAccount(i, 'username', e.target.value)}
-                      placeholder="Username"
-                      className="flex-1 bg-black/40 border border-white/10 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px]"
-                    />
-                    <input 
-                      type="text" 
-                      value={jury.password} 
-                      onChange={e => updateJuryAccount(i, 'password', e.target.value)}
-                      placeholder="Password"
-                      className="flex-1 bg-black/40 border border-white/10 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px]"
-                    />
-                  </div>
-                ))}
-              </div>
+               </div>
             </div>
           </div>
 
-          {/* Section 2: Participants */}
-          <div className="space-y-6 bg-white/5 p-6 border border-white/10 lg:col-span-1">
-            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/40">2. Configuration Participants</h3>
-            <div className="space-y-4">
-              <div>
-                <p className="text-[9px] font-black uppercase text-white/40 mb-2">Nombre total de participants</p>
-                <input 
-                  type="number" 
-                  min="0"
-                  value={participantCount || ""}
-                  onChange={e => handleParticipantCountChange(parseInt(e.target.value) || 0)}
-                  placeholder="Ex: 8"
-                  className="w-full bg-black/40 border border-white/10 px-4 py-2 font-black focus:border-white transition-all outline-none italic"
-                />
-              </div>
+          {/* Right: Bracket */}
+          <div className="lg:col-span-4 space-y-8">
+            <div className="bg-white/5 p-8 border border-white/10">
+               <div className="flex justify-between items-center mb-6">
+                 <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 flex items-center gap-2">
+                   <Trophy size={14} className="text-primary" /> 3. Structure du Tableau
+                 </h3>
+                 <button 
+                  onClick={generateTop16Bracket}
+                  className="text-[9px] font-black text-primary hover:text-white transition-colors uppercase italic border-b border-primary/30"
+                 >
+                   Reset Bracket
+                 </button>
+               </div>
 
-              <div className="max-h-[350px] overflow-y-auto space-y-4 pt-4 border-t border-white/5">
-                {participants.map((p, i) => (
-                  <div key={p.id} className="p-3 bg-white/5 border border-white/5 space-y-2 relative group">
-                    <span className="absolute -left-2 -top-2 w-5 h-5 bg-white text-black flex items-center justify-center text-[10px] font-black italic">
-                      {i + 1}
-                    </span>
-                    <input 
-                      type="text" 
-                      value={p.name} 
-                      onChange={e => updateParticipant(i, 'name', e.target.value)}
-                      placeholder={`Nom Participant ${i + 1}`}
-                      className="w-full bg-black/40 border border-white/10 px-4 py-2 font-black focus:border-white transition-all outline-none italic text-sm"
-                    />
-                    <input 
-                      type="text" 
-                      value={p.photo} 
-                      onChange={e => updateParticipant(i, 'photo', e.target.value)}
-                      placeholder="URL Photo (Optionnel)"
-                      className="w-full bg-black/40 border border-white/10 px-4 py-2 font-bold focus:border-white transition-all outline-none italic text-[10px] opacity-60"
-                    />
-                  </div>
-                ))}
-                {participants.length === 0 && (
-                  <p className="text-center py-12 text-white/10 font-bold italic uppercase tracking-widest text-[10px]">
-                    Indiquez le nombre de participants ci-dessus
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Section 3: Bracket Builder */}
-          <div className="space-y-6 bg-white/5 p-6 border border-white/10">
-            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/40">3. Bracket Manuel ({matches.length} Matchs)</h3>
-            <div className="space-y-3">
-              <input 
-                type="text" 
-                value={newMatchRound} 
-                onChange={e => setNewMatchRound(e.target.value)}
-                placeholder="Etape (ex: FINALE)"
-                className="w-full bg-black/40 border border-white/10 px-4 py-2 font-black focus:border-white transition-all outline-none italic uppercase text-xs"
-              />
-              <div className="grid grid-cols-2 gap-2">
-                <select 
-                  value={redId} 
-                  onChange={e => setRedId(e.target.value)}
-                  className="bg-black/40 border border-white/10 px-2 py-2 font-black text-xs outline-none italic"
-                >
-                  <option value="">ROUGE</option>
-                  {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <select 
-                  value={blueId} 
-                  onChange={e => setBlueId(e.target.value)}
-                  className="bg-black/40 border border-white/10 px-2 py-2 font-black text-xs outline-none italic"
-                >
-                  <option value="">BLEU</option>
-                  {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              </div>
-              
-              <div className="space-y-2 py-2 border-y border-white/5">
-                <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-black uppercase text-white/30 italic">Type de Juridiction</span>
-                  <div className="flex gap-2">
+               {matches.length === 0 ? (
+                 <div className="py-20 text-center border-2 border-dashed border-white/5 hover:border-primary/20 transition-all group flex flex-col items-center">
+                    <p className="text-[11px] font-black italic uppercase text-white/20 mb-6 max-w-[200px]">Initialisez le tableau officiel Top 16</p>
                     <button 
-                      onClick={() => setVotingMode('match')}
-                      className={`px-3 py-1 text-[9px] font-black italic border ${votingMode === 'match' ? 'bg-white text-black border-white' : 'border-white/10 text-white/40'}`}
+                      onClick={generateTop16Bracket}
+                      className="px-6 py-3 bg-white text-black font-black italic uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all"
                     >
-                      BATTLE
+                      GÉNÉRER LE TOP 16
                     </button>
-                    <button 
-                      onClick={() => setVotingMode('round')}
-                      className={`px-3 py-1 text-[9px] font-black italic border ${votingMode === 'round' ? 'bg-white text-black border-white' : 'border-white/10 text-white/40'}`}
-                    >
-                      ROUND
-                    </button>
-                  </div>
-                </div>
-
-                {votingMode === 'round' && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-[10px] font-black uppercase text-white/30 italic">Nombre de Rounds</span>
-                    <input 
-                      type="number"
-                      min="1"
-                      max="10"
-                      value={roundCount}
-                      onChange={e => setRoundCount(parseInt(e.target.value) || 1)}
-                      className="w-16 bg-black/40 border border-white/10 px-2 py-1 font-black text-xs outline-none italic text-center"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <button 
-                onClick={addMatch} 
-                disabled={!newMatchRound || !redId || !blueId}
-                className="w-full bg-white text-black py-2 font-black italic flex justify-center items-center gap-2 disabled:opacity-20"
-              >
-                <Plus size={16} /> AJOUTER LE MATCH
-              </button>
-            </div>
-            <div className="max-h-48 overflow-y-auto space-y-1 mt-4">
-              {matches.map((m, i) => (
-                <div key={m.id} className="flex justify-between items-center bg-white/5 px-3 py-2 rounded-sm text-[10px]">
-                  <div className="flex flex-col">
-                    <span className="opacity-40 font-black">{m.round}</span>
-                    <span className="font-black italic uppercase">
-                      {participants.find(p => p.id === m.redTeamId)?.name} VS {participants.find(p => p.id === m.blueTeamId)?.name}
-                    </span>
-                  </div>
-                  <button onClick={() => removeMatch(m.id)} className="text-white/20 hover:text-red-500"><Trash2 size={14} /></button>
-                </div>
-              ))}
+                 </div>
+               ) : (
+                 <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
+                    {/* Simplified selection for bracket matches */}
+                    {['TOP 16', 'TOP 8', 'SEMI FINALE', 'FINALE'].map(roundName => (
+                        <div key={roundName} className="space-y-2">
+                            <h4 className="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase border-b border-white/5 pb-1">{roundName}</h4>
+                            {matches.filter(m => m.round === roundName).map(m => (
+                                <div key={m.id} className="grid grid-cols-2 gap-1 bg-white/5 p-2 border border-white/5">
+                                    <select 
+                                        value={m.redTeamId} 
+                                        onChange={e => updateMatchParticipant(m.id, 'red', e.target.value)}
+                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none focus:border-brand-red/50"
+                                    >
+                                        <option value="">ROUGE</option>
+                                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                    <select 
+                                        value={m.blueTeamId} 
+                                        onChange={e => updateMatchParticipant(m.id, 'blue', e.target.value)}
+                                        className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none focus:border-brand-blue/50"
+                                    >
+                                        <option value="">BLEU</option>
+                                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                    </select>
+                                </div>
+                            ))}
+                        </div>
+                    ))}
+                 </div>
+               )}
             </div>
           </div>
         </div>
 
-        <div className="w-full mt-12 flex flex-col items-center gap-6">
+        <div className="w-full mt-16 flex flex-col items-center gap-8 pb-12">
           <button 
-            disabled={matches.length === 0}
+            disabled={matches.length === 0 || !competitionName}
             onClick={configure}
-            className={`w-full max-w-lg py-6 font-black italic text-xl md:text-2xl tracking-tighter flex items-center justify-center gap-4 transition-all
-              ${matches.length === 0 ? 'bg-white/5 text-white/10' : 'bg-green-500 text-black shadow-[0_10px_40px_rgba(34,197,94,0.3)] hover:scale-[1.01]'}`}
+            className="btn-luxury-primary w-full max-w-2xl text-lg md:text-xl shadow-[0_20px_50px_rgba(211,95,23,0.2)]"
           >
-            <Play size={24} /> LANCER LA COMPÉTITION
+            Lancer l'Événement Officiel
           </button>
-          <p className="text-[9px] text-center font-bold text-white/20 uppercase tracking-widest italic">Vérifiez toutes les informations avant de démarrer.</p>
+          <div className="flex gap-4 items-center opacity-40">
+             <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+             <p className="text-[9px] font-black uppercase tracking-[0.3em] italic">Judge System Ready</p>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen p-6 md:p-12 flex flex-col items-center bg-surface-dark font-sans text-white">
-       <header className="w-full flex justify-between items-center mb-12 max-w-6xl">
-          <div className="flex items-center gap-4 md:gap-6">
-            <h2 className="text-2xl md:text-3xl font-black italic">{state.competitionName} - ADMIN</h2>
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-500 text-[9px] font-black uppercase tracking-widest">
-               <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-               Live System
+    <div className="min-h-screen p-6 md:p-12 flex flex-col items-center bg-background-dark font-sans text-white urban-texture selection:bg-primary/30">
+       <header className="w-full flex justify-between items-center mb-12 max-w-7xl border-b border-white/5 pb-8">
+          <div className="flex flex-col gap-1">
+            <p className="text-primary text-[10px] font-black uppercase tracking-[0.4em]">Arena Control Center</p>
+            <div className="flex items-center gap-4 md:gap-6">
+              <h2 className="text-2xl md:text-3xl font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1 bg-green-500/10 border border-green-500/30 text-green-500 text-[9px] font-black uppercase tracking-[0.2em]">
+                 <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                 Live System
+              </div>
             </div>
           </div>
-          <button onClick={() => navigate('/select')} className="text-white/40 hover:text-white transition-colors"><LogOut /></button>
+          <div className="flex items-center gap-8">
+            <button onClick={() => navigate('/bracket')} className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-white transition-all border-b border-primary/20 hover:border-white pb-1 italic">View Bracket</button>
+            <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors"><LogOut size={20} /></button>
+          </div>
         </header>
 
         <div className="w-full max-w-6xl flex flex-col lg:grid lg:grid-cols-3 gap-8">
@@ -1276,6 +1314,200 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   );
 }
 
+function BracketView({ state }: { state: TournamentState }) {
+  const navigate = useNavigate();
+  const bracketContainerRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [bracketScale, setBracketScale] = useState(1);
+  const [bracketHeight, setBracketHeight] = useState(800);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (bracketContainerRef.current && measureRef.current) {
+        const containerWidth = bracketContainerRef.current.offsetWidth;
+        const contentWidth = 1200; // Fixed width for bracket layout
+        const scale = Math.min(1, (containerWidth - 40) / contentWidth);
+        setBracketScale(scale);
+        
+        // Update height based on scaled content
+        const contentHeight = measureRef.current.offsetHeight;
+        setBracketHeight(contentHeight);
+      }
+    };
+
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [state.matches]);
+
+  const stats = [
+    { label: "PARTICIPANTS", value: "16" },
+    { label: "BATTLES", value: "15" },
+    { label: "JURY", value: state.juryCount.toString() }
+  ];
+
+  return (
+    <div className="min-h-screen bg-background-dark overflow-x-hidden selection:bg-primary/30">
+      {/* Header for Bracket Page */}
+      <header className="px-6 md:px-12 py-6 flex justify-between items-center border-b border-white/5 bg-black/40 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center gap-4">
+           <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors">
+             <Rocket size={20} />
+           </button>
+           <div className="h-4 w-px bg-white/10"></div>
+           <h2 className="text-sm md:text-xl font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
+        </div>
+        <div className="flex gap-4">
+           <button onClick={() => navigate('/')} className="px-4 py-1.5 bg-white/5 border border-white/10 rounded-sm text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">Scoreboard</button>
+        </div>
+      </header>
+
+      {/* BRACKETS SECTION */}
+      <section id="brackets" className="py-12 md:py-32 bg-background-dark overflow-hidden relative">
+        <div className="absolute inset-0 pointer-events-none grain-texture z-0 opacity-5"></div>
+        <div className="absolute inset-0 pointer-events-none diagonal-lines z-0 opacity-10"></div>
+        
+        <div className="max-w-7xl mx-auto px-4 text-center mb-16 relative z-10">
+          <div className="inline-block px-4 py-1 border border-primary/30 bg-primary/10 rounded-full mb-6">
+            <span className="text-primary text-[10px] font-bold tracking-[0.2em] uppercase">Phase Finale</span>
+          </div>
+          <h1 className="font-heading text-4xl md:text-8xl text-white mb-4 tracking-tight uppercase">
+            TABLEAU DES BATTLES <span className="text-primary">-</span> TOP 16
+          </h1>
+          <p className="text-slate-400 max-w-2xl mx-auto font-light text-sm md:text-lg italic">
+            Suivez en temps réel l'ascension des meilleurs B-Boys et B-Girls.
+          </p>
+        </div>
+
+        <div ref={bracketContainerRef} className="w-full relative z-10 overflow-hidden px-4" style={{ height: `${bracketHeight * bracketScale + 40}px`, minHeight: '600px' }}>
+          {/* Hidden clone for measurement */}
+          <div 
+            ref={measureRef} 
+            className="absolute top-0 left-0 invisible pointer-events-none" 
+            style={{ width: '1200px' }}
+          >
+            <BracketContent state={state} />
+          </div>
+
+          {/* Scaled visible content */}
+          <div 
+            style={{ 
+              width: '1200px',
+              position: 'absolute',
+              left: '50%',
+              top: 0,
+              transform: `translateX(-50%) scale(${bracketScale})`,
+              transformOrigin: 'top center',
+              transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              willChange: 'transform'
+            }}
+          >
+            <BracketContent state={state} />
+          </div>
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 mt-16 md:mt-32 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+          {stats.map((stat, idx) => (
+            <div key={idx} className={`bg-white/5 p-8 rounded-sm border border-white/10 hover:border-primary/30 transition-all flex flex-col items-center md:items-start`}>
+              <h4 className={`font-heading text-4xl md:text-6xl text-white mb-2 italic`}>{stat.value}</h4>
+              <p className="text-slate-500 uppercase text-[10px] font-black tracking-widest leading-none">{stat.label}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+interface MatchNodeProps {
+  match?: Match;
+  participants: Participant[];
+  className?: string;
+  key?: string;
+}
+
+function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
+  if (!match) return <div className={`bracket-match-card opacity-20 border-dashed ${className}`}><div className="h-20" /></div>;
+  
+  const red = participants.find(p => p.id === match.redTeamId);
+  const blue = participants.find(p => p.id === match.blueTeamId);
+
+  return (
+    <div className={`bracket-match-card ${className}`}>
+      <div className="space-y-1">
+        <div className="flex justify-between items-center group">
+          <span className={`text-[11px] font-black uppercase italic tracking-wider transition-colors ${match.winnerId === match.redTeamId ? 'text-primary' : (red ? 'text-white' : 'text-white/20')}`}>
+            {red?.name || "???"}
+          </span>
+          {match.status === 'finished' && match.winnerId === match.redTeamId && <Shield size={10} className="text-primary" />}
+        </div>
+        <div className="h-px bg-white/5" />
+        <div className="flex justify-between items-center group">
+          <span className={`text-[11px] font-black uppercase italic tracking-wider transition-colors ${match.winnerId === match.blueTeamId ? 'text-brand-blue' : (blue ? 'text-white' : 'text-white/20')}`}>
+            {blue?.name || "???"}
+          </span>
+          {match.status === 'finished' && match.winnerId === match.blueTeamId && <Shield size={10} className="text-brand-blue" />}
+        </div>
+      </div>
+      <div className="absolute -top-2 -right-2 bg-black border border-white/10 px-2 py-0.5 rounded-full text-[7px] font-black text-white/40">
+         {match.id.replace('t16-', '').replace('t8-', '').replace('semi-', '').replace('final-', '')}
+      </div>
+    </div>
+  );
+}
+
+function BracketContent({ state }: { state: TournamentState }) {
+  const getMatch = (round: string, index: number) => {
+    return state.matches.filter(m => m.round === round)[index];
+  };
+
+  return (
+    <div className="grid grid-cols-4 gap-x-12 py-10 w-full font-sans overflow-visible">
+      {/* Round 1: Top 16 */}
+      <div className="space-y-4 flex flex-col justify-between">
+        {[0, 1, 2, 3, 4, 5, 6, 7].map(i => <MatchNode key={`v1-m${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+      </div>
+
+      {/* Round 2: Top 8 */}
+      <div className="space-y-8 flex flex-col justify-around py-10 relative">
+        {[0, 1, 2, 3].map(i => (
+          <div key={`v2-m${i}`} className="relative">
+             <MatchNode match={getMatch("TOP 8", i)} participants={state.participants} />
+             {/* Connector lines from previous round */}
+             <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[4.5rem] -left-6 top-1/2 -translate-y-full" />
+             <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[4.5rem] -left-6 top-1/2" />
+          </div>
+        ))}
+      </div>
+
+      {/* Round 3: Semis */}
+      <div className="space-y-16 flex flex-col justify-around py-20">
+        {[0, 1].map(i => (
+          <div key={`v3-m${i}`} className="relative">
+             <MatchNode match={getMatch("SEMI FINALE", i)} participants={state.participants} />
+             <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[9rem] -left-6 top-1/2 -translate-y-full" />
+             <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[9rem] -left-6 top-1/2" />
+          </div>
+        ))}
+      </div>
+
+      {/* Round 4: Final */}
+      <div className="flex flex-col justify-center py-40">
+        <div className="relative">
+            <MatchNode match={getMatch("FINALE", 0)} participants={state.participants} className="scale-125 border-primary/40 shadow-[0_20px_60px_rgba(211,95,23,0.2)]" />
+            <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[18rem] -left-6 top-1/2 -translate-y-full" />
+            <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[18rem] -left-6 top-1/2" />
+            
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-center w-full">
+              <Trophy className="text-primary mx-auto mb-2 animate-bounce" size={32} />
+              <p className="text-primary font-heading text-4xl italic tracking-widest uppercase">Champion</p>
+            </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PublicView({ state }: { state: TournamentState }) {
   const navigate = useNavigate();
   const activeMatch = state.matches.find(m => m.id === state.currentMatchId);
@@ -1330,20 +1562,24 @@ function PublicView({ state }: { state: TournamentState }) {
 
       {/* Header Bar */}
       <header className="px-4 md:px-12 py-3 md:py-8 flex justify-between items-start z-20">
-        <div className="flex flex-col gap-1 md:gap-2">
+        <div className="flex flex-col gap-1 md:gap-4">
           <button onClick={() => navigate('/select')} className="px-3 py-1 bg-white/5 border border-white/10 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/10 transition-all text-left">HUB SYSTEM</button>
+          <button onClick={() => navigate('/bracket')} className="px-3 py-1 bg-primary/10 border border-primary/20 text-[7px] md:text-[10px] font-black uppercase tracking-widest text-primary hover:text-white hover:bg-primary transition-all text-left italic">VIEW BRACKET</button>
         </div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-6 md:top-14 w-full max-w-[60%] pointer-events-none flex flex-col items-center">
-          <h1 className="text-xl md:text-5xl font-black tracking-tighter leading-none italic uppercase truncate mb-3 md:mb-8">{state.competitionName}</h1>
-          <div className="text-sm md:text-3xl font-black italic uppercase tracking-wider text-brand-red bg-brand-red/10 border border-brand-red/30 py-1 md:py-2 px-4 md:px-6 inline-block">
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-6 md:top-10 w-full max-w-[80%] pointer-events-none flex flex-col items-center">
+          <h1 className="text-2xl md:text-7xl font-black tracking-tighter leading-none italic uppercase truncate mb-4 md:mb-10 text-white/95 text-luxury-glow">
+            {state.competitionName}
+          </h1>
+          <div className="text-lg md:text-5xl font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x-2 border-primary/40 py-2 md:py-4 px-8 md:px-16 inline-block transform -skew-x-12">
             {activeMatch.round}
           </div>
         </div>
 
         <div className="text-right">
-          <div className="h-[20px] md:h-auto flex items-center">
-            <div className={`w-2 h-2 rounded-full ${activeMatch.status === 'active' ? 'bg-red-600 animate-pulse' : 'bg-white/20'}`} />
+          <div className="h-[20px] md:h-auto flex items-center justify-end gap-3">
+             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 hidden md:block">Streaming Live</span>
+             <div className={`w-3 h-3 rounded-full ${activeMatch.status === 'active' ? 'bg-primary animate-pulse' : 'bg-white/20'}`} />
           </div>
         </div>
       </header>
