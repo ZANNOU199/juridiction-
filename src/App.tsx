@@ -1388,11 +1388,11 @@ function BracketView({ state }: { state: TournamentState }) {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
         const containerHeight = bracketContainerRef.current.offsetHeight;
-        const contentWidth = 1800; // Reduced base width
+        const contentWidth = 2000; 
         const contentHeight = measureRef.current.offsetHeight;
         
-        const scaleW = (containerWidth - 40) / contentWidth;
-        const scaleH = (containerHeight - 40) / contentHeight;
+        const scaleW = (containerWidth - 60) / contentWidth;
+        const scaleH = (containerHeight - 60) / contentHeight;
         const scale = Math.min(1, scaleW, scaleH);
         
         setBracketScale(scale);
@@ -1437,7 +1437,7 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={measureRef} 
           className="absolute top-0 left-0 invisible pointer-events-none" 
-          style={{ width: '1800px' }}
+          style={{ width: '2000px' }}
         >
           <BracketContent state={state} />
         </div>
@@ -1445,7 +1445,7 @@ function BracketView({ state }: { state: TournamentState }) {
         {/* Scaled visible content */}
         <div 
           style={{ 
-            width: '1800px',
+            width: '2000px',
             transform: `scale(${bracketScale})`,
             transformOrigin: 'center center',
             transition: 'transform 0.4s ease-out',
@@ -1476,28 +1476,28 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
   const isWinner = (pId: string) => match?.status === 'finished' && match.winnerId === pId;
 
   return (
-    <div className={`bracket-card flex flex-col gap-1 group hover:border-primary/30 min-w-[160px] md:min-w-[190px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
+    <div className={`bracket-card flex flex-col gap-1 group hover:border-primary/30 min-w-[180px] md:min-w-[240px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
       {[red, blue].map((p, idx) => (
-        <div key={idx} className="flex justify-between items-center h-8 md:h-9 px-3 relative border-b border-white/5 last:border-b-0">
-          <div className="flex items-center gap-2 overflow-hidden">
+        <div key={idx} className="flex justify-between items-center h-9 md:h-12 px-4 relative border-b border-white/5 last:border-b-0">
+          <div className="flex items-center gap-3 overflow-hidden">
              {p?.photo && (
-               <div className="w-4 h-4 rounded-full overflow-hidden border border-white/10 shrink-0">
+               <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
                  <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
              )}
-             <span className={`text-[10px] md:text-[13px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+             <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
                {p?.name || "-"}
              </span>
           </div>
           <div className="flex items-center gap-1 md:gap-2">
-             <span className={`text-[9px] md:text-[11px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
+             <span className={`text-[10px] md:text-[13px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
                {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '-')) : '-'}
              </span>
           </div>
-          {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-4 md:h-5 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
+          {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-5 md:h-7 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
         </div>
       ))}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[8px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5 whitespace-nowrap">
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[10px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5 whitespace-nowrap">
          {match?.id || ""}
       </div>
     </div>
@@ -1533,7 +1533,7 @@ function BracketContent({ state }: { state: TournamentState }) {
         )}
         {showSemi && (
           <div className="flex flex-col">
-            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[220px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 left-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
               <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
             </div>
@@ -1551,24 +1551,24 @@ function BracketContent({ state }: { state: TournamentState }) {
             <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white leading-[0.8]">FINALE</h1>
          </div>
 
-         <div className="champion-box w-[220px] h-[320px] p-0.5 flex flex-col relative overflow-hidden group">
+         <div className="champion-box w-[260px] h-[380px] p-0.5 flex flex-col relative overflow-hidden group">
             <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
             <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 relative z-10">
-                <div className="w-20 h-20 rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.05)]">
+                <div className="w-24 h-24 rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.05)]">
                     {getWinner(getMatch("FINALE", 0)) ? (
                         <img src={getWinner(getMatch("FINALE", 0))?.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
-                        <div className="text-white/5"><Users size={40} /></div>
+                        <div className="text-white/5"><Users size={48} /></div>
                     )}
                 </div>
-                <div className="text-center space-y-1">
-                    <p className="text-[10px] font-bold text-primary uppercase tracking-[0.3em] italic">Champion</p>
-                    <h2 className="text-2xl font-black italic uppercase text-white tracking-tighter truncate w-[180px] drop-shadow-md">
+                <div className="text-center space-y-2">
+                    <p className="text-[11px] font-bold text-primary uppercase tracking-[0.3em] italic">Champion</p>
+                    <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
                         {getWinner(getMatch("FINALE", 0))?.name || "-"}
                     </h2>
                 </div>
             </div>
-            <div className="h-1 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <div className="h-1.5 bg-gradient-to-r from-transparent via-primary to-transparent" />
          </div>
       </div>
 
@@ -1586,7 +1586,7 @@ function BracketContent({ state }: { state: TournamentState }) {
         )}
         {showSemi && (
           <div className="flex flex-col">
-            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[220px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 right-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
               <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
             </div>
