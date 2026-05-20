@@ -1388,11 +1388,11 @@ function BracketView({ state }: { state: TournamentState }) {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
         const containerHeight = bracketContainerRef.current.offsetHeight;
-        const contentWidth = 2400; 
+        const contentWidth = 2000; 
         const contentHeight = measureRef.current.offsetHeight;
         
-        const scaleW = (containerWidth - 100) / contentWidth;
-        const scaleH = (containerHeight - 100) / contentHeight;
+        const scaleW = (containerWidth - 60) / contentWidth;
+        const scaleH = (containerHeight - 60) / contentHeight;
         const scale = Math.min(1, scaleW, scaleH);
         
         setBracketScale(scale);
@@ -1437,7 +1437,7 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={measureRef} 
           className="absolute top-0 left-0 invisible pointer-events-none" 
-          style={{ width: '2400px' }}
+          style={{ width: '2000px' }}
         >
           <BracketContent state={state} />
         </div>
@@ -1445,7 +1445,7 @@ function BracketView({ state }: { state: TournamentState }) {
         {/* Scaled visible content */}
         <div 
           style={{ 
-            width: '2400px',
+            width: '2000px',
             transform: `scale(${bracketScale})`,
             transformOrigin: 'center center',
             transition: 'transform 0.4s ease-out',
@@ -1466,6 +1466,7 @@ interface MatchNodeProps {
   participants: Participant[];
   className?: string;
   side?: 'left' | 'right';
+  key?: string | number;
 }
 
 function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
@@ -1476,16 +1477,16 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
   const isWinner = (pId: string) => match?.status === 'finished' && match.winnerId === pId;
 
   return (
-    <div className={`bracket-card flex flex-col gap-1 group hover:border-primary/30 min-w-[220px] md:min-w-[350px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
+    <div className={`bracket-card flex flex-col gap-1 group hover:border-primary/30 min-w-[180px] md:min-w-[240px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
       {[red, blue].map((p, idx) => (
-        <div key={idx} className="flex justify-between items-center h-10 md:h-14 px-6 relative border-b border-white/5 last:border-b-0">
-          <div className="flex items-center gap-4 overflow-hidden">
+        <div key={idx} className="flex justify-between items-center h-10 md:h-14 px-4 relative border-b border-white/5 last:border-b-0">
+          <div className="flex items-center gap-3 overflow-hidden">
              {p?.photo && (
-               <div className="w-7 h-7 rounded-full overflow-hidden border border-white/10 shrink-0">
+               <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
                  <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
              )}
-             <span className={`text-[13px] md:text-[20px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+             <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
                {p?.name || "-"}
              </span>
           </div>
@@ -1533,7 +1534,7 @@ function BracketContent({ state }: { state: TournamentState }) {
         )}
         {showSemi && (
           <div className="flex flex-col">
-            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[380px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 left-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
               <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
             </div>
@@ -1586,7 +1587,7 @@ function BracketContent({ state }: { state: TournamentState }) {
         )}
         {showSemi && (
           <div className="flex flex-col">
-            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[380px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+            <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
               <span className="absolute -top-3 right-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
               <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
             </div>
