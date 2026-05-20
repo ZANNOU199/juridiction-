@@ -1387,12 +1387,16 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
+        const containerHeight = window.innerHeight - 180; // Approximate header/padding space
         const contentWidth = 1900; 
-        const scale = Math.min(1, (containerWidth - 100) / contentWidth);
-        const height = measureRef.current.offsetHeight;
+        const contentHeight = measureRef.current.offsetHeight;
+        
+        const scaleW = (containerWidth - 48) / contentWidth;
+        const scaleH = (containerHeight - 48) / contentHeight;
+        const scale = Math.min(1, scaleW, scaleH);
         
         setBracketScale(scale);
-        setBracketHeight(height);
+        setBracketHeight(contentHeight);
       }
     };
 
@@ -1425,11 +1429,11 @@ function BracketView({ state }: { state: TournamentState }) {
         </div>
       </header>
 
-      <section className="py-12 md:py-24 relative z-10">
+      <section className="py-4 md:py-8 relative z-10 flex items-center justify-center min-h-[calc(100vh-120px)]">
         <div 
           ref={bracketContainerRef} 
-          className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '1100px' }}
+          className="w-full relative z-10 overflow-hidden flex items-center justify-center" 
+          style={{ height: `${(bracketHeight * bracketScale) + 40}px` }}
         >
           {/* Hidden clone for measurement */}
           <div 
@@ -1446,9 +1450,9 @@ function BracketView({ state }: { state: TournamentState }) {
               width: '1900px',
               position: 'absolute',
               left: '50%',
-              top: '40px',
-              transform: `translateX(-50%) scale(${bracketScale})`,
-              transformOrigin: 'top center',
+              top: '50%',
+              transform: `translate(-50%, -50%) scale(${bracketScale})`,
+              transformOrigin: 'center center',
               transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
               willChange: 'transform'
             }}
@@ -1518,7 +1522,7 @@ function BracketContent({ state }: { state: TournamentState }) {
   const showSemi = state.tournamentSize >= 4;
 
   return (
-    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[1100px] gap-12">
+    <div className="flex justify-center items-center w-full px-20 py-10 relative gap-12">
       
       {/* LEFT SIDE FLOW */}
       <div className="flex items-center gap-12">
@@ -1644,7 +1648,7 @@ function PublicView({ state }: { state: TournamentState }) {
   const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   return (
-    <div className="min-h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative overflow-x-hidden">
+    <div className="h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative overflow-hidden">
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-red blur-[150px] opacity-10" />
@@ -1676,7 +1680,7 @@ function PublicView({ state }: { state: TournamentState }) {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 mt-6 md:mt-12 overflow-y-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 overflow-hidden w-full">
         <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-12 relative py-4">
           
           {/* Red Side */}
@@ -1700,7 +1704,7 @@ function PublicView({ state }: { state: TournamentState }) {
           </div>
 
           {/* VS Divider */}
-          <div className="text-lg md:text-6xl font-black italic text-white/5 px-1 pt-4 md:pt-24 select-none self-center shrink-0">VS</div>
+          <div className="text-lg md:text-6xl font-black italic text-white/30 px-1 pt-4 md:pt-24 select-none self-center shrink-0">VS</div>
 
           {/* Blue Side */}
           <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
