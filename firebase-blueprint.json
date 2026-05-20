@@ -1,0 +1,74 @@
+{
+  "entities": {
+    "TournamentState": {
+      "title": "TournamentState",
+      "description": "Stores the configuration, matches, and real-time voting state of the championship",
+      "type": "object",
+      "properties": {
+        "competitionName": {
+          "type": "string",
+          "description": "Name of the current tournament"
+        },
+        "competitionLogo": {
+          "type": "string",
+          "description": "Base64 or URL of the competition logo"
+        },
+        "participants": {
+          "type": "array",
+          "description": "List of active players/participants"
+        },
+        "juryAccounts": {
+          "type": "array",
+          "description": "Registered jurys for voting"
+        },
+        "juryCount": {
+          "type": "integer",
+          "description": "The exact number of judges required to vote"
+        },
+        "currentMatchId": {
+          "type": "string",
+          "description": "ID of the currently active match, or null"
+        },
+        "matches": {
+          "type": "array",
+          "description": "Matches array containing current scores, states, and statuses"
+        },
+        "juryVotes": {
+          "type": "object",
+          "description": "Key-value pair mapping juryId to vote"
+        },
+        "warnedJuries": {
+          "type": "array",
+          "description": "ID list of judges warned by the admin"
+        },
+        "configured": {
+          "type": "boolean",
+          "description": "Whether the tournament configuration has been completed"
+        },
+        "tournamentSize": {
+          "type": "integer",
+          "description": "Total size of the tournament grid"
+        }
+      },
+      "required": [
+        "competitionName",
+        "competitionLogo",
+        "participants",
+        "juryAccounts",
+        "juryCount",
+        "currentMatchId",
+        "matches",
+        "juryVotes",
+        "warnedJuries",
+        "configured",
+        "tournamentSize"
+      ]
+    }
+  },
+  "firestore": {
+    "state/current": {
+      "schema": "TournamentState",
+      "description": "Singleton document containing our live tournament state synchronized across all devices"
+    }
+  }
+}

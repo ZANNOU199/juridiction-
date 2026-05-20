@@ -115,7 +115,7 @@ export default function App() {
   useEffect(() => {
     // Poll server for multi-device sync
     fetchState();
-    const interval = setInterval(fetchState, 5000); // Reduce frequency to be less annoying if failing
+    const interval = setInterval(fetchState, 1500); // Fast polling (1.5s) for snappy real-time multi-device sync
 
     // Sync across tabs on the same device/browser
     const handleStorage = (e: StorageEvent) => {
