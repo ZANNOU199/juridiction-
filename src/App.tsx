@@ -101,13 +101,14 @@ export default function App() {
       const res = await fetch('/api/state');
       if (res.ok) {
         const data = await res.json();
-        // Only update if server state is actually newer or different
-        // In local-first mode, we only overwrite if we get a valid response
-        setState(data);
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        // Check if data is valid before updating
+        if (data && typeof data === 'object' && data.matches) {
+          setState(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        }
       }
     } catch (err) {
-      // Ignore network errors
+      // Ignore network errors completely
     }
   };
 
@@ -649,6 +650,14 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   };
 
   const warnJudges = async () => {
+    // Local update first
+    const missingVotes = state.juryAccounts
+      .filter(j => !state.juryVotes[j.id])
+      .map(j => j.id);
+    
+    const newState = { ...state, warnedJuries: missingVotes };
+    onSave(newState);
+
     try {
       const res = await fetch('/api/admin/warn-judges', { method: 'POST' });
       if (res.ok) {
@@ -1201,6 +1210,16 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState, juryId: string, onSave: (s: TournamentState) => void, onLogout: () => void }) {
   const currentMatch = state.matches.find(m => m.id === state.currentMatchId);
   const [view, setView] = useState<'list' | 'vote'>('list');
+
+  useEffect(() => {
+    // Auto-exit vote console if match is cancelled or finished by admin
+    if (view === 'vote') {
+      const liveMatch = state.matches.find(m => m.id === state.currentMatchId);
+      if (!liveMatch || liveMatch.status !== 'active') {
+        setView('list');
+      }
+    }
+  }, [state.currentMatchId, state.matches, view]);
   const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
   const navigate = useNavigate();

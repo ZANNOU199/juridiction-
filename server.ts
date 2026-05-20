@@ -144,7 +144,45 @@ app.use(express.json());
 // --- API Routes ---
 
 app.get("/api/state", (req, res) => {
-  res.json(tournamentState);
+  try {
+    res.json(tournamentState);
+  } catch (error) {
+    console.error("Error in /api/state:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/warn-juries", (req, res) => {
+  // Aliasing warn-juries and warn-judges for compatibility
+  try {
+    if (!tournamentState.currentMatchId) return res.status(400).json({ error: "Aucun match actif" });
+    
+    const missingVotes = (tournamentState.juryAccounts || [])
+      .filter(j => !tournamentState.juryVotes[j.id])
+      .map(j => j.id);
+    
+    tournamentState.warnedJuries = missingVotes;
+    res.json({ success: true, state: tournamentState });
+  } catch (error) {
+    console.error("Error in /api/admin/warn-juries:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/warn-judges", (req, res) => {
+  try {
+    if (!tournamentState.currentMatchId) return res.status(400).json({ error: "Aucun match actif" });
+    
+    const missingVotes = (tournamentState.juryAccounts || [])
+      .filter(j => !tournamentState.juryVotes[j.id])
+      .map(j => j.id);
+    
+    tournamentState.warnedJuries = missingVotes;
+    res.json({ success: true, state: tournamentState });
+  } catch (error) {
+    console.error("Error in /api/admin/warn-judges:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 app.post("/api/jury/login", (req, res) => {
@@ -245,39 +283,37 @@ app.post("/api/admin/confirm-round", (req, res) => {
 });
 
 app.post("/api/admin/reveal", (req, res) => {
-  const { matchId } = req.body;
-  const match = tournamentState.matches.find(m => m.id === matchId);
-  if (match) {
-    match.revealed = true;
-    res.json({ success: true, state: tournamentState });
-  } else {
-    res.status(404).json({ error: "Match non trouvé" });
+  try {
+    const { matchId } = req.body;
+    const match = (tournamentState.matches || []).find(m => m.id === matchId);
+    if (match) {
+      match.revealed = true;
+      res.json({ success: true, state: tournamentState });
+    } else {
+      res.status(404).json({ error: "Match non trouvé" });
+    }
+  } catch (error) {
+    console.error("Error in /api/admin/reveal:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
 app.post("/api/admin/cancel-match", (req, res) => {
-  tournamentState.currentMatchId = null;
-  tournamentState.juryVotes = {};
-  tournamentState.warnedJuries = [];
-  tournamentState.matches = tournamentState.matches.map(m => {
-    if (m.status === 'active') {
-      return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
-    }
-    return m;
-  });
-  res.json({ success: true, state: tournamentState });
-});
-
-app.post("/api/admin/warn-judges", (req, res) => {
-  if (!tournamentState.currentMatchId) return res.status(400).json({ error: "No active match" });
-  
-  // Warn juries who haven't voted yet
-  const missingVotes = tournamentState.juryAccounts
-    .filter(j => !tournamentState.juryVotes[j.id])
-    .map(j => j.id);
-  
-  tournamentState.warnedJuries = missingVotes;
-  res.json({ success: true, state: tournamentState });
+  try {
+    tournamentState.currentMatchId = null;
+    tournamentState.juryVotes = {};
+    tournamentState.warnedJuries = [];
+    tournamentState.matches = (tournamentState.matches || []).map(m => {
+      if (m.status === 'active') {
+        return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
+      }
+      return m;
+    });
+    res.json({ success: true, state: tournamentState });
+  } catch (error) {
+    console.error("Error in /api/admin/cancel-match:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 app.post("/api/admin/finish-match", (req, res) => {
