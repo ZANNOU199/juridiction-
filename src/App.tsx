@@ -496,7 +496,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       ...state,
       competitionName,
       competitionLogo,
-      participants,
+      participants: participants.slice(0, tournamentSize),
       juryAccounts,
       juryCount: juryAccounts.length,
       currentMatchId: matches.length > 0 ? matches[0].id : null,
@@ -683,7 +683,10 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                       {[16, 8, 4, 2].map(s => (
                         <button 
                           key={s}
-                          onClick={() => setTournamentSize(s as any)}
+                          onClick={() => {
+                            setTournamentSize(s as any);
+                            // If they haven't customized names much, we could re-init but let's just let the slice handle it
+                          }}
                           className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? 'bg-white border-white text-black' : 'border-white/10 text-white/40'}`}
                         >
                           TOP {s}
@@ -813,7 +816,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                                         className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                                     >
                                         <option value="">ROUGE</option>
-                                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        {participants.slice(0, tournamentSize).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                     <select 
                                         value={m.blueTeamId} 
@@ -821,7 +824,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                                         className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                                     >
                                         <option value="">BLEU</option>
-                                        {participants.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                                        {participants.slice(0, tournamentSize).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                                     </select>
                                 </div>
                             ))}
