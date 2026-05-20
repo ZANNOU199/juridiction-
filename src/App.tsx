@@ -1678,7 +1678,7 @@ function PublicView({ state }: { state: TournamentState }) {
         <div className="w-20 hidden md:block"></div>
         
         <div className="absolute left-1/2 -translate-x-1/2 text-center top-2 md:top-4 w-full max-w-[90%] pointer-events-none flex flex-col items-center">
-          <h1 className="text-xl md:text-4xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-3 text-white/90 drop-shadow-2xl">
+          <h1 className="text-xl md:text-4xl font-black tracking-tighter leading-none italic uppercase truncate mb-4 md:mb-8 text-white/90 drop-shadow-2xl">
             {state.competitionName}
           </h1>
           <div className="text-xs md:text-xl font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x border-primary/40 py-1 md:py-2 px-6 md:px-12 inline-block transform -skew-x-12 shadow-[0_0_20px_rgba(255,77,0,0.1)]">
@@ -1686,12 +1686,7 @@ function PublicView({ state }: { state: TournamentState }) {
           </div>
         </div>
 
-        <div className="text-right">
-          <div className="h-[20px] md:h-auto flex items-center justify-end gap-3">
-             <span className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20 hidden md:block">Streaming Live</span>
-             <div className={`w-3 h-3 rounded-full ${activeMatch.status === 'active' ? 'bg-primary animate-pulse' : 'bg-white/20'}`} />
-          </div>
-        </div>
+        <div className="w-20 hidden md:block"></div>
       </header>
 
       {/* Main Battle Area */}
