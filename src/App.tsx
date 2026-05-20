@@ -42,6 +42,7 @@ interface Match {
   currentRound: number;
   roundResults: { red: number; blue: number }[];
   finishedJuries: string[];
+  revealed?: boolean;
 }
 
 interface JuryAccount {
@@ -572,6 +573,25 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     }
   };
 
+  const revealResults = async () => {
+    const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
+    if (activeIdx !== -1) {
+      const newMatches = [...state.matches];
+      newMatches[activeIdx] = { ...newMatches[activeIdx], revealed: true };
+      onSave({ ...state, matches: newMatches });
+      
+      try {
+        await fetch('/api/admin/reveal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ matchId: state.currentMatchId })
+        });
+      } catch (e) {
+        console.warn("Server sync failed during reveal");
+      }
+    }
+  };
+
   const finishMatch = async () => {
     const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
     if (activeIdx !== -1) {
@@ -1065,16 +1085,29 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
                 <div className="space-y-3 pt-4 border-t border-white/10">
                   {activeMatch && activeMatch.status === 'active' && (
-                    <button 
-                      onClick={finishMatch}
-                      disabled={!state.juryAccounts.every(j => state.juryVotes[j.id])}
-                      className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm mb-2 shadow-[0_4px_20px_rgba(225,29,72,0.3)]
-                        ${state.juryAccounts.every(j => state.juryVotes[j.id]) 
-                          ? 'bg-brand-red text-white hover:scale-[1.02]' 
-                          : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
-                    >
-                      <CheckCircle2 size={18} /> MARQUER TERMINER
-                    </button>
+                    <div className="space-y-3">
+                      <button 
+                        onClick={revealResults}
+                        disabled={!state.juryAccounts.every(j => state.juryVotes[j.id]) || activeMatch.revealed}
+                        className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm shadow-[0_4px_20px_rgba(34,197,94,0.2)]
+                          ${(state.juryAccounts.every(j => state.juryVotes[j.id]) && !activeMatch.revealed)
+                            ? 'bg-green-500 text-black hover:scale-[1.02]' 
+                            : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                      >
+                        <Monitor size={18} /> {activeMatch.revealed ? "RÉSULTATS AFFICHÉS" : "AFFICHER RÉSULTAT DU BATTLE"}
+                      </button>
+
+                      <button 
+                        onClick={finishMatch}
+                        disabled={!state.juryAccounts.every(j => state.juryVotes[j.id])}
+                        className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm mb-2 shadow-[0_4px_20px_rgba(225,29,72,0.3)]
+                          ${state.juryAccounts.every(j => state.juryVotes[j.id]) 
+                            ? 'bg-brand-red text-white hover:scale-[1.02]' 
+                            : 'bg-white/5 text-white/20 cursor-not-allowed'}`}
+                      >
+                        <CheckCircle2 size={18} /> MARQUER TERMINER
+                      </button>
+                    </div>
                   )}
                   {activeMatch?.votingMode === 'round' && activeMatch.status === 'active' && (
                     <button 
@@ -1776,17 +1809,17 @@ function PublicView({ state }: { state: TournamentState }) {
   
   const gracePeriodPassed = activeMatch.allVotesCastAt ? (now - activeMatch.allVotesCastAt > 5000) : false;
   
-  // In ROUND mode, the score is the number of rounds won (from match object)
-  // In MATCH mode, the score is the jury vote count
-  const redScore = activeMatch.votingMode === 'round' 
-    ? activeMatch.redVotes 
-    : (activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed) ? currentVotesRed : 0);
-  
-  const blueScore = activeMatch.votingMode === 'round' 
-    ? activeMatch.blueVotes 
-    : (activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed) ? currentVotesBlue : 0);
+  // Gate scores and results behind the revealed/finished status
+  const showResults = activeMatch.status === 'finished' || activeMatch.revealed;
 
-  const showResults = activeMatch.status === 'finished' || (totalCurrentVotes >= state.juryCount && gracePeriodPassed);
+  const redScore = showResults
+    ? (activeMatch.votingMode === 'round' ? activeMatch.redVotes : currentVotesRed)
+    : 0;
+  
+  const blueScore = showResults
+    ? (activeMatch.votingMode === 'round' ? activeMatch.blueVotes : currentVotesBlue)
+    : 0;
+
   const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   return (
@@ -1910,8 +1943,7 @@ function PublicView({ state }: { state: TournamentState }) {
               style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, 1fr)` }}
             >
                {state.juryAccounts.map((jury, i) => {
-                 const allVoted = Object.keys(state.juryVotes).length >= state.juryAccounts.length;
-                 const showVotes = allVoted && gracePeriodPassed;
+                 const showVotes = activeMatch.status === 'finished' || activeMatch.revealed;
                  const vote = showVotes ? state.juryVotes[jury.id] : null;
                  return (
                    <div key={jury.id} className="border-r border-white/5 last:border-r-0 flex flex-col p-2 relative overflow-hidden">

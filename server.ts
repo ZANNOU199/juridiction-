@@ -24,6 +24,7 @@ interface Match {
   currentRound: number;
   roundResults: { red: number; blue: number }[]; // Index matches round index (0-based)
   finishedJuries: string[]; // List of juryIds who finalized this match
+  revealed?: boolean;
 }
 
 interface JuryAccount {
@@ -238,6 +239,17 @@ app.post("/api/admin/confirm-round", (req, res) => {
   }
 
   res.json({ success: true, state: tournamentState });
+});
+
+app.post("/api/admin/reveal", (req, res) => {
+  const { matchId } = req.body;
+  const match = tournamentState.matches.find(m => m.id === matchId);
+  if (match) {
+    match.revealed = true;
+    res.json({ success: true, state: tournamentState });
+  } else {
+    res.status(404).json({ error: "Match non trouvé" });
+  }
 });
 
 app.post("/api/admin/finish-match", (req, res) => {
