@@ -1419,12 +1419,12 @@ function MatchNode({ match, participants, className = "", side = 'left' }: Match
                </div>
              )}
              <span className={`text-[10px] md:text-[14px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
-               {p?.name || "TBD"}
+               {p?.name || "-"}
              </span>
           </div>
           <div className="flex items-center gap-1 md:gap-2">
              <span className={`text-[9px] md:text-[11px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
-               {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '--')) : '--'}
+               {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '-')) : '-'}
              </span>
           </div>
           {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-4 md:h-6 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
@@ -1485,7 +1485,7 @@ function BracketContent({ state }: { state: TournamentState }) {
                 <div className="text-center space-y-2">
                     <p className="text-[11px] font-bold text-primary uppercase tracking-[0.3em] italic">Champion</p>
                     <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
-                        {getWinner(getMatch("FINALE", 0))?.name || "À DÉTERMINER"}
+                        {getWinner(getMatch("FINALE", 0))?.name || "-"}
                     </h2>
                 </div>
             </div>
@@ -1609,7 +1609,7 @@ function PublicView({ state }: { state: TournamentState }) {
               </div>
             </div>
             <div className="bg-brand-red font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-start border-l-[3px] md:border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-              <span className="truncate uppercase tracking-tighter">{redP?.name || "???"}</span>
+              <span className="truncate uppercase tracking-tighter">{redP?.name || "-"}</span>
             </div>
           </div>
 
@@ -1632,7 +1632,7 @@ function PublicView({ state }: { state: TournamentState }) {
               </div>
             </div>
             <div className="bg-brand-blue font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-end border-r-[3px] md:border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-              <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "???"}</span>
+              <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "-"}</span>
             </div>
           </div>
         </div>
