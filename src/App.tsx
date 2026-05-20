@@ -324,7 +324,10 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const [competitionName, setCompetitionName] = useState(state.competitionName || "");
   const [competitionLogo, setCompetitionLogo] = useState(state.competitionLogo || "");
   const [tournamentSize, setTournamentSize] = useState<16 | 8 | 4 | 2>(state.tournamentSize || 16);
-  const [participants, setParticipants] = useState<Participant[]>(state.participants && state.participants.length === 16 ? state.participants : Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" })));
+  const [participants, setParticipants] = useState<Participant[]>(() => {
+    if (state.participants && state.participants.length > 0) return state.participants;
+    return Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" }));
+  });
   const [matches, setMatches] = useState<Match[]>(state.matches || []);
   const [juryCount, setJuryCount] = useState(state.juryCount || 3);
   const [juryAccounts, setJuryAccounts] = useState<JuryAccount[]>(state.juryAccounts || []);
@@ -492,11 +495,12 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const removeMatch = (id: string) => { setMatches(matches.filter(m => m.id !== id)); };
 
   const configure = async () => {
+    const finalParticipants = participants.slice(0, tournamentSize);
     const newState: TournamentState = {
       ...state,
       competitionName,
       competitionLogo,
-      participants: participants.slice(0, tournamentSize),
+      participants: finalParticipants,
       juryAccounts,
       juryCount: juryAccounts.length,
       currentMatchId: matches.length > 0 ? matches[0].id : null,
@@ -511,7 +515,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       await fetch('/api/admin/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches, tournamentSize })
+        body: JSON.stringify({ competitionName, competitionLogo, participants: finalParticipants, juryAccounts, matches, tournamentSize })
       });
     } catch (e) {
       console.warn("Server sync failed during configure");
@@ -683,10 +687,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                       {[16, 8, 4, 2].map(s => (
                         <button 
                           key={s}
-                          onClick={() => {
-                            setTournamentSize(s as any);
-                            // If they haven't customized names much, we could re-init but let's just let the slice handle it
-                          }}
+                          onClick={() => setTournamentSize(s as any)}
                           className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? 'bg-white border-white text-black' : 'border-white/10 text-white/40'}`}
                         >
                           TOP {s}
