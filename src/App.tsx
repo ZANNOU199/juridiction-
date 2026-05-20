@@ -518,8 +518,44 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const finishMatch = async () => {
     const activeIdx = state.matches.findIndex(m => m.id === state.currentMatchId);
     if (activeIdx !== -1) {
-       const newMatches = [...state.matches];
-       newMatches[activeIdx] = { ...newMatches[activeIdx], status: 'finished' };
+       let newMatches = [...state.matches];
+       const finishedMatch = { ...newMatches[activeIdx], status: 'finished' as const };
+       newMatches[activeIdx] = finishedMatch;
+
+       // ADVANCE WINNER LOCALLY
+       const winnerId = finishedMatch.winnerId;
+       if (winnerId) {
+         const progression: Record<string, { nextMatchId: string; side: 'red' | 'blue' }> = {
+           't16-1': { nextMatchId: 't8-1', side: 'red' },
+           't16-2': { nextMatchId: 't8-1', side: 'blue' },
+           't16-3': { nextMatchId: 't8-2', side: 'red' },
+           't16-4': { nextMatchId: 't8-2', side: 'blue' },
+           't16-5': { nextMatchId: 't8-3', side: 'red' },
+           't16-6': { nextMatchId: 't8-3', side: 'blue' },
+           't16-7': { nextMatchId: 't8-4', side: 'red' },
+           't16-8': { nextMatchId: 't8-4', side: 'blue' },
+           't8-1': { nextMatchId: 'semi-1', side: 'red' },
+           't8-2': { nextMatchId: 'semi-1', side: 'blue' },
+           't8-3': { nextMatchId: 'semi-2', side: 'red' },
+           't8-4': { nextMatchId: 'semi-2', side: 'blue' },
+           'semi-1': { nextMatchId: 'final-1', side: 'red' },
+           'semi-2': { nextMatchId: 'final-1', side: 'blue' },
+         };
+
+         const nextInfo = progression[finishedMatch.id];
+         if (nextInfo) {
+           newMatches = newMatches.map(m => {
+             if (m.id === nextInfo.nextMatchId) {
+               return {
+                 ...m,
+                 [nextInfo.side === 'red' ? 'redTeamId' : 'blueTeamId']: winnerId
+               };
+             }
+             return m;
+           });
+         }
+       }
+
        const newState = { ...state, matches: newMatches };
        onSave(newState);
        
@@ -1321,8 +1357,8 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const contentWidth = 1800; 
-        const scale = Math.min(1, (containerWidth - 20) / contentWidth);
+        const contentWidth = 1700; // Optimal base width for 1080p and scaling
+        const scale = Math.min(1, (containerWidth - 32) / contentWidth);
         setBracketScale(scale);
         setBracketHeight(measureRef.current.offsetHeight);
       }
@@ -1361,13 +1397,13 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={bracketContainerRef} 
           className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${bracketHeight * bracketScale + 100}px`, minHeight: '500px' }}
+          style={{ height: `${bracketHeight * bracketScale + 120}px`, minHeight: '520px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
             className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1800px' }}
+            style={{ width: '1700px' }}
           >
             <BracketContent state={state} />
           </div>
@@ -1375,7 +1411,7 @@ function BracketView({ state }: { state: TournamentState }) {
           {/* Scaled visible content */}
           <div 
             style={{ 
-              width: '1800px',
+              width: '1700px',
               position: 'absolute',
               left: '50%',
               top: 0,
@@ -1409,7 +1445,7 @@ function MatchNode({ match, participants, className = "", side = 'left' }: Match
   const isWinner = (pId: string) => match?.status === 'finished' && match.winnerId === pId;
 
   return (
-    <div className={`bracket-card flex flex-col gap-1 md:gap-2 group hover:border-primary/30 min-w-[140px] md:min-w-[220px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
+    <div className={`bracket-card flex flex-col gap-1 md:gap-2 group hover:border-primary/30 min-w-[140px] md:min-w-[200px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
       {[red, blue].map((p, idx) => (
         <div key={idx} className="flex justify-between items-center h-8 md:h-10 px-3 relative border-b border-white/5 last:border-b-0">
           <div className="flex items-center gap-2 overflow-hidden">
@@ -1418,7 +1454,7 @@ function MatchNode({ match, participants, className = "", side = 'left' }: Match
                  <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                </div>
              )}
-             <span className={`text-[10px] md:text-[14px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+             <span className={`text-[10px] md:text-[13px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
                {p?.name || "-"}
              </span>
           </div>
@@ -1430,7 +1466,7 @@ function MatchNode({ match, participants, className = "", side = 'left' }: Match
           {p && isWinner(p.id) && <div className="absolute -left-0.5 md:-left-1 top-1/2 -translate-y-1/2 w-0.5 md:w-1 h-4 md:h-6 bg-primary shadow-[0_0_10px_rgba(255,255,255,0.5)]" />}
         </div>
       ))}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[9px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5">
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[9px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5 whitespace-nowrap">
          {match?.id || ""}
       </div>
     </div>
@@ -1446,10 +1482,10 @@ function BracketContent({ state }: { state: TournamentState }) {
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
   return (
-    <div className="flex justify-between items-center w-full px-12 py-24 relative min-h-[900px]">
+    <div className="flex justify-between items-center w-full px-4 py-20 relative min-h-[850px]">
       
       {/* LEFT SIDE: T16 -> T8 -> SEMI */}
-      <div className="flex items-center gap-16">
+      <div className="flex items-center gap-10">
         <div className="flex flex-col gap-10">
            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
@@ -1457,8 +1493,8 @@ function BracketContent({ state }: { state: TournamentState }) {
            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col justify-center h-full">
-           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-             <span className="absolute -top-3 left-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20">SEMI-FINAL A</span>
+           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[220px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+             <span className="absolute -top-3 left-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
            </div>
         </div>
@@ -1494,7 +1530,7 @@ function BracketContent({ state }: { state: TournamentState }) {
       </div>
 
       {/* RIGHT SIDE: T16 -> T8 -> SEMI (REVERSED) */}
-      <div className="flex items-center gap-16 flex-row-reverse">
+      <div className="flex items-center gap-10 flex-row-reverse">
         <div className="flex flex-col gap-10">
            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
@@ -1502,8 +1538,8 @@ function BracketContent({ state }: { state: TournamentState }) {
            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col justify-center h-full">
-           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-             <span className="absolute -top-3 right-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20">SEMI-FINAL B</span>
+           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[220px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+             <span className="absolute -top-3 right-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
            </div>
         </div>

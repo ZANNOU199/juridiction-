@@ -269,7 +269,9 @@ app.post("/api/admin/select-match", (req, res) => {
 app.post("/api/admin/next-match", (req, res) => {
   const activeIdx = tournamentState.matches.findIndex(m => m.id === tournamentState.currentMatchId);
   if (activeIdx !== -1) {
-    tournamentState.matches[activeIdx].status = 'finished';
+    const match = tournamentState.matches[activeIdx];
+    match.status = 'finished';
+    advanceWinner(match, tournamentState);
     const next = tournamentState.matches.find((m, i) => i > activeIdx && m.status === 'pending');
     if (next) {
       tournamentState.currentMatchId = next.id;
