@@ -1677,11 +1677,11 @@ function PublicView({ state }: { state: TournamentState }) {
       <header className="px-4 md:px-12 py-3 md:py-6 flex justify-between items-start z-20">
         <div className="w-20 hidden md:block"></div>
         
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-2 md:top-4 w-full max-w-[80%] pointer-events-none flex flex-col items-center">
-          <h1 className="text-lg md:text-2xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-2 text-white/90">
+        <div className="absolute left-1/2 -translate-x-1/2 text-center top-2 md:top-4 w-full max-w-[90%] pointer-events-none flex flex-col items-center">
+          <h1 className="text-xl md:text-4xl font-black tracking-tighter leading-none italic uppercase truncate mb-1 md:mb-3 text-white/90 drop-shadow-2xl">
             {state.competitionName}
           </h1>
-          <div className="text-[10px] md:text-sm font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x border-primary/40 py-1 px-4 md:px-8 inline-block transform -skew-x-12">
+          <div className="text-xs md:text-xl font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x border-primary/40 py-1 md:py-2 px-6 md:px-12 inline-block transform -skew-x-12 shadow-[0_0_20px_rgba(255,77,0,0.1)]">
             {activeMatch.round}
           </div>
         </div>
