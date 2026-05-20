@@ -1315,17 +1315,16 @@ function BracketView({ state }: { state: TournamentState }) {
   const bracketContainerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
   const [bracketScale, setBracketScale] = useState(1);
-  const [bracketHeight, setBracketHeight] = useState(800);
+  const [bracketHeight, setBracketHeight] = useState(1000);
 
   useEffect(() => {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const contentWidth = 1200; 
-        // On mobile we prefer scrolling over extreme scaling
+        const contentWidth = 1400; // Mirrored layout needs more width
         const isMobile = window.innerWidth < 768;
-        const minScale = isMobile ? 0.6 : 0.5;
-        const scale = Math.max(minScale, Math.min(1, (containerWidth - 20) / contentWidth));
+        const minScale = isMobile ? 0.4 : 0.6;
+        const scale = Math.max(minScale, Math.min(1, (containerWidth - 40) / contentWidth));
         setBracketScale(scale);
         
         const contentHeight = measureRef.current.offsetHeight;
@@ -1334,7 +1333,7 @@ function BracketView({ state }: { state: TournamentState }) {
     };
 
     updateScale();
-    const timer = setTimeout(updateScale, 100); // Ensure layout is settled
+    const timer = setTimeout(updateScale, 100);
     window.addEventListener('resize', updateScale);
     return () => {
       window.removeEventListener('resize', updateScale);
@@ -1342,50 +1341,39 @@ function BracketView({ state }: { state: TournamentState }) {
     };
   }, [state.matches]);
 
-  const stats = [
-    { label: "PARTICIPANTS", value: "16" },
-    { label: "BATTLES", value: "15" },
-    { label: "JURY", value: state.juryCount.toString() }
-  ];
-
   return (
-    <div className="min-h-screen bg-black overflow-x-hidden selection:bg-primary/30">
-      {/* Header for Bracket Page */}
-      <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/80 backdrop-blur-md sticky top-0 z-50">
+    <div className="min-h-screen bg-[#0a0807] overflow-x-hidden selection:bg-primary/30">
+      {/* Dynamic Background */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03] diagonal-lines z-0"></div>
+      
+      {/* Header */}
+      <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/60 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-4">
            <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors">
              <Rocket size={18} />
            </button>
-           <h2 className="text-xs md:text-lg font-black italic uppercase tracking-tighter">{state.competitionName}</h2>
+           <h2 className="text-xs md:text-sm font-black italic uppercase tracking-[0.3em] text-white/60">
+             {state.competitionName} <span className="mx-2 text-primary">/</span> Bracket
+           </h2>
         </div>
         <div className="flex gap-4">
-           <button onClick={() => navigate('/')} className="px-4 py-1.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all italic">Direct</button>
+           <button onClick={() => navigate('/')} className="px-4 py-1.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all italic flex items-center gap-2">
+             <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div> Scoreboard
+           </button>
         </div>
       </header>
 
-      {/* BRACKETS SECTION */}
-      <section id="brackets" className="py-12 md:py-24 bg-black overflow-hidden relative">
-        <div className="absolute inset-0 pointer-events-none diagonal-lines z-0 opacity-5"></div>
-        
-        <div className="max-w-7xl mx-auto px-4 text-center mb-12 relative z-10">
-          <div className="inline-block px-3 py-0.5 border border-primary/40 bg-primary/5 mb-4">
-            <span className="text-primary text-[8px] font-black tracking-[0.3em] uppercase">Tableau Officiel</span>
-          </div>
-          <h1 className="font-heading text-4xl md:text-7xl text-white mb-2 tracking-tight uppercase italic">
-            BRACKET <span className="text-primary">-</span> TOP 16
-          </h1>
-        </div>
-
+      <section className="py-12 md:py-16 relative z-10">
         <div 
           ref={bracketContainerRef} 
-          className="w-full relative z-10 overflow-x-auto no-scrollbar pb-12 cursor-grab active:cursor-grabbing"
-          style={{ height: `${bracketHeight * bracketScale + 100}px` }}
+          className="w-full relative overflow-x-auto no-scrollbar scroll-smooth"
+          style={{ height: `${bracketHeight * bracketScale + 150}px` }}
         >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
             className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1200px' }}
+            style={{ width: '1400px' }}
           >
             <BracketContent state={state} />
           </div>
@@ -1393,7 +1381,7 @@ function BracketView({ state }: { state: TournamentState }) {
           {/* Scaled visible content */}
           <div 
             style={{ 
-              width: '1200px',
+              width: '1400px',
               position: 'absolute',
               left: bracketScale < 1 ? '1rem' : '50%',
               top: 0,
@@ -1406,15 +1394,6 @@ function BracketView({ state }: { state: TournamentState }) {
             <BracketContent state={state} />
           </div>
         </div>
-
-        <div className="max-w-7xl mx-auto px-4 mt-16 md:mt-32 grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-          {stats.map((stat, idx) => (
-            <div key={idx} className={`bg-white/5 p-8 rounded-sm border border-white/10 hover:border-primary/30 transition-all flex flex-col items-center md:items-start`}>
-              <h4 className={`font-heading text-4xl md:text-6xl text-white mb-2 italic`}>{stat.value}</h4>
-              <p className="text-slate-500 uppercase text-[10px] font-black tracking-widest leading-none">{stat.label}</p>
-            </div>
-          ))}
-        </div>
       </section>
     </div>
   );
@@ -1424,34 +1403,37 @@ interface MatchNodeProps {
   match?: Match;
   participants: Participant[];
   className?: string;
+  side?: 'left' | 'right';
   key?: string;
 }
 
-function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
-  if (!match) return <div className={`bracket-match-card opacity-20 border-dashed ${className}`}><div className="h-20" /></div>;
-  
-  const red = participants.find(p => p.id === match.redTeamId);
-  const blue = participants.find(p => p.id === match.blueTeamId);
+function MatchNode({ match, participants, className = "", side = 'left' }: MatchNodeProps) {
+  const getParticipant = (id: string) => participants.find(p => p.id === id);
+  const red = match ? getParticipant(match.redTeamId) : null;
+  const blue = match ? getParticipant(match.blueTeamId) : null;
+
+  const isWinner = (pId: string) => match?.status === 'finished' && match.winnerId === pId;
 
   return (
-    <div className={`bracket-match-card ${className}`}>
-      <div className="space-y-1">
-        <div className="flex justify-between items-center group">
-          <span className={`text-[11px] font-black uppercase italic tracking-wider transition-colors ${match.winnerId === match.redTeamId ? 'text-primary' : (red ? 'text-white' : 'text-white/20')}`}>
-            {red?.name || "???"}
-          </span>
-          {match.status === 'finished' && match.winnerId === match.redTeamId && <Shield size={10} className="text-primary" />}
+    <div className={`bracket-card flex flex-col gap-1.5 group hover:border-primary/30 min-w-[180px] ${className} ${match?.status === 'active' ? 'bracket-card-active' : ''}`}>
+      {[red, blue].map((p, idx) => (
+        <div key={idx} className="flex justify-between items-center h-8 px-2 relative">
+          <div className="flex items-center gap-2 overflow-hidden">
+             <span className={`text-[12px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+               {p?.name || "TBD"}
+             </span>
+             {p?.photo && <span className="text-xs grayscale group-hover:grayscale-0 transition-all">🚩</span>}
+          </div>
+          <div className="flex items-center gap-2">
+             <span className={`text-[10px] font-mono font-black ${p ? 'text-white/40' : 'text-white/5'}`}>
+               {match?.status === 'finished' ? (p?.id === match.redTeamId ? match.redVotes : (p?.id === match.blueTeamId ? match.blueVotes : '--')) : '--'}
+             </span>
+          </div>
+          {p && isWinner(p.id) && <div className="absolute -left-1 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary" />}
         </div>
-        <div className="h-px bg-white/5" />
-        <div className="flex justify-between items-center group">
-          <span className={`text-[11px] font-black uppercase italic tracking-wider transition-colors ${match.winnerId === match.blueTeamId ? 'text-brand-blue' : (blue ? 'text-white' : 'text-white/20')}`}>
-            {blue?.name || "???"}
-          </span>
-          {match.status === 'finished' && match.winnerId === match.blueTeamId && <Shield size={10} className="text-brand-blue" />}
-        </div>
-      </div>
-      <div className="absolute -top-2 -right-2 bg-black border border-white/10 px-2 py-0.5 rounded-full text-[7px] font-black text-white/40">
-         {match.id.replace('t16-', '').replace('t8-', '').replace('semi-', '').replace('final-', '')}
+      ))}
+      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[8px] font-black text-white/20 uppercase bg-[#1a1512] px-2">
+         {match?.id || ""}
       </div>
     </div>
   );
@@ -1459,52 +1441,93 @@ function MatchNode({ match, participants, className = "" }: MatchNodeProps) {
 
 function BracketContent({ state }: { state: TournamentState }) {
   const getMatch = (round: string, index: number) => {
-    return state.matches.filter(m => m.round === round)[index];
+    const roundMatches = state.matches.filter(m => m.round === round);
+    return roundMatches[index];
   };
 
+  const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
+
+  // Layout logic for mirrored bracket:
+  // Left: T16 (1-4), T8 (1-2), Semi (1)
+  // Center: Trophy & Large Finale Box
+  // Right: T16 (5-8), T8 (3-4), Semi (2)
+
   return (
-    <div className="grid grid-cols-4 gap-x-12 py-10 w-full font-sans overflow-visible">
-      {/* Round 1: Top 16 */}
-      <div className="space-y-4 flex flex-col justify-between">
-        {[0, 1, 2, 3, 4, 5, 6, 7].map(i => <MatchNode key={`v1-m${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
-      </div>
-
-      {/* Round 2: Top 8 */}
-      <div className="space-y-8 flex flex-col justify-around py-10 relative">
-        {[0, 1, 2, 3].map(i => (
-          <div key={`v2-m${i}`} className="relative">
-             <MatchNode match={getMatch("TOP 8", i)} participants={state.participants} />
-             {/* Connector lines from previous round */}
-             <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[4.5rem] -left-6 top-1/2 -translate-y-full" />
-             <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[4.5rem] -left-6 top-1/2" />
-          </div>
-        ))}
-      </div>
-
-      {/* Round 3: Semis */}
-      <div className="space-y-16 flex flex-col justify-around py-20">
-        {[0, 1].map(i => (
-          <div key={`v3-m${i}`} className="relative">
-             <MatchNode match={getMatch("SEMI FINALE", i)} participants={state.participants} />
-             <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[9rem] -left-6 top-1/2 -translate-y-full" />
-             <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[9rem] -left-6 top-1/2" />
-          </div>
-        ))}
-      </div>
-
-      {/* Round 4: Final */}
-      <div className="flex flex-col justify-center py-40">
-        <div className="relative">
-            <MatchNode match={getMatch("FINALE", 0)} participants={state.participants} className="scale-125 border-primary/40 shadow-[0_20px_60px_rgba(211,95,23,0.2)]" />
-            <div className="bracket-connector-line border-t border-r border-slate-700 w-6 h-[18rem] -left-6 top-1/2 -translate-y-full" />
-            <div className="bracket-connector-line border-b border-r border-slate-700 w-6 h-[18rem] -left-6 top-1/2" />
-            
-            <div className="absolute -top-12 left-1/2 -translate-x-1/2 text-center w-full">
-              <Trophy className="text-primary mx-auto mb-2 animate-bounce" size={32} />
-              <p className="text-primary font-heading text-4xl italic tracking-widest uppercase">Champion</p>
-            </div>
+    <div className="flex justify-between items-center w-full px-8 py-20 relative min-h-[800px]">
+      
+      {/* LEFT SIDE FLOW */}
+      <div className="flex items-center gap-12">
+        {/* Round 1: Top 16 (4 matches) */}
+        <div className="flex flex-col gap-12">
+           {[0, 1, 2, 3].map(i => <MatchNode key={`lt16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+        </div>
+        {/* Round 2: Top 8 (2 matches) */}
+        <div className="flex flex-col gap-32">
+           {[0, 1].map(i => <MatchNode key={`lt8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+        </div>
+        {/* Round 3: Semi 1 */}
+        <div className="flex flex-col justify-center h-full">
+           <div className="p-6 border border-white/5 bg-white/5 rounded-sm relative w-[220px]">
+             <span className="absolute -top-3 left-4 text-[8px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic">SEMI-FINAL A</span>
+             <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0" />
+           </div>
         </div>
       </div>
+
+      {/* CENTERPIECE: GRANDE FINALE */}
+      <div className="flex flex-col items-center gap-8 px-4 relative z-20">
+         <div className="text-center">
+            <Trophy className="text-primary mx-auto mb-4 animate-pulse" size={56} />
+            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter text-white leading-[0.8] mb-2">GRANDE</h1>
+            <h1 className="text-6xl md:text-8xl font-black italic tracking-tighter text-white leading-[0.8]">FINALE</h1>
+         </div>
+
+         <div className="champion-box w-[240px] h-[380px] p-1 flex flex-col">
+            <div className="flex-1 flex flex-col items-center justify-center gap-6 p-6">
+                <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                    {getWinner(getMatch("FINALE", 0)) ? (
+                        <img src={getWinner(getMatch("FINALE", 0))?.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    ) : (
+                        <div className="text-white/10"><Users size={40} /></div>
+                    )}
+                </div>
+                <div className="text-center space-y-2">
+                    <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Champion</p>
+                    <h2 className="text-3xl font-black italic uppercase text-white truncate w-[180px]">
+                        {getWinner(getMatch("FINALE", 0))?.name || "À DÉTERMINER"}
+                    </h2>
+                </div>
+            </div>
+            <div className="h-2 bg-gradient-to-r from-transparent via-primary to-transparent" />
+            <div className="p-4 bg-primary/5 flex flex-col items-center">
+                <div className="flex gap-2">
+                    <div className="w-1 h-1 bg-primary rounded-full" />
+                    <div className="w-1 h-1 bg-primary rounded-full animate-pulse" />
+                    <div className="w-1 h-1 bg-primary rounded-full" />
+                </div>
+            </div>
+         </div>
+      </div>
+
+      {/* RIGHT SIDE FLOW */}
+      <div className="flex items-center gap-12 flex-row-reverse">
+        {/* Round 1: Top 16 (4 matches) */}
+        <div className="flex flex-col gap-12">
+           {[4, 5, 6, 7].map(i => <MatchNode key={`rt16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+        </div>
+        {/* Round 2: Top 8 (2 matches) */}
+        <div className="flex flex-col gap-32">
+           {[2, 3].map(i => <MatchNode key={`rt8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+        </div>
+        {/* Round 3: Semi 2 */}
+        <div className="flex flex-col justify-center h-full">
+           <div className="p-6 border border-white/5 bg-white/5 rounded-sm relative w-[220px]">
+             <span className="absolute -top-3 left-4 text-[8px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic">SEMI-FINAL B</span>
+             <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0" />
+           </div>
+        </div>
+      </div>
+
     </div>
   );
 }

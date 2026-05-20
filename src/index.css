@@ -40,53 +40,21 @@
     @apply bg-white/5 backdrop-blur-xl border border-white/10;
   }
 
-  .glass-hover {
-    @apply hover:bg-white/10 transition-all duration-300;
+  .bracket-card {
+    @apply bg-[#1a1512]/80 backdrop-blur-md border border-white/5 p-3 rounded-sm transition-all duration-300;
   }
 
-  .btn-luxury-primary {
-    @apply relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-light text-background-dark px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:scale-105 hover:shadow-[0_0_30px_rgba(211,95,23,0.4)] active:scale-95;
-    background-size: 200% 100%;
+  .bracket-card-active {
+    @apply border-primary/50 shadow-[0_0_20px_rgba(211,95,23,0.2)];
   }
 
-  .btn-luxury-secondary {
-    @apply relative overflow-hidden rounded-xl border border-white/20 bg-white/5 backdrop-blur-md text-white px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:bg-white hover:text-background-dark hover:scale-105 active:scale-95;
+  .text-condensed {
+    @apply font-heading tracking-tight;
   }
 
-  .btn-luxury-vip {
-    @apply relative overflow-hidden rounded-xl bg-gradient-to-r from-accent-red to-primary text-white px-10 py-4 text-xs font-black tracking-[0.3em] uppercase transition-all duration-500 hover:scale-105 hover:shadow-[0_0_40px_rgba(225,29,72,0.5)] active:scale-95;
+  .champion-box {
+    @apply border-2 border-primary bg-[#0a0807] shadow-[0_0_40px_rgba(211,95,23,0.3)] relative overflow-hidden;
   }
-
-  .bracket-match-card {
-    @apply bg-surface-match/80 backdrop-blur-sm p-4 rounded-xl border border-white/5 transition-all duration-500 hover:border-primary/50 hover:shadow-[0_10px_30px_rgba(0,0,0,0.5)] relative z-10;
-  }
-
-  .bracket-round-tab {
-    @apply px-6 py-2 text-[10px] font-black tracking-[0.2em] uppercase transition-all duration-300 border-b-2;
-  }
-
-  .bracket-round-tab-active {
-    @apply border-primary text-primary bg-primary/5;
-  }
-
-  .bracket-round-tab-inactive {
-    @apply border-transparent text-slate-500 hover:text-white;
-  }
-}
-
-.shimmer-effect::after {
-  content: "";
-  @apply absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-[-20deg];
-  animation: shimmer 3s infinite;
-}
-
-.grainy-bg {
-  background-image: url("https://www.transparenttextures.com/patterns/stardust.png");
-  background-repeat: repeat;
-}
-
-.text-luxury-glow {
-  text-shadow: 0 0 20px rgba(211,95,23,0.3);
 }
 
 .diagonal-lines {
