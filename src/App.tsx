@@ -1321,9 +1321,8 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const isMobile = window.innerWidth < 768;
-        const contentWidth = isMobile ? 1300 : 1400; 
-        const scale = Math.min(1, (containerWidth - 20) / contentWidth);
+        const contentWidth = 1300; 
+        const scale = Math.min(1, (containerWidth - 24) / contentWidth);
         setBracketScale(scale);
         
         const contentHeight = measureRef.current.offsetHeight;
@@ -1332,7 +1331,7 @@ function BracketView({ state }: { state: TournamentState }) {
     };
 
     updateScale();
-    const timer = setTimeout(updateScale, 100);
+    const timer = setTimeout(updateScale, 150);
     window.addEventListener('resize', updateScale);
     return () => {
       window.removeEventListener('resize', updateScale);
@@ -1342,14 +1341,12 @@ function BracketView({ state }: { state: TournamentState }) {
 
   return (
     <div className="min-h-screen bg-[#0a0807] overflow-x-hidden selection:bg-primary/30">
-      {/* Dynamic Background */}
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] diagonal-lines z-0"></div>
       
-      {/* Header */}
       <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/60 backdrop-blur-md sticky top-0 z-50">
         <div className="flex items-center gap-4">
            <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors">
-             <Rocket size={18} />
+              <Rocket size={18} />
            </button>
            <h2 className="text-xs md:text-sm font-black italic uppercase tracking-[0.3em] text-white/60">
              {state.competitionName} <span className="mx-2 text-primary">/</span> Bracket
@@ -1362,17 +1359,17 @@ function BracketView({ state }: { state: TournamentState }) {
         </div>
       </header>
 
-      <section className="py-12 md:py-16 relative z-10">
+      <section className="py-12 md:py-24 relative z-10 overflow-hidden">
         <div 
           ref={bracketContainerRef} 
-          className="w-full relative overflow-x-auto no-scrollbar scroll-smooth"
-          style={{ height: `${bracketHeight * bracketScale + 150}px` }}
+          className="w-full relative z-10 overflow-hidden" 
+          style={{ height: `${bracketHeight * bracketScale + 40}px`, minHeight: '500px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
             className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1400px' }}
+            style={{ width: '1300px' }}
           >
             <BracketContent state={state} />
           </div>
@@ -1380,12 +1377,12 @@ function BracketView({ state }: { state: TournamentState }) {
           {/* Scaled visible content */}
           <div 
             style={{ 
-              width: '1400px',
+              width: '1300px',
               position: 'absolute',
-              left: bracketScale < 1 ? '1rem' : '50%',
+              left: '50%',
               top: 0,
-              transform: bracketScale < 1 ? `scale(${bracketScale})` : 'translateX(-50%)',
-              transformOrigin: 'top left',
+              transform: `translateX(-50%) scale(${bracketScale})`,
+              transformOrigin: 'top center',
               transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
               willChange: 'transform'
             }}
