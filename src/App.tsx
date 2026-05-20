@@ -690,6 +690,12 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   };
 
   const selectMatch = async (matchId: string) => {
+    const match = state.matches.find(m => m.id === matchId);
+    if (!match || !match.redTeamId || !match.blueTeamId) {
+      console.warn("Cannot launch match: Missing participants");
+      return;
+    }
+
     const newMatches = state.matches.map(m => {
       if (m.id === matchId) return { ...m, status: 'active' as const };
       // if (m.status === 'active') return { ...m, status: 'finished' as const }; // Don't auto finish
@@ -1019,9 +1025,14 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                         {m.status === 'pending' && (!state.currentMatchId || state.matches.find(ex => ex.id === state.currentMatchId)?.status === 'finished') && (
                           <button 
                             onClick={() => selectMatch(m.id)}
-                            className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
+                            disabled={!m.redTeamId || !m.blueTeamId}
+                            className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest transition-all ${
+                              m.redTeamId && m.blueTeamId 
+                                ? 'bg-white text-black hover:scale-105 cursor-pointer' 
+                                : 'bg-white/5 text-white/20 cursor-not-allowed border border-white/5'
+                            }`}
                           >
-                            LANCER
+                            {(!m.redTeamId || !m.blueTeamId) ? 'INCOMPLET' : 'LANCER'}
                           </button>
                         )}
                         {m.id === state.currentMatchId && m.status === 'active' && (
