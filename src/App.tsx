@@ -60,6 +60,7 @@ interface TournamentState {
   matches: Match[];
   juryVotes: Record<string, 'red' | 'blue' | null>;
   configured: boolean;
+  tournamentSize: 16 | 8 | 4 | 2;
 }
 
 const DEFAULT_STATE: TournamentState = {
@@ -71,7 +72,8 @@ const DEFAULT_STATE: TournamentState = {
   currentMatchId: null,
   matches: [],
   juryVotes: {},
-  configured: false
+  configured: false,
+  tournamentSize: 16
 };
 
 const STORAGE_KEY = 'arena_tournament_state';
@@ -321,6 +323,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const navigate = useNavigate();
   const [competitionName, setCompetitionName] = useState(state.competitionName || "");
   const [competitionLogo, setCompetitionLogo] = useState(state.competitionLogo || "");
+  const [tournamentSize, setTournamentSize] = useState<16 | 8 | 4 | 2>(state.tournamentSize || 16);
   const [participants, setParticipants] = useState<Participant[]>(state.participants && state.participants.length === 16 ? state.participants : Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" })));
   const [matches, setMatches] = useState<Match[]>(state.matches || []);
   const [juryCount, setJuryCount] = useState(state.juryCount || 3);
@@ -364,71 +367,77 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     setParticipants(newParticipants);
   };
 
-  const generateTop16Bracket = () => {
+  const generateBracket = (size: 16 | 8 | 4 | 2) => {
     const newMatches: Match[] = [];
     
     // Top 16 (8 matches)
-    for (let i = 0; i < 8; i++) {
-      newMatches.push({
-        id: `t16-${i + 1}`,
-        redTeamId: participants[i * 2]?.id || "",
-        blueTeamId: participants[i * 2 + 1]?.id || "",
-        redVotes: 0,
-        blueVotes: 0,
-        winnerId: null,
-        status: 'pending',
-        round: "TOP 16",
-        votingMode: 'match',
-        roundCount: 1,
-        currentRound: 1,
-        roundResults: [],
-        finishedJuries: []
-      });
+    if (size >= 16) {
+      for (let i = 0; i < 8; i++) {
+        newMatches.push({
+          id: `t16-${i + 1}`,
+          redTeamId: participants[i * 2]?.id || "",
+          blueTeamId: participants[i * 2 + 1]?.id || "",
+          redVotes: 0,
+          blueVotes: 0,
+          winnerId: null,
+          status: 'pending',
+          round: "TOP 16",
+          votingMode: 'match',
+          roundCount: 1,
+          currentRound: 1,
+          roundResults: [],
+          finishedJuries: []
+        });
+      }
     }
 
     // Top 8 (Empty containers for manual filling)
-    for (let i = 0; i < 4; i++) {
-        newMatches.push({
-          id: `t8-${i + 1}`,
-          redTeamId: "",
-          blueTeamId: "",
-          redVotes: 0,
-          blueVotes: 0,
-          winnerId: null,
-          status: 'pending',
-          round: "TOP 8",
-          votingMode: 'match',
-          roundCount: 1,
-          currentRound: 1,
-          roundResults: [],
-          finishedJuries: []
-        });
-      }
+    if (size >= 8) {
+      for (let i = 0; i < 4; i++) {
+          newMatches.push({
+            id: `t8-${i + 1}`,
+            redTeamId: size === 8 ? (participants[i * 2]?.id || "") : "",
+            blueTeamId: size === 8 ? (participants[i * 2 + 1]?.id || "") : "",
+            redVotes: 0,
+            blueVotes: 0,
+            winnerId: null,
+            status: 'pending',
+            round: "TOP 8",
+            votingMode: 'match',
+            roundCount: 1,
+            currentRound: 1,
+            roundResults: [],
+            finishedJuries: []
+          });
+        }
+    }
 
     // Semi (2 matches)
-    for (let i = 0; i < 2; i++) {
-        newMatches.push({
-          id: `semi-${i + 1}`,
-          redTeamId: "",
-          blueTeamId: "",
-          redVotes: 0,
-          blueVotes: 0,
-          winnerId: null,
-          status: 'pending',
-          round: "SEMI FINALE",
-          votingMode: 'match',
-          roundCount: 1,
-          currentRound: 1,
-          roundResults: [],
-          finishedJuries: []
-        });
-      }
+    if (size >= 4) {
+      for (let i = 0; i < 2; i++) {
+          newMatches.push({
+            id: `semi-${i + 1}`,
+            redTeamId: size === 4 ? (participants[i * 2]?.id || "") : "",
+            blueTeamId: size === 4 ? (participants[i * 2 + 1]?.id || "") : "",
+            redVotes: 0,
+            blueVotes: 0,
+            winnerId: null,
+            status: 'pending',
+            round: "SEMI FINALE",
+            votingMode: 'match',
+            roundCount: 1,
+            currentRound: 1,
+            roundResults: [],
+            finishedJuries: []
+          });
+        }
+    }
 
     // Finale (1 match)
     newMatches.push({
         id: `final-1`,
-        redTeamId: "",
-        blueTeamId: "",
+        redTeamId: size === 2 ? (participants[0]?.id || "") : "",
+        blueTeamId: size === 2 ? (participants[1]?.id || "") : "",
         redVotes: 0,
         blueVotes: 0,
         winnerId: null,
@@ -493,7 +502,8 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       currentMatchId: matches.length > 0 ? matches[0].id : null,
       matches: matches.map((m, i) => i === 0 ? { ...m, status: 'active' } : m),
       configured: true,
-      juryVotes: {}
+      juryVotes: {},
+      tournamentSize
     };
     onSave(newState);
 
@@ -501,7 +511,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       await fetch('/api/admin/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches })
+        body: JSON.stringify({ competitionName, competitionLogo, participants, juryAccounts, matches, tournamentSize })
       });
     } catch (e) {
       console.warn("Server sync failed during configure");
@@ -667,6 +677,21 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                  <Settings size={14} /> 1. Paramètres Généraux
                </h3>
                <div className="space-y-4">
+                  <div className="pt-2">
+                    <p className="text-[9px] font-black uppercase text-white/40 mb-3 tracking-widest">Type de Compétition</p>
+                    <div className="grid grid-cols-4 gap-2">
+                      {[16, 8, 4, 2].map(s => (
+                        <button 
+                          key={s}
+                          onClick={() => setTournamentSize(s as any)}
+                          className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? 'bg-white border-white text-black' : 'border-white/10 text-white/40'}`}
+                        >
+                          TOP {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
                  <input 
                    type="text" 
                    value={competitionName} 
@@ -723,10 +748,10 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-white/5 p-8 border border-white/10">
                <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                 <Users size={14} /> 2. TOP 16 Participants
+                 <Users size={14} /> 2. Participants ({tournamentSize})
                </h3>
                <div className="grid grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                  {participants.map((p, i) => (
+                  {participants.slice(0, tournamentSize).map((p, i) => (
                     <div key={p.id} className="relative group">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 italic">
                         {String(i + 1).padStart(2, '0')}
@@ -752,7 +777,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                    <Trophy size={14} /> 3. Structure du Tableau
                  </h3>
                  <button 
-                  onClick={generateTop16Bracket}
+                  onClick={() => generateBracket(tournamentSize)}
                   className="text-[9px] font-black hover:text-white transition-colors uppercase italic border-b border-white/20"
                  >
                    Reset
@@ -761,17 +786,22 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
                {matches.length === 0 ? (
                  <div className="py-20 text-center border-2 border-dashed border-white/5 flex flex-col items-center">
-                    <p className="text-[11px] font-black italic uppercase text-white/20 mb-6 max-w-[200px]">Initialiser le tableau Top 16</p>
+                    <p className="text-[11px] font-black italic uppercase text-white/20 mb-6 max-w-[200px]">Initialiser le tableau Top {tournamentSize}</p>
                     <button 
-                      onClick={generateTop16Bracket}
+                      onClick={() => generateBracket(tournamentSize)}
                       className="px-6 py-3 bg-white text-black font-black italic uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all"
                     >
-                      GÉNÉRER LE TOP 16
+                      GÉNÉRER LE TOP {tournamentSize}
                     </button>
                  </div>
                ) : (
                  <div className="space-y-6 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                    {['TOP 16', 'TOP 8', 'SEMI FINALE', 'FINALE'].map(roundName => (
+                    {['TOP 16', 'TOP 8', 'SEMI FINALE', 'FINALE'].filter(r => {
+                      if (tournamentSize === 2) return r === 'FINALE';
+                      if (tournamentSize === 4) return ['SEMI FINALE', 'FINALE'].includes(r);
+                      if (tournamentSize === 8) return ['TOP 8', 'SEMI FINALE', 'FINALE'].includes(r);
+                      return true;
+                    }).map(roundName => (
                         <div key={roundName} className="space-y-2">
                             <h4 className="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase border-b border-white/5 pb-1">{roundName}</h4>
                             {matches.filter(m => m.round === roundName).map(m => (
@@ -1483,30 +1513,42 @@ function BracketContent({ state }: { state: TournamentState }) {
 
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
+  const showTop16 = state.tournamentSize >= 16;
+  const showTop8 = state.tournamentSize >= 8;
+  const showSemi = state.tournamentSize >= 4;
+
   return (
     <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[1100px] gap-12">
       
       {/* LEFT SIDE FLOW */}
       <div className="flex items-center gap-12">
-        <div className="flex flex-col gap-20">
-           {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
-        </div>
-        <div className="flex flex-col gap-80">
-           {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
-        </div>
-        <div className="flex flex-col">
-           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-             <span className="absolute -top-3 left-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
-             <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
-           </div>
-        </div>
+        {showTop16 && (
+          <div className="flex flex-col gap-20">
+            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+          </div>
+        )}
+        {showTop8 && (
+          <div className="flex flex-col gap-80">
+            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+          </div>
+        )}
+        {showSemi && (
+          <div className="flex flex-col">
+            <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+              <span className="absolute -top-3 left-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL A</span>
+              <MatchNode match={getMatch("SEMI FINALE", 0)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* CENTER: CHAMPION */}
       <div className="flex flex-col items-center gap-12 px-10 relative z-20 shrink-0">
          <div className="text-center">
             <Trophy className="text-primary mx-auto mb-4 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]" size={64} />
-            <h1 className="text-7xl font-black italic tracking-tighter text-white leading-[0.8] mb-1">GRANDE</h1>
+            <h1 className="text-7xl font-black italic tracking-tighter text-white leading-[0.8] mb-1">
+              {state.tournamentSize === 2 ? 'SUPER' : 'GRANDE'}
+            </h1>
             <h1 className="text-7xl font-black italic tracking-tighter text-white leading-[0.8]">FINALE</h1>
          </div>
 
@@ -1533,18 +1575,24 @@ function BracketContent({ state }: { state: TournamentState }) {
 
       {/* RIGHT SIDE FLOW */}
       <div className="flex items-center gap-12 flex-row-reverse">
-        <div className="flex flex-col gap-20">
-           {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
-        </div>
-        <div className="flex flex-col gap-80">
-           {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
-        </div>
-        <div className="flex flex-col">
-           <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-             <span className="absolute -top-3 right-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
-             <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
-           </div>
-        </div>
+        {showTop16 && (
+          <div className="flex flex-col gap-20">
+            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
+          </div>
+        )}
+        {showTop8 && (
+          <div className="flex flex-col gap-80">
+            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
+          </div>
+        )}
+        {showSemi && (
+          <div className="flex flex-col">
+            <div className="p-6 border border-primary/20 bg-primary/5 rounded-sm relative w-[240px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
+              <span className="absolute -top-3 right-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">SEMI-FINAL B</span>
+              <MatchNode match={getMatch("SEMI FINALE", 1)} participants={state.participants} className="border-none bg-transparent p-0 min-w-0" />
+            </div>
+          </div>
+        )}
       </div>
 
     </div>

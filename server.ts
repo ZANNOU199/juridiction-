@@ -42,6 +42,7 @@ interface TournamentState {
   matches: Match[];
   juryVotes: Record<string, 'red' | 'blue' | null>;
   configured: boolean;
+  tournamentSize: 16 | 8 | 4 | 2;
 }
 
 // Helper to check if a match is finished and update winner
@@ -128,7 +129,8 @@ let tournamentState: TournamentState = {
   currentMatchId: null,
   matches: [],
   juryVotes: {},
-  configured: false
+  configured: false,
+  tournamentSize: 16
 };
 
 const app = express();
@@ -159,7 +161,7 @@ app.post("/api/jury/login", (req, res) => {
 });
 
 app.post("/api/admin/configure", (req, res) => {
-  const { competitionName, competitionLogo, participants, juryAccounts, matches } = req.body;
+  const { competitionName, competitionLogo, participants, juryAccounts, matches, tournamentSize } = req.body;
   
   const processedMatches = (matches || []).map((m: any, i: number) => ({
     ...m,
@@ -183,7 +185,8 @@ app.post("/api/admin/configure", (req, res) => {
     currentMatchId: processedMatches.length > 0 ? processedMatches[0].id : null,
     matches: processedMatches,
     juryVotes: {},
-    configured: true
+    configured: true,
+    tournamentSize: tournamentSize || 16
   };
   
   const active = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
@@ -323,7 +326,8 @@ app.post("/api/admin/reset", (req, res) => {
     currentMatchId: null,
     matches: [],
     juryVotes: {},
-    configured: false
+    configured: false,
+    tournamentSize: 16
   };
   res.json({ success: true, state: tournamentState });
 });
