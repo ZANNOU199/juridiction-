@@ -1387,12 +1387,12 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const containerHeight = window.innerHeight - 180; // Approximate header/padding space
+        const containerHeight = bracketContainerRef.current.offsetHeight;
         const contentWidth = 1900; 
         const contentHeight = measureRef.current.offsetHeight;
         
-        const scaleW = (containerWidth - 48) / contentWidth;
-        const scaleH = (containerHeight - 48) / contentHeight;
+        const scaleW = (containerWidth - 60) / contentWidth;
+        const scaleH = (containerHeight - 60) / contentHeight;
         const scale = Math.min(1, scaleW, scaleH);
         
         setBracketScale(scale);
@@ -1407,13 +1407,13 @@ function BracketView({ state }: { state: TournamentState }) {
       window.removeEventListener('resize', updateScale);
       clearTimeout(timer);
     };
-  }, [state.matches]);
+  }, [state.matches, state.tournamentSize]);
 
   return (
-    <div className="min-h-screen bg-[#0a0807] overflow-x-hidden selection:bg-primary/30">
+    <div className="h-screen bg-[#0a0807] overflow-hidden flex flex-col selection:bg-primary/30">
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] diagonal-lines z-0"></div>
       
-      <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/60 backdrop-blur-md sticky top-0 z-50">
+      <header className="px-6 md:px-12 py-4 flex justify-between items-center border-b border-white/5 bg-black/60 backdrop-blur-md z-50 shrink-0">
         <div className="flex items-center gap-4">
            <button onClick={() => navigate('/select')} className="text-white/20 hover:text-white transition-colors">
               <Rocket size={18} />
@@ -1429,38 +1429,34 @@ function BracketView({ state }: { state: TournamentState }) {
         </div>
       </header>
 
-      <section className="py-4 md:py-8 relative z-10 flex items-center justify-center min-h-[calc(100vh-120px)]">
+      <main 
+        ref={bracketContainerRef} 
+        className="flex-1 relative z-10 overflow-hidden flex items-center justify-center p-4"
+      >
+        {/* Hidden clone for measurement */}
         <div 
-          ref={bracketContainerRef} 
-          className="w-full relative z-10 overflow-hidden flex items-center justify-center" 
-          style={{ height: `${(bracketHeight * bracketScale) + 40}px` }}
+          ref={measureRef} 
+          className="absolute top-0 left-0 invisible pointer-events-none" 
+          style={{ width: '1900px' }}
         >
-          {/* Hidden clone for measurement */}
-          <div 
-            ref={measureRef} 
-            className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1900px' }}
-          >
-            <BracketContent state={state} />
-          </div>
-
-          {/* Scaled visible content */}
-          <div 
-            style={{ 
-              width: '1900px',
-              position: 'absolute',
-              left: '50%',
-              top: '50%',
-              transform: `translate(-50%, -50%) scale(${bracketScale})`,
-              transformOrigin: 'center center',
-              transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-              willChange: 'transform'
-            }}
-          >
-            <BracketContent state={state} />
-          </div>
+          <BracketContent state={state} />
         </div>
-      </section>
+
+        {/* Scaled visible content */}
+        <div 
+          style={{ 
+            width: '1900px',
+            transform: `scale(${bracketScale})`,
+            transformOrigin: 'center center',
+            transition: 'transform 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            willChange: 'transform',
+            flexShrink: 0
+          }}
+          className="flex justify-center"
+        >
+          <BracketContent state={state} />
+        </div>
+      </main>
     </div>
   );
 }
@@ -1609,11 +1605,33 @@ function PublicView({ state }: { state: TournamentState }) {
   const redP = activeMatch ? state.participants.find(p => p.id === activeMatch.redTeamId) : null;
   const blueP = activeMatch ? state.participants.find(p => p.id === activeMatch.blueTeamId) : null;
 
+  const [scale, setScale] = useState(1);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 500);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (containerRef.current && contentRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const containerHeight = containerRef.current.offsetHeight;
+        const contentWidth = 1200; // Base width for max-7xl
+        const contentHeight = contentRef.current.offsetHeight;
+        
+        const scaleW = (containerWidth - 40) / contentWidth;
+        const scaleH = (containerHeight - 40) / contentHeight;
+        setScale(Math.min(1, scaleW, scaleH));
+      }
+    };
+    updateScale();
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [activeMatch]);
 
   if (!activeMatch) {
     return (
@@ -1680,71 +1698,80 @@ function PublicView({ state }: { state: TournamentState }) {
       </header>
 
       {/* Main Battle Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-1 md:px-12 z-10 overflow-hidden w-full">
-        <div className="w-full max-w-7xl grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-12 relative py-4">
-          
-          {/* Red Side */}
-          <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
-            <div className="flex justify-end gap-1.5 md:gap-8 items-end flex-1">
-              <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
-                {redP?.photo ? (
-                  <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+      <main ref={containerRef} className="flex-1 flex flex-col items-center justify-center px-4 md:px-12 z-10 overflow-hidden w-full relative">
+        <div 
+          ref={contentRef}
+          style={{ 
+            transform: `scale(${scale})`, 
+            transformOrigin: 'center center',
+            transition: 'transform 0.5s ease-out'
+          }}
+          className="w-full max-w-7xl flex flex-col items-center shrink-0"
+        >
+          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-12 relative py-4">
+            
+            {/* Red Side */}
+            <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
+              <div className="flex justify-end gap-1.5 md:gap-8 items-end flex-1">
+                <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
+                  {redP?.photo ? (
+                    <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                </div>
+                <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
+                  {redScore}
+                </div>
               </div>
-              <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-red flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
-                {redScore}
+              <div className="bg-brand-red font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-start border-l-[3px] md:border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                <span className="truncate uppercase tracking-tighter">{redP?.name || "-"}</span>
               </div>
             </div>
-            <div className="bg-brand-red font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-start border-l-[3px] md:border-l-[10px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-              <span className="truncate uppercase tracking-tighter">{redP?.name || "-"}</span>
+
+            {/* VS Divider */}
+            <div className="text-lg md:text-6xl font-black italic text-white/80 px-1 pt-4 md:pt-24 select-none self-center shrink-0">VS</div>
+
+            {/* Blue Side */}
+            <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
+              <div className="flex justify-start gap-1.5 md:gap-8 items-end flex-1">
+                <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
+                  {blueScore}
+                </div>
+                <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
+                  {blueP?.photo ? (
+                    <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
+                  ) : (
+                    <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                </div>
+              </div>
+              <div className="bg-brand-blue font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-end border-r-[3px] md:border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "-"}</span>
+              </div>
             </div>
           </div>
 
-          {/* VS Divider */}
-          <div className="text-lg md:text-6xl font-black italic text-white/30 px-1 pt-4 md:pt-24 select-none self-center shrink-0">VS</div>
-
-          {/* Blue Side */}
-          <div className="space-y-1 md:space-y-8 flex flex-col min-w-0">
-            <div className="flex justify-start gap-1.5 md:gap-8 items-end flex-1">
-              <div className="w-10 h-10 sm:w-32 sm:h-32 md:w-48 md:h-48 bg-brand-blue flex items-center justify-center text-xl sm:text-6xl md:text-8xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b md:border-b-8 border-black/20 uppercase shrink-0">
-                {blueScore}
+          {/* Jury Table */}
+          <div className="w-full mt-4 md:mt-12 relative overflow-hidden">
+            <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
+              <div 
+                className="grid border-b border-white/10 min-w-full"
+                style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, minmax(50px, 1fr))` }}
+              >
+                 {state.juryAccounts.map((jury, i) => {
+                   return (
+                     <div key={jury.id} className="py-2 md:py-3 text-center border-r border-white/5 last:border-r-0 overflow-hidden">
+                       <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest italic text-white/50 block truncate px-0.5">
+                         {jury.username}
+                       </span>
+                     </div>
+                   );
+                 })}
               </div>
-              <div className="w-16 h-12 sm:w-40 sm:h-28 md:w-64 md:h-40 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-2 relative group overflow-hidden shrink-0">
-                {blueP?.photo ? (
-                  <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
-                ) : (
-                  <span className="text-[5px] md:text-[10px] font-black text-white/10 uppercase tracking-widest italic">img</span>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              </div>
-            </div>
-            <div className="bg-brand-blue font-black italic text-[10px] sm:text-2xl md:text-4xl px-2 md:px-10 py-1.5 md:py-6 flex items-center justify-end border-r-[3px] md:border-r-[10px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-              <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "-"}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Jury Table */}
-        <div className="w-full max-w-7xl mt-4 md:mt-20 relative px-1 md:px-0 mb-8 overflow-hidden">
-          <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
-            <div 
-              className="grid border-b border-white/10 min-w-full"
-              style={{ gridTemplateColumns: `repeat(${state.juryAccounts.length}, minmax(50px, 1fr))` }}
-            >
-               {state.juryAccounts.map((jury, i) => {
-                 return (
-                   <div key={jury.id} className="py-2 md:py-3 text-center border-r border-white/5 last:border-r-0 overflow-hidden">
-                     <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest italic text-white/50 block truncate px-0.5">
-                       {jury.username}
-                     </span>
-                   </div>
-                 );
-               })}
-            </div>
-            <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-4">
               <div className="flex gap-2">
                 {activeMatch.votingMode === 'round' ? (
                   Array.from({ length: activeMatch.roundCount }).map((_, i) => {
@@ -1808,7 +1835,8 @@ function PublicView({ state }: { state: TournamentState }) {
             </motion.div>
           )}
         </AnimatePresence>
-      </main>
+      </div>
+    </main>
 
       {/* Admin Quick Links (Discreet) */}
       <div className="absolute bottom-12 left-1/2 -translate-x-1/2 flex gap-8 z-10 opacity-30 hover:opacity-100 transition-opacity">
