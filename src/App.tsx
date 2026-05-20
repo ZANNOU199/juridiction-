@@ -1397,15 +1397,15 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
       {state.warnedJuries?.includes(juryId) && !state.juryVotes[juryId] && (
         <div 
           className="fixed inset-0 z-[200] pointer-events-none flex items-center justify-center overflow-hidden"
-          style={{ background: 'rgba(234, 179, 8, 0.1)' }}
+          style={{ background: 'rgba(234, 179, 8, 0.05)' }}
         >
-          <div className="absolute inset-0 bg-yellow-400/20 animate-pulse pointer-events-none" />
+          <div className="absolute inset-0 bg-yellow-400/10 animate-pulse pointer-events-none" />
           <motion.div
-            initial={{ rotate: -25, scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1.2, opacity: 1 }}
-            className="bg-yellow-500 text-black font-black text-4xl sm:text-7xl italic py-10 px-24 border-y-[12px] border-black shadow-[0_0_150px_rgba(234,179,8,0.6)] whitespace-nowrap z-[201]"
+            initial={{ rotate: -12, scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-yellow-500 text-black font-black text-xs sm:text-base tracking-[0.2em] italic py-2 px-8 border-y-[3px] border-black shadow-[0_0_40px_rgba(234,179,8,0.4)] whitespace-nowrap z-[201]"
             style={{ 
-              transform: 'rotate(-25deg)',
+              transform: 'rotate(-12deg)',
             }}
           >
             VOTEZ MAINTENANT !
