@@ -1321,8 +1321,8 @@ function BracketView({ state }: { state: TournamentState }) {
     const updateScale = () => {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
-        const contentWidth = 1200; 
-        const scale = Math.min(1, (containerWidth - 24) / contentWidth);
+        const contentWidth = 1600; 
+        const scale = Math.min(1, (containerWidth - 20) / contentWidth);
         setBracketScale(scale);
         setBracketHeight(measureRef.current.offsetHeight);
       }
@@ -1357,17 +1357,17 @@ function BracketView({ state }: { state: TournamentState }) {
         </div>
       </header>
 
-      <section className="py-12 md:py-24 relative z-10 overflow-hidden">
+      <section className="py-16 md:py-32 relative z-10 overflow-hidden">
         <div 
           ref={bracketContainerRef} 
           className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${bracketHeight * bracketScale + 60}px`, minHeight: '400px' }}
+          style={{ height: `${bracketHeight * bracketScale + 100}px`, minHeight: '500px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
             ref={measureRef} 
             className="absolute top-0 left-0 invisible pointer-events-none" 
-            style={{ width: '1200px' }}
+            style={{ width: '1600px' }}
           >
             <BracketContent state={state} />
           </div>
@@ -1375,7 +1375,7 @@ function BracketView({ state }: { state: TournamentState }) {
           {/* Scaled visible content */}
           <div 
             style={{ 
-              width: '1200px',
+              width: '1600px',
               position: 'absolute',
               left: '50%',
               top: 0,
@@ -1441,7 +1441,7 @@ function BracketContent({ state }: { state: TournamentState }) {
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
   return (
-    <div className="flex justify-between items-center w-full px-4 py-12 relative min-h-[700px]">
+    <div className="flex justify-between items-center w-full px-8 py-20 relative min-h-[800px]">
       
       {/* LEFT SIDE: T16 -> T8 -> SEMI */}
       <div className="flex items-center gap-10">
