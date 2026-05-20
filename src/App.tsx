@@ -1399,7 +1399,7 @@ function BracketView({ state }: { state: TournamentState }) {
         <div 
           ref={bracketContainerRef} 
           className="w-full relative z-10 overflow-hidden" 
-          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '800px' }}
+          style={{ height: `${(bracketHeight * bracketScale) + 200}px`, minHeight: '1100px' }}
         >
           {/* Hidden clone for measurement */}
           <div 
@@ -1484,14 +1484,14 @@ function BracketContent({ state }: { state: TournamentState }) {
   const getWinner = (match?: Match) => state.participants.find(p => p.id === match?.winnerId);
 
   return (
-    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[1000px] gap-12">
+    <div className="flex justify-center items-center w-full px-20 py-20 relative min-h-[1100px] gap-12">
       
       {/* LEFT SIDE FLOW */}
       <div className="flex items-center gap-12">
-        <div className="flex flex-col gap-14">
+        <div className="flex flex-col gap-20">
            {[0, 1, 2, 3].map(i => <MatchNode key={`l16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
-        <div className="flex flex-col gap-56">
+        <div className="flex flex-col gap-80">
            {[0, 1].map(i => <MatchNode key={`l8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col">
@@ -1533,10 +1533,10 @@ function BracketContent({ state }: { state: TournamentState }) {
 
       {/* RIGHT SIDE FLOW */}
       <div className="flex items-center gap-12 flex-row-reverse">
-        <div className="flex flex-col gap-14">
+        <div className="flex flex-col gap-20">
            {[4, 5, 6, 7].map(i => <MatchNode key={`r16-${i}`} match={getMatch("TOP 16", i)} participants={state.participants} />)}
         </div>
-        <div className="flex flex-col gap-56">
+        <div className="flex flex-col gap-80">
            {[2, 3].map(i => <MatchNode key={`r8-${i}`} match={getMatch("TOP 8", i)} participants={state.participants} />)}
         </div>
         <div className="flex flex-col">
