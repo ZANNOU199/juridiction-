@@ -544,6 +544,7 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
   const configure = async () => {
     const finalParticipants = participants.slice(0, tournamentSize);
+    const mappedMatches = matches.map((m, i) => i === 0 ? { ...m, status: 'active' as const } : m);
     const newState: TournamentState = {
       ...state,
       competitionName,
@@ -551,8 +552,8 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       participants: finalParticipants,
       juryAccounts,
       juryCount: juryAccounts.length,
-      currentMatchId: matches.length > 0 ? matches[0].id : null,
-      matches: matches.map((m, i) => i === 0 ? { ...m, status: 'active' } : m),
+      currentMatchId: mappedMatches.length > 0 ? mappedMatches[0].id : null,
+      matches: mappedMatches,
       configured: true,
       juryVotes: {},
       tournamentSize
@@ -560,11 +561,24 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     onSave(newState);
 
     try {
-      await fetch('/api/admin/configure', {
+      const res = await fetch('/api/admin/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ competitionName, competitionLogo, participants: finalParticipants, juryAccounts, matches, tournamentSize })
+        body: JSON.stringify({ 
+          competitionName, 
+          competitionLogo, 
+          participants: finalParticipants, 
+          juryAccounts, 
+          matches: mappedMatches, 
+          tournamentSize 
+        })
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.state) {
+          onSave(data.state);
+        }
+      }
     } catch (e) {
       console.warn("Server sync failed during configure");
     }
@@ -1259,6 +1273,17 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                 <p className="text-[8px] text-white/30 italic uppercase text-center mt-2 leading-normal">
                   Donnez ces identifiants aux juges pour qu'ils se connectent sur leur téléphone via le menu /jury
                 </p>
+
+                <div className="pt-4 border-t border-white/5">
+                   <a 
+                     href="/jury" 
+                     target="_blank" 
+                     rel="noopener noreferrer"
+                     className="w-full py-3 bg-white/5 hover:bg-white/10 hover:text-white hover:border-white/20 text-[9px] font-black uppercase tracking-widest transition-all rounded-sm italic border border-white/10 flex items-center justify-center gap-2"
+                   >
+                     <Lock size={12} className="text-yellow-400" /> OUVRIR LA CONSOLE JURY EN NOUVEL ONGLET ↗
+                   </a>
+                </div>
              </div>
 
           </div>

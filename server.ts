@@ -176,7 +176,9 @@ async function saveTournamentState(state: TournamentState) {
   console.log("[Firestore] Attempting to save state to state/current...");
   try {
     tournamentState = state;
-    await setDoc(stateDocRef, state);
+    // Guaranteed sanitization of 'undefined' properties for safe Firestore serialization
+    const sanitizedDoc = JSON.parse(JSON.stringify(state));
+    await setDoc(stateDocRef, sanitizedDoc);
     console.log("[Firestore] State successfully saved to Firestore:", {
       competitionName: state.competitionName,
       configured: state.configured,
