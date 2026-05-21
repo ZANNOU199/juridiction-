@@ -86,14 +86,17 @@ const STORAGE_KEY = 'arena_tournament_state';
 // --- Main App ---
 
 export default function App() {
-  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
-  const [isLoading, setIsLoading] = useState(true);
+  const [state, setState] = useState<TournamentState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : DEFAULT_STATE;
+  });
 
   const saveStateLocal = (newState: TournamentState) => {
     setState(newState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   };
 
-  const fetchState = async (isFirstLoad = false) => {
+  const fetchState = async () => {
     try {
       const res = await fetch('/api/state');
       if (res.ok) {
@@ -101,46 +104,44 @@ export default function App() {
         // Check if data is valid before updating
         if (data && typeof data === 'object' && data.matches) {
           setState(data);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         }
       }
     } catch (err) {
       // Ignore network errors completely
-    } finally {
-      if (isFirstLoad) {
-        setIsLoading(false);
-      }
     }
   };
 
   useEffect(() => {
     // Poll server for multi-device sync
-    fetchState(true);
-    const interval = setInterval(() => fetchState(false), 1500); // Fast polling (1.5s) for snappy real-time multi-device sync
+    fetchState();
+    const interval = setInterval(fetchState, 5000); // Reduce frequency to be less annoying if failing
+
+    // Sync across tabs on the same device/browser
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const newState = JSON.parse(e.newValue);
+          setState(newState);
+        } catch (err) {
+          console.error("Failed to parse storage update", err);
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorage);
 
     return () => {
       clearInterval(interval);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dark space-y-4">
-        <div className="animate-spin w-12 h-12 border-4 border-white/10 border-t-white rounded-full" />
-        <p className="text-xs font-black tracking-widest uppercase text-white/50 animate-pulse">Chargement de la compétition...</p>
-      </div>
-    );
-  }
 
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
         <Route path="/bracket" element={<BracketView state={state} />} />
-        <Route path="/admin" element={
-          <div className="contents" key={state.configured ? 'dashboard' : 'config'}>
-            <AdminView state={state} onSave={saveStateLocal} />
-          </div>
-        } />
+        <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
         <Route path="/jury" element={<JuryGateway state={state} onSave={saveStateLocal} />} />
         <Route path="/select" element={<RoleSelection state={state} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -544,7 +545,6 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
 
   const configure = async () => {
     const finalParticipants = participants.slice(0, tournamentSize);
-    const mappedMatches = matches.map((m, i) => i === 0 ? { ...m, status: 'active' as const } : m);
     const newState: TournamentState = {
       ...state,
       competitionName,
@@ -552,8 +552,8 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
       participants: finalParticipants,
       juryAccounts,
       juryCount: juryAccounts.length,
-      currentMatchId: mappedMatches.length > 0 ? mappedMatches[0].id : null,
-      matches: mappedMatches,
+      currentMatchId: matches.length > 0 ? matches[0].id : null,
+      matches: matches.map((m, i) => i === 0 ? { ...m, status: 'active' } : m),
       configured: true,
       juryVotes: {},
       tournamentSize
@@ -561,24 +561,11 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
     onSave(newState);
 
     try {
-      const res = await fetch('/api/admin/configure', {
+      await fetch('/api/admin/configure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          competitionName, 
-          competitionLogo, 
-          participants: finalParticipants, 
-          juryAccounts, 
-          matches: mappedMatches, 
-          tournamentSize 
-        })
+        body: JSON.stringify({ competitionName, competitionLogo, participants: finalParticipants, juryAccounts, matches, tournamentSize })
       });
-      if (res.ok) {
-        const data = await res.json();
-        if (data.success && data.state) {
-          onSave(data.state);
-        }
-      }
     } catch (e) {
       console.warn("Server sync failed during configure");
     }
@@ -1250,42 +1237,6 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                   </button>
                 </div>
              </div>
-
-             {/* List of Judges and Credentials */}
-             <div className="bg-white/5 p-6 border border-white/10 space-y-4 rounded-sm">
-                <h4 className="text-[10px] font-black tracking-widest uppercase text-white/40 flex items-center gap-2">
-                  <Shield size={12} /> Comptes Jury / Juges (Login)
-                </h4>
-                <div className="grid grid-cols-1 gap-2">
-                   {state.juryAccounts.map((jury) => (
-                      <div key={jury.id} className="flex justify-between items-center text-xs border-b border-white/5 pb-2 last:border-b-0 last:pb-0">
-                         <div className="flex flex-col">
-                            <span className="font-extrabold text-white uppercase italic">{jury.username}</span>
-                            <span className="text-[9px] text-white/40 tracking-wider">UTILISATEUR</span>
-                         </div>
-                         <div className="flex flex-col items-end">
-                            <span className="font-mono text-xs text-yellow-400 font-bold uppercase select-all bg-white/10 px-2 py-1 rounded-sm">{jury.password || "PAS DE MOT DE PASSE"}</span>
-                            <span className="text-[9px] text-white/40 tracking-wider">MOT DE PASSE</span>
-                         </div>
-                      </div>
-                   ))}
-                </div>
-                <p className="text-[8px] text-white/30 italic uppercase text-center mt-2 leading-normal">
-                  Donnez ces identifiants aux juges pour qu'ils se connectent sur leur téléphone via le menu /jury
-                </p>
-
-                <div className="pt-4 border-t border-white/5">
-                   <a 
-                     href="/jury" 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     className="w-full py-3 bg-white/5 hover:bg-white/10 hover:text-white hover:border-white/20 text-[9px] font-black uppercase tracking-widest transition-all rounded-sm italic border border-white/10 flex items-center justify-center gap-2"
-                   >
-                     <Lock size={12} className="text-yellow-400" /> OUVRIR LA CONSOLE JURY EN NOUVEL ONGLET ↗
-                   </a>
-                </div>
-             </div>
-
           </div>
         </div>
     </div>
@@ -1349,8 +1300,8 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
   };
 
   const selectMatch = async (matchId: string) => {
-    const targetMatch = state.matches?.find(m => m.id === matchId);
-    if (targetMatch?.finishedJuries?.includes(juryId)) return;
+    const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (localFinished.includes(matchId)) return;
 
     try {
       const res = await fetch('/api/admin/select-match', {
@@ -1374,18 +1325,12 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
       return;
     }
     
-    // Optimistic state update: add jury to finishedJuries locally
-    const newMatches = state.matches.map(m => {
-      if (m.id === cid) {
-        const finished = m.finishedJuries || [];
-        return {
-          ...m,
-          finishedJuries: finished.includes(juryId) ? finished : [...finished, juryId]
-        };
-      }
-      return m;
-    });
-    onSave({ ...state, matches: newMatches });
+    // Optimistic UI update: local storage and state
+    const juryFinishedMatches = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+    if (!juryFinishedMatches.includes(cid)) {
+      juryFinishedMatches.push(cid);
+      localStorage.setItem(`finished_${juryId}`, JSON.stringify(juryFinishedMatches));
+    }
     
     setView('list'); 
     
@@ -1651,7 +1596,8 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                   const blue = state.participants.find(p => p.id === m.blueTeamId);
                   const isActive = m.status === 'active';
                   const isFinishedGlobal = m.status === 'finished';
-                  const isFinishedByMe = !!(m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId));
+                  const localFinished = JSON.parse(localStorage.getItem(`finished_${juryId}`) || '[]');
+                  const isFinishedByMe = (m.finishedJuries && Array.isArray(m.finishedJuries) && m.finishedJuries.includes(juryId)) || localFinished.includes(m.id);
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
