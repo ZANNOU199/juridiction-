@@ -87,12 +87,13 @@ const STORAGE_KEY = 'arena_tournament_state';
 
 export default function App() {
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [isLoading, setIsLoading] = useState(true);
 
   const saveStateLocal = (newState: TournamentState) => {
     setState(newState);
   };
 
-  const fetchState = async () => {
+  const fetchState = async (isFirstLoad = false) => {
     try {
       const res = await fetch('/api/state');
       if (res.ok) {
@@ -104,25 +105,42 @@ export default function App() {
       }
     } catch (err) {
       // Ignore network errors completely
+    } finally {
+      if (isFirstLoad) {
+        setIsLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     // Poll server for multi-device sync
-    fetchState();
-    const interval = setInterval(fetchState, 1500); // Fast polling (1.5s) for snappy real-time multi-device sync
+    fetchState(true);
+    const interval = setInterval(() => fetchState(false), 1500); // Fast polling (1.5s) for snappy real-time multi-device sync
 
     return () => {
       clearInterval(interval);
     };
   }, []);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-surface-dark space-y-4">
+        <div className="animate-spin w-12 h-12 border-4 border-white/10 border-t-white rounded-full" />
+        <p className="text-xs font-black tracking-widest uppercase text-white/50 animate-pulse">Chargement de la compétition...</p>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<PublicView state={state} />} />
         <Route path="/bracket" element={<BracketView state={state} />} />
-        <Route path="/admin" element={<AdminView state={state} onSave={saveStateLocal} />} />
+        <Route path="/admin" element={
+          <div className="contents" key={state.configured ? 'dashboard' : 'config'}>
+            <AdminView state={state} onSave={saveStateLocal} />
+          </div>
+        } />
         <Route path="/jury" element={<JuryGateway state={state} onSave={saveStateLocal} />} />
         <Route path="/select" element={<RoleSelection state={state} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
@@ -1218,6 +1236,31 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                   </button>
                 </div>
              </div>
+
+             {/* List of Judges and Credentials */}
+             <div className="bg-white/5 p-6 border border-white/10 space-y-4 rounded-sm">
+                <h4 className="text-[10px] font-black tracking-widest uppercase text-white/40 flex items-center gap-2">
+                  <Shield size={12} /> Comptes Jury / Juges (Login)
+                </h4>
+                <div className="grid grid-cols-1 gap-2">
+                   {state.juryAccounts.map((jury) => (
+                      <div key={jury.id} className="flex justify-between items-center text-xs border-b border-white/5 pb-2 last:border-b-0 last:pb-0">
+                         <div className="flex flex-col">
+                            <span className="font-extrabold text-white uppercase italic">{jury.username}</span>
+                            <span className="text-[9px] text-white/40 tracking-wider">UTILISATEUR</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                            <span className="font-mono text-xs text-yellow-400 font-bold uppercase select-all bg-white/10 px-2 py-1 rounded-sm">{jury.password || "PAS DE MOT DE PASSE"}</span>
+                            <span className="text-[9px] text-white/40 tracking-wider">MOT DE PASSE</span>
+                         </div>
+                      </div>
+                   ))}
+                </div>
+                <p className="text-[8px] text-white/30 italic uppercase text-center mt-2 leading-normal">
+                  Donnez ces identifiants aux juges pour qu'ils se connectent sur leur téléphone via le menu /jury
+                </p>
+             </div>
+
           </div>
         </div>
     </div>
