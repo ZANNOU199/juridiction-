@@ -27,7 +27,29 @@ interface Participant {
   id: string;
   name: string;
   photo: string;
+  countryCode?: string;
+  countryName?: string;
+  countryFlag?: string;
 }
+
+const DEFAULT_PARTICIPANTS: Participant[] = [
+  { id: 'p-1', name: 'LILOU', countryCode: 'FR', countryName: 'France', countryFlag: 'https://flagcdn.com/w40/fr.png', photo: 'https://images.unsplash.com/photo-1547153760-18fc86324498?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-2', name: 'VICTOR', countryCode: 'US', countryName: 'États-Unis', countryFlag: 'https://flagcdn.com/w40/us.png', photo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-3', name: 'HONG10', countryCode: 'KR', countryName: 'Corée du Sud', countryFlag: 'https://flagcdn.com/w40/kr.png', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-4', name: 'MENNO', countryCode: 'NL', countryName: 'Pays-Bas', countryFlag: 'https://flagcdn.com/w40/nl.png', photo: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-5', name: 'WING', countryCode: 'KR', countryName: 'Corée du Sud', countryFlag: 'https://flagcdn.com/w40/kr.png', photo: 'https://images.unsplash.com/photo-1489980508314-941910ded1f4?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-6', name: 'SHIGEKIX', countryCode: 'JP', countryName: 'Japon', countryFlag: 'https://flagcdn.com/w40/jp.png', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-7', name: 'PHIL WIZARD', countryCode: 'CA', countryName: 'Canada', countryFlag: 'https://flagcdn.com/w40/ca.png', photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-8', name: 'DANY DANN', countryCode: 'FR', countryName: 'France', countryFlag: 'https://flagcdn.com/w40/fr.png', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-9', name: 'AMIR', countryCode: 'KZ', countryName: 'Kazakhstan', countryFlag: 'https://flagcdn.com/w40/kz.png', photo: 'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-10', name: 'SUNNI', countryCode: 'GB', countryName: 'Royaume-Uni', countryFlag: 'https://flagcdn.com/w40/gb.png', photo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-11', name: 'LEE', countryCode: 'IT', countryName: 'Italie', countryFlag: 'https://flagcdn.com/w40/it.png', photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-12', name: 'LUSSY SKY', countryCode: 'UA', countryName: 'Ukraine', countryFlag: 'https://flagcdn.com/w40/ua.png', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-13', name: 'KUZYA', countryCode: 'UA', countryName: 'Ukraine', countryFlag: 'https://flagcdn.com/w40/ua.png', photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-14', name: 'GRAVITY', countryCode: 'US', countryName: 'États-Unis', countryFlag: 'https://flagcdn.com/w40/us.png', photo: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-15', name: 'QUAKE', countryCode: 'TW', countryName: 'Taïwan', countryFlag: 'https://flagcdn.com/w40/tw.png', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60' },
+  { id: 'p-16', name: 'ALVIN', countryCode: 'CO', countryName: 'Colombie', countryFlag: 'https://flagcdn.com/w40/co.png', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=60' }
+];
 
 interface Match {
   id: string;
@@ -70,7 +92,7 @@ interface TournamentState {
 const DEFAULT_STATE: TournamentState = {
   competitionName: "ARENA CHAMPIONSHIP",
   competitionLogo: "",
-  participants: Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" })),
+  participants: DEFAULT_PARTICIPANTS,
   juryAccounts: [],
   juryCount: 3,
   currentMatchId: null,
@@ -332,8 +354,90 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
   const [tournamentSize, setTournamentSize] = useState<16 | 8 | 4 | 2>(state.tournamentSize || 16);
   const [participants, setParticipants] = useState<Participant[]>(() => {
     if (state.participants && state.participants.length > 0) return state.participants;
-    return Array.from({ length: 16 }, (_, i) => ({ id: `p-${i + 1}`, name: `B-BOY ${i + 1}`, photo: "" }));
+    return DEFAULT_PARTICIPANTS;
   });
+
+  // --- REST Countries API & Fallback List ---
+  const FALLBACK_COUNTRIES = useMemo(() => [
+    { cca2: 'FR', name: 'France', flag: '🇫🇷', flagUrl: 'https://flagcdn.com/w40/fr.png' },
+    { cca2: 'US', name: 'États-Unis', flag: '🇺🇸', flagUrl: 'https://flagcdn.com/w40/us.png' },
+    { cca2: 'KR', name: 'Corée du Sud', flag: '🇰🇷', flagUrl: 'https://flagcdn.com/w40/kr.png' },
+    { cca2: 'JP', name: 'Japon', flag: '🇯🇵', flagUrl: 'https://flagcdn.com/w40/jp.png' },
+    { cca2: 'CA', name: 'Canada', flag: '🇨🇦', flagUrl: 'https://flagcdn.com/w40/ca.png' },
+    { cca2: 'NL', name: 'Pays-Bas', flag: '🇳🇱', flagUrl: 'https://flagcdn.com/w40/nl.png' },
+    { cca2: 'BE', name: 'Belgique', flag: '🇧🇪', flagUrl: 'https://flagcdn.com/w40/be.png' },
+    { cca2: 'CH', name: 'Suisse', flag: '🇨🇭', flagUrl: 'https://flagcdn.com/w40/ch.png' },
+    { cca2: 'GB', name: 'Royaume-Uni', flag: '🇬🇧', flagUrl: 'https://flagcdn.com/w40/gb.png' },
+    { cca2: 'DE', name: 'Allemagne', flag: '🇩🇪', flagUrl: 'https://flagcdn.com/w40/de.png' },
+    { cca2: 'ES', name: 'Espagne', flag: '🇪🇸', flagUrl: 'https://flagcdn.com/w40/es.png' },
+    { cca2: 'IT', name: 'Italie', flag: '🇮🇹', flagUrl: 'https://flagcdn.com/w40/it.png' },
+    { cca2: 'BR', name: 'Brésil', flag: '🇧🇷', flagUrl: 'https://flagcdn.com/w40/br.png' },
+    { cca2: 'UA', name: 'Ukraine', flag: '🇺🇦', flagUrl: 'https://flagcdn.com/w40/ua.png' },
+    { cca2: 'KZ', name: 'Kazakhstan', flag: '🇰🇿', flagUrl: 'https://flagcdn.com/w40/kz.png' },
+    { cca2: 'CN', name: 'Chine', flag: '🇨🇳', flagUrl: 'https://flagcdn.com/w40/cn.png' },
+    { cca2: 'MA', name: 'Maroc', flag: '🇲🇦', flagUrl: 'https://flagcdn.com/w40/ma.png' },
+    { cca2: 'DZ', name: 'Algérie', flag: '🇩🇿', flagUrl: 'https://flagcdn.com/w40/dz.png' },
+    { cca2: 'TN', name: 'Tunisie', flag: '🇹🇳', flagUrl: 'https://flagcdn.com/w40/tn.png' },
+    { cca2: 'SN', name: 'Sénégal', flag: '🇸🇳', flagUrl: 'https://flagcdn.com/w40/sn.png' },
+  ], []);
+
+  const [countries, setCountries] = useState<any[]>(() => {
+    return FALLBACK_COUNTRIES.map(fc => ({
+      cca2: fc.cca2,
+      name: { common: fc.name },
+      translations: { fra: { common: fc.name } },
+      flags: { png: fc.flagUrl, svg: fc.flagUrl },
+      flag: fc.flag
+    }));
+  });
+
+  const [loadingCountries, setLoadingCountries] = useState(false);
+
+  useEffect(() => {
+    setLoadingCountries(true);
+    fetch('https://restcountries.com/v3.1/all?fields=name,cca2,flags,translations,flag')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data) && data.length > 0) {
+          const sorted = data.sort((a, b) => {
+            const nameA = a.translations?.fra?.common || a.name?.common || '';
+            const nameB = b.translations?.fra?.common || b.name?.common || '';
+            return nameA.localeCompare(nameB);
+          });
+          setCountries(sorted);
+        }
+        setLoadingCountries(false);
+      })
+      .catch(err => {
+        console.error("Error loading countries:", err);
+        setLoadingCountries(false);
+      });
+  }, [FALLBACK_COUNTRIES]);
+
+  const handleCountryChange = (index: number, countryCca2: string) => {
+    const selected = countries.find(c => c.cca2 === countryCca2);
+    if (selected) {
+      const flagUrl = selected.flags?.png || selected.flags?.svg || '';
+      const nameFra = selected.translations?.fra?.common || selected.name?.common || selected.name?.official || '';
+      const newParticipants = [...participants];
+      newParticipants[index] = {
+        ...newParticipants[index],
+        countryCode: selected.cca2,
+        countryName: nameFra,
+        countryFlag: flagUrl
+      };
+      setParticipants(newParticipants);
+    } else {
+      const newParticipants = [...participants];
+      newParticipants[index] = {
+        ...newParticipants[index],
+        countryCode: '',
+        countryName: '',
+        countryFlag: ''
+      };
+      setParticipants(newParticipants);
+    }
+  };
   const [matches, setMatches] = useState<Match[]>(state.matches || []);
   const [juryCount, setJuryCount] = useState(state.juryCount || 3);
   const [juryAccounts, setJuryAccounts] = useState<JuryAccount[]>(state.juryAccounts || []);
@@ -901,19 +1005,102 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
                  <Users size={14} /> 2. Participants ({tournamentSize})
                </h3>
-               <div className="grid grid-cols-1 gap-2 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
+               {loadingCountries && (
+                 <div className="flex gap-2 items-center text-[10px] uppercase font-black tracking-widest text-[#f59e0b] mb-4">
+                   <div className="w-2.5 h-2.5 border-2 border-[#f59e0b]/20 border-t-[#f59e0b] rounded-full animate-spin"></div>
+                   Chargement des pays du monde...
+                 </div>
+               )}
+               <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
                   {participants.slice(0, tournamentSize).map((p, i) => (
-                    <div key={p.id} className="relative group">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-white/20 italic">
-                        {String(i + 1).padStart(2, '0')}
-                      </span>
-                      <input 
-                        type="text" 
-                        value={p.name} 
-                        onChange={e => updateParticipant(i, 'name', e.target.value)}
-                        placeholder={`NOM PARTICIPANT ${i + 1}`}
-                        className="w-full bg-black/40 border border-white/5 pl-12 pr-4 py-3 font-black focus:border-white transition-all outline-none italic text-xs uppercase"
-                      />
+                    <div key={p.id} className="p-4 bg-black/40 border border-white/5 hover:border-white/10 transition-all rounded-sm space-y-3 relative">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-black text-white/20 italic">
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          {p.photo ? (
+                            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/15">
+                              <img src={p.photo} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                            </div>
+                          ) : (
+                            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">
+                              <Users size={12} className="text-white/20" />
+                            </div>
+                          )}
+                        </div>
+
+                        {p.countryFlag && (
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 border border-white/5 text-[9px] font-bold text-white/50 rounded-sm">
+                            <img src={p.countryFlag} alt={p.countryName} className="w-3.5 h-2.5 object-cover" referrerPolicy="no-referrer" />
+                            <span className="uppercase">{p.countryCode}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">Nom du Danseur</p>
+                          <input 
+                            type="text" 
+                            value={p.name} 
+                            onChange={e => updateParticipant(i, 'name', e.target.value)}
+                            placeholder={`DANS-BOY LILOU ${i + 1}`}
+                            className="w-full bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-xs uppercase"
+                          />
+                        </div>
+
+                        <div>
+                          <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">Origine / Pays</p>
+                          <select 
+                            value={p.countryCode || ''} 
+                            onChange={e => handleCountryChange(i, e.target.value)}
+                            className="w-full bg-black/40 border border-white/15 focus:border-white px-2.5 py-2 font-black text-xs italic uppercase text-white/80 cursor-pointer"
+                          >
+                            <option value="" className="bg-[#101015]">PAYS NON DÉFINI</option>
+                            {countries.map(country => {
+                              const cca = country.cca2;
+                              const name = country.translations?.fra?.common || country.name?.common || country.name?.official || '';
+                              const emoji = country.flag || '';
+                              return (
+                                <option key={cca} value={cca} className="bg-[#101015]">
+                                  {emoji} {name.toUpperCase()} ({cca})
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div>
+                          <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">Photo URL <span className="text-white/10">(Presets à droite)</span></p>
+                          <div className="flex gap-1.5">
+                            <input 
+                              type="text" 
+                              value={p.photo} 
+                              onChange={e => updateParticipant(i, 'photo', e.target.value)}
+                              placeholder="https://images.unsplash.com/..."
+                              className="flex-1 bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
+                            />
+                            <select
+                              onChange={e => {
+                                if (e.target.value) {
+                                  updateParticipant(i, 'photo', e.target.value);
+                                  e.target.value = ''; 
+                                }
+                              }}
+                              className="bg-white/5 border border-white/15 text-[10px] font-black py-1.5 px-2 cursor-pointer uppercase italic text-white/60"
+                            >
+                              <option value="" className="bg-[#101015]">Preset...</option>
+                              <option value="https://images.unsplash.com/photo-1547153760-18fc86324498?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">B-Boy Alpha</option>
+                              <option value="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">B-Boy Beta</option>
+                              <option value="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 1</option>
+                              <option value="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 2</option>
+                              <option value="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 3</option>
+                              <option value="https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 4</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   ))}
                </div>
@@ -1494,7 +1681,12 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               )}
               <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-4 py-3 sm:px-6 sm:py-4'}`}>
                 <Shield className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md`}>{redP?.name}</h2>
+                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}>
+                  {redP?.countryFlag && (
+                    <img src={redP.countryFlag} alt={redP.countryCode} className="w-5 h-3.5 sm:w-7 sm:h-5 object-cover shrink-0 border border-white/10" referrerPolicy="no-referrer" />
+                  )}
+                  <span>{redP?.name}</span>
+                </h2>
                 <div className="px-3 py-1 bg-white text-black font-black italic uppercase text-[8px] sm:text-[10px] tracking-widest shadow-xl short-screen-text-sm">
                   {myVote === 'red' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'red' ? 'VOTE ACTUEL' : 'ROUGE')}
                 </div>
@@ -1521,7 +1713,12 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               )}
               <div className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? 'px-4 py-2 scale-75' : 'px-4 py-3 sm:px-6 sm:py-4'}`}>
                 <Rocket className={`${myVote && !isChanging ? 'w-8 h-8 mb-1' : 'w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide'} text-white drop-shadow-lg`} />
-                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md`}>{blueP?.name}</h2>
+                <h2 className={`${myVote && !isChanging ? 'text-lg sm:text-xl' : 'text-xl md:text-4xl short-screen-text-sm'} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}>
+                  {blueP?.countryFlag && (
+                    <img src={blueP.countryFlag} alt={blueP.countryCode} className="w-5 h-3.5 sm:w-7 sm:h-5 object-cover shrink-0 border border-white/10" referrerPolicy="no-referrer" />
+                  )}
+                  <span>{blueP?.name}</span>
+                </h2>
                 <div className="px-3 py-1 bg-white text-black font-black italic uppercase text-[8px] sm:text-[10px] tracking-widest shadow-xl short-screen-text-sm">
                    {myVote === 'blue' && !isChanging ? 'SÉLECTIONNÉ' : (isChanging && myVote === 'blue' ? 'VOTE ACTUEL' : 'BLEU')}
                 </div>
@@ -1540,8 +1737,11 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
                        <CheckCircle2 size={32} className="text-white md:w-12 md:h-12" />
                     </div>
                     <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-2 md:mb-3 short-screen-text-sm">VOTE ENREGISTRÉ</p>
-                    <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm">
-                       {myVote === 'red' ? redP?.name : blueP?.name}
+                    <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm flex items-center gap-2.5 justify-center">
+                       {(myVote === 'red' ? redP : blueP)?.countryFlag && (
+                         <img src={(myVote === 'red' ? redP : blueP)?.countryFlag} alt="Flag" className="w-6 h-4 md:w-9 md:h-6 object-cover border border-white/10 shrink-0" referrerPolicy="no-referrer" />
+                       )}
+                       <span>{myVote === 'red' ? redP?.name : blueP?.name}</span>
                     </h3>
                     <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-widest mb-6 md:mb-10 italic short-screen-hide">
                        SÉLECTION BIEN TRANSMISE AU SYSTÈME
@@ -1774,12 +1974,17 @@ function MatchNode({ match, participants, className = "", onUpdateMatchTeam }: M
                  >
                    <option value="" className="bg-[#0a0807]">-</option>
                    {participants.map(part => (
-                     <option key={part.id} value={part.id} className="bg-[#0a0807]">{part.name}</option>
+                     <option key={part.id} value={part.id} className="bg-[#0a0807]">
+                       {part.countryCode ? `[${part.countryCode}] ` : ''}{part.name}
+                     </option>
                    ))}
                  </select>
                ) : (
-                <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
-                  {p?.name || "-"}
+                <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
+                  {p?.countryFlag && (
+                    <img src={p.countryFlag} alt={p.countryCode} className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/10" referrerPolicy="no-referrer" />
+                  )}
+                  <span>{p?.name || "-"}</span>
                 </span>
                )}
             </div>
@@ -2011,7 +2216,10 @@ function PublicView({ state }: { state: TournamentState }) {
                   {redScore}
                 </div>
               </div>
-              <div className="bg-brand-red font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-start border-l-[3px] md:border-l-[8px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+              <div className="bg-brand-red font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-start gap-2.5 md:gap-4 border-l-[3px] md:border-l-[8px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                {redP?.countryFlag && (
+                  <img src={redP.countryFlag} alt={redP.countryCode} className="w-6 h-4 md:w-10 md:h-6.5 object-cover border border-white/10 shrink-0" referrerPolicy="no-referrer" />
+                )}
                 <span className="truncate uppercase tracking-tighter">{redP?.name || "-"}</span>
               </div>
             </div>
@@ -2034,8 +2242,11 @@ function PublicView({ state }: { state: TournamentState }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               </div>
-              <div className="bg-brand-blue font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-end border-r-[3px] md:border-r-[8px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+              <div className="bg-brand-blue font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-end gap-2.5 md:gap-4 border-r-[3px] md:border-r-[8px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
                 <span className="truncate uppercase tracking-tighter text-right">{blueP?.name || "-"}</span>
+                {blueP?.countryFlag && (
+                  <img src={blueP.countryFlag} alt={blueP.countryCode} className="w-6 h-4 md:w-10 md:h-6.5 object-cover border border-white/10 shrink-0" referrerPolicy="no-referrer" />
+                )}
               </div>
             </div>
           </div>
