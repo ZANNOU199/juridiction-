@@ -2628,36 +2628,57 @@ function MatchNode({
                     ))}
                   </select>
                   {onUpdateParticipantCountry && p && countries && (
-                    <select
-                      value={p.countryCode || ""}
-                      onChange={(e) =>
-                        onUpdateParticipantCountry(p.id, e.target.value)
-                      }
-                      className="bg-transparent text-[10px] md:text-[14px] font-black uppercase tracking-tight outline-none border-b border-white/10 text-white/50 cursor-pointer hover:text-primary transition-colors max-w-[60px] md:max-w-[100px] shrink-0"
+                    <div
+                      className="relative shrink-0 flex items-center justify-center hover:scale-110 transition-transform duration-200"
+                      title="Changer le pays"
                     >
-                      <option value="" className="bg-[#0a0807] text-white/30">
-                        -
-                      </option>
-                      {countries.map((c) => (
-                        <option
-                          key={c.cca2}
-                          value={c.cca2}
-                          className="bg-[#0a0807] text-white"
+                      {p.countryFlag ? (
+                        <img
+                          src={p.countryFlag}
+                          alt={p.countryCode || "Drapeau"}
+                          className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/20 rounded-xs"
+                          referrerPolicy="no-referrer"
+                        />
+                      ) : (
+                        <svg
+                          className="w-4.5 h-3 md:w-5 md:h-3.5 text-white/30 border border-white/10 border-dashed rounded-xs bg-white/5 flex shrink-0"
+                          viewBox="0 0 20 14"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
                         >
-                          {c.translations?.fra?.common ||
-                            c.name?.common ||
-                            c.cca2}
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            d="M3 2v10M3 3h12l-2 3 2 3H3"
+                          />
+                        </svg>
+                      )}
+
+                      {/* Invisible native select overlaid on the flag to change the country */}
+                      <select
+                        value={p.countryCode || ""}
+                        onChange={(e) =>
+                          onUpdateParticipantCountry(p.id, e.target.value)
+                        }
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      >
+                        <option value="" className="bg-[#0a0807] text-white/50">
+                          - Aucun pays -
                         </option>
-                      ))}
-                    </select>
-                  )}
-                  {p?.countryFlag && (
-                    <img
-                      src={p.countryFlag}
-                      alt={p.countryCode}
-                      className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/10 rounded-xs"
-                      referrerPolicy="no-referrer"
-                    />
+                        {countries.map((c) => (
+                          <option
+                            key={c.cca2}
+                            value={c.cca2}
+                            className="bg-[#0a0807] text-white"
+                          >
+                            {c.translations?.fra?.common ||
+                              c.name?.common ||
+                              c.cca2}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   )}
                 </div>
               ) : (
