@@ -54,6 +54,49 @@ const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
 const DEFAULT_SILHOUETTE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
 
+function DancerPhoto({
+  photoUrl,
+  className = "w-full h-full object-cover",
+  alt = "Dancer",
+}: {
+  photoUrl?: string;
+  className?: string;
+  alt?: string;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [photoUrl]);
+
+  if (!photoUrl || failed) {
+    return (
+      <svg
+        className={`${className} bg-[#1f2937]`}
+        viewBox="0 0 100 100"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <rect width="100" height="100" fill="#1f2937" />
+        <circle cx="50" cy="35" r="18" fill="#000000" />
+        <path
+          d="M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z"
+          fill="#000000"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <img
+      src={photoUrl}
+      alt={alt}
+      className={className}
+      referrerPolicy="no-referrer"
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 interface Match {
   id: string;
   redTeamId: string;
@@ -1330,11 +1373,10 @@ function AdminView({
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <div className="w-8 h-8 rounded-full overflow-hidden border border-white/15 bg-white/5">
-                          <img
-                            src={p.photo || DEFAULT_SILHOUETTE}
+                          <DancerPhoto
+                            photoUrl={p.photo}
                             alt={p.name}
                             className="w-full h-full object-cover"
-                            referrerPolicy="no-referrer"
                           />
                         </div>
                       </div>
@@ -2195,10 +2237,10 @@ function JuryView({
                   <div
                     className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? "rounded-full" : ""}`}
                   >
-                    <img
-                      src={redP.photo || DEFAULT_SILHOUETTE}
+                    <DancerPhoto
+                      photoUrl={redP.photo}
+                      alt={redP.name}
                       className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
                   </div>
@@ -2250,10 +2292,10 @@ function JuryView({
                   <div
                     className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? "rounded-full" : ""}`}
                   >
-                    <img
-                      src={blueP.photo || DEFAULT_SILHOUETTE}
+                    <DancerPhoto
+                      photoUrl={blueP.photo}
+                      alt={blueP.name}
                       className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
                   </div>
@@ -2817,13 +2859,10 @@ function BracketContent({
           <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 relative z-10">
             <div className="w-24 h-24 rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.05)]">
               {getWinner(getMatch("FINALE", 0)) ? (
-                <img
-                  src={
-                    getWinner(getMatch("FINALE", 0))?.photo ||
-                    DEFAULT_SILHOUETTE
-                  }
+                <DancerPhoto
+                  photoUrl={getWinner(getMatch("FINALE", 0))?.photo}
+                  alt={getWinner(getMatch("FINALE", 0))?.name}
                   className="w-full h-full object-cover"
-                  referrerPolicy="no-referrer"
                 />
               ) : (
                 <div className="text-white/5">
@@ -3026,10 +3065,10 @@ function PublicView({ state }: { state: TournamentState }) {
             <div className="space-y-1 md:space-y-4 flex flex-col min-w-0">
               <div className="flex justify-end gap-1.5 md:gap-6 items-end flex-1">
                 <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
-                  <img
-                    src={redP?.photo || DEFAULT_SILHOUETTE}
+                  <DancerPhoto
+                    photoUrl={redP?.photo}
+                    alt={redP?.name}
                     className="w-full h-full object-cover transition-all duration-700"
-                    referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
@@ -3064,10 +3103,10 @@ function PublicView({ state }: { state: TournamentState }) {
                   {blueScore}
                 </div>
                 <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
-                  <img
-                    src={blueP?.photo || DEFAULT_SILHOUETTE}
+                  <DancerPhoto
+                    photoUrl={blueP?.photo}
+                    alt={blueP?.name}
                     className="w-full h-full object-cover transition-all duration-700"
-                    referrerPolicy="no-referrer"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
