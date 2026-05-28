@@ -52,7 +52,7 @@ const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
 );
 
 const DEFAULT_SILHOUETTE =
-  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23111116'/><circle cx='50' cy='38' r='18' fill='%23475569'/><path d='M20 85 C 20 62, 30 55, 50 55 C 70 55, 80 62, 80 85 Z' fill='%23475569'/></svg>";
+  "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
 
 interface Match {
   id: string;
