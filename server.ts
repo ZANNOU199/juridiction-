@@ -11,24 +11,14 @@ interface Participant {
   countryFlag?: string;
 }
 
-const DEFAULT_PARTICIPANTS: Participant[] = [
-  { id: 'p-1', name: 'LILOU', countryCode: 'FR', countryName: 'France', countryFlag: 'https://flagcdn.com/w40/fr.png', photo: 'https://images.unsplash.com/photo-1547153760-18fc86324498?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-2', name: 'VICTOR', countryCode: 'US', countryName: 'États-Unis', countryFlag: 'https://flagcdn.com/w40/us.png', photo: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-3', name: 'HONG10', countryCode: 'KR', countryName: 'Corée du Sud', countryFlag: 'https://flagcdn.com/w40/kr.png', photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-4', name: 'MENNO', countryCode: 'NL', countryName: 'Pays-Bas', countryFlag: 'https://flagcdn.com/w40/nl.png', photo: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-5', name: 'WING', countryCode: 'KR', countryName: 'Corée du Sud', countryFlag: 'https://flagcdn.com/w40/kr.png', photo: 'https://images.unsplash.com/photo-1489980508314-941910ded1f4?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-6', name: 'SHIGEKIX', countryCode: 'JP', countryName: 'Japon', countryFlag: 'https://flagcdn.com/w40/jp.png', photo: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-7', name: 'PHIL WIZARD', countryCode: 'CA', countryName: 'Canada', countryFlag: 'https://flagcdn.com/w40/ca.png', photo: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-8', name: 'DANY DANN', countryCode: 'FR', countryName: 'France', countryFlag: 'https://flagcdn.com/w40/fr.png', photo: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-9', name: 'AMIR', countryCode: 'KZ', countryName: 'Kazakhstan', countryFlag: 'https://flagcdn.com/w40/kz.png', photo: 'https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-10', name: 'SUNNI', countryCode: 'GB', countryName: 'Royaume-Uni', countryFlag: 'https://flagcdn.com/w40/gb.png', photo: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-11', name: 'LEE', countryCode: 'IT', countryName: 'Italie', countryFlag: 'https://flagcdn.com/w40/it.png', photo: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-12', name: 'LUSSY SKY', countryCode: 'UA', countryName: 'Ukraine', countryFlag: 'https://flagcdn.com/w40/ua.png', photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-13', name: 'KUZYA', countryCode: 'UA', countryName: 'Ukraine', countryFlag: 'https://flagcdn.com/w40/ua.png', photo: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-14', name: 'GRAVITY', countryCode: 'US', countryName: 'États-Unis', countryFlag: 'https://flagcdn.com/w40/us.png', photo: 'https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-15', name: 'QUAKE', countryCode: 'TW', countryName: 'Taïwan', countryFlag: 'https://flagcdn.com/w40/tw.png', photo: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=60' },
-  { id: 'p-16', name: 'ALVIN', countryCode: 'CO', countryName: 'Colombie', countryFlag: 'https://flagcdn.com/w40/co.png', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=60' }
-];
+const DEFAULT_PARTICIPANTS: Participant[] = Array.from({ length: 16 }, (_, i) => ({
+  id: `p-${i + 1}`,
+  name: `B-BOY ${i + 1}`,
+  photo: "",
+  countryCode: "",
+  countryName: "",
+  countryFlag: ""
+}));
 
 interface Match {
   id: string;
