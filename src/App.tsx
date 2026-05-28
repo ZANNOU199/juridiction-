@@ -51,6 +51,8 @@ const DEFAULT_PARTICIPANTS: Participant[] = [
   { id: 'p-16', name: 'ALVIN', countryCode: 'CO', countryName: 'Colombie', countryFlag: 'https://flagcdn.com/w40/co.png', photo: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=150&auto=format&fit=crop&q=60' }
 ];
 
+const DEFAULT_SILHOUETTE = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect width='24' height='24' fill='%23121214'/><path d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z' fill='%23000000'/></svg>";
+
 interface Match {
   id: string;
   redTeamId: string;
@@ -1019,15 +1021,9 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                           <span className="text-[10px] font-black text-white/20 italic">
                             {String(i + 1).padStart(2, '0')}
                           </span>
-                          {p.photo ? (
-                            <div className="w-8 h-8 rounded-full overflow-hidden border border-white/15">
-                              <img src={p.photo} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                            </div>
-                          ) : (
-                            <div className="w-8 h-8 rounded-full bg-white/5 border border-white/5 flex items-center justify-center">
-                              <Users size={12} className="text-white/20" />
-                            </div>
-                          )}
+                          <div className="w-8 h-8 rounded-full overflow-hidden border border-white/15 bg-white/5">
+                            <img src={p.photo || DEFAULT_SILHOUETTE} alt={p.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                          </div>
                         </div>
 
                         {p.countryFlag && (
@@ -1072,33 +1068,14 @@ function AdminView({ state, onSave }: { state: TournamentState, onSave: (s: Tour
                         </div>
 
                         <div>
-                          <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">Photo URL <span className="text-white/10">(Presets à droite)</span></p>
-                          <div className="flex gap-1.5">
-                            <input 
-                              type="text" 
-                              value={p.photo} 
-                              onChange={e => updateParticipant(i, 'photo', e.target.value)}
-                              placeholder="https://images.unsplash.com/..."
-                              className="flex-1 bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
-                            />
-                            <select
-                              onChange={e => {
-                                if (e.target.value) {
-                                  updateParticipant(i, 'photo', e.target.value);
-                                  e.target.value = ''; 
-                                }
-                              }}
-                              className="bg-white/5 border border-white/15 text-[10px] font-black py-1.5 px-2 cursor-pointer uppercase italic text-white/60"
-                            >
-                              <option value="" className="bg-[#101015]">Preset...</option>
-                              <option value="https://images.unsplash.com/photo-1547153760-18fc86324498?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">B-Boy Alpha</option>
-                              <option value="https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">B-Boy Beta</option>
-                              <option value="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 1</option>
-                              <option value="https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 2</option>
-                              <option value="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 3</option>
-                              <option value="https://images.unsplash.com/photo-1501196354995-cbb51c65aaea?w=150&auto=format&fit=crop&q=60" className="bg-[#101015]">Avatar 4</option>
-                            </select>
-                          </div>
+                          <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">Photo URL</p>
+                          <input 
+                            type="text" 
+                            value={p.photo} 
+                            onChange={e => updateParticipant(i, 'photo', e.target.value)}
+                            placeholder="https://images.unsplash.com/..."
+                            className="w-full bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
+                          />
                         </div>
                       </div>
                     </div>
@@ -1671,10 +1648,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               `}
               style={{ backgroundColor: 'rgb(225, 29, 72)' }}
             >
-              {redP?.photo && (
+              {redP && (
                 <div className={`absolute inset-0 flex items-center justify-center p-2 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
                   <div className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
-                    <img src={redP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={redP.photo || DEFAULT_SILHOUETTE} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
                   </div>
                 </div>
@@ -1703,10 +1680,10 @@ function JuryView({ state, juryId, onSave, onLogout }: { state: TournamentState,
               `}
               style={{ backgroundColor: 'rgb(37, 99, 235)' }}
             >
-              {blueP?.photo && (
+              {blueP && (
                 <div className={`absolute inset-0 flex items-center justify-center p-2 transition-all duration-700 ${myVote && !isChanging ? 'opacity-40 scale-75' : 'md:p-8'}`}>
                   <div className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? 'rounded-full' : ''}`}>
-                    <img src={blueP.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={blueP.photo || DEFAULT_SILHOUETTE} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
                   </div>
                 </div>
@@ -1961,11 +1938,6 @@ function MatchNode({ match, participants, className = "", onUpdateMatchTeam }: M
         return (
           <div key={idx} className="flex justify-between items-center h-10 md:h-14 px-4 relative border-b border-white/5 last:border-b-0">
             <div className="flex items-center gap-3 overflow-hidden w-full">
-               {p?.photo && (
-                 <div className="w-5 h-5 rounded-full overflow-hidden border border-white/10 shrink-0">
-                   <img src={p.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                 </div>
-               )}
                {onUpdateMatchTeam && match ? (
                  <select
                    value={teamId || ""}
@@ -1981,10 +1953,10 @@ function MatchNode({ match, participants, className = "", onUpdateMatchTeam }: M
                  </select>
                ) : (
                 <span className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${p ? 'text-white' : 'text-white/10'} ${p && isWinner(p.id) ? 'text-primary' : ''}`}>
-                  {p?.countryFlag && (
-                    <img src={p.countryFlag} alt={p.countryCode} className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/10" referrerPolicy="no-referrer" />
-                  )}
                   <span>{p?.name || "-"}</span>
+                  {p?.countryFlag && (
+                    <img src={p.countryFlag} alt={p.countryCode} className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/10 rounded-xs" referrerPolicy="no-referrer" />
+                  )}
                 </span>
                )}
             </div>
@@ -2056,7 +2028,7 @@ function BracketContent({ state, onUpdateMatchTeam }: { state: TournamentState; 
             <div className="flex-1 flex flex-col items-center justify-center gap-4 p-4 relative z-10">
                 <div className="w-24 h-24 rounded-full bg-white/5 border-2 border-white/10 flex items-center justify-center overflow-hidden shadow-[0_0_40px_rgba(255,255,255,0.05)]">
                     {getWinner(getMatch("FINALE", 0)) ? (
-                        <img src={getWinner(getMatch("FINALE", 0))?.photo} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                        <img src={getWinner(getMatch("FINALE", 0))?.photo || DEFAULT_SILHOUETTE} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                     ) : (
                         <div className="text-white/5"><Users size={48} /></div>
                     )}
@@ -2205,11 +2177,7 @@ function PublicView({ state }: { state: TournamentState }) {
             <div className="space-y-1 md:space-y-4 flex flex-col min-w-0">
               <div className="flex justify-end gap-1.5 md:gap-6 items-end flex-1">
                 <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
-                  {redP?.photo ? (
-                    <img src={redP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="text-[5px] md:text-[8px] font-black text-white/10 uppercase tracking-widest italic">img</span>
-                  )}
+                  <img src={redP?.photo || DEFAULT_SILHOUETTE} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
                 <div className="w-10 h-10 sm:w-24 sm:h-24 md:w-36 md:h-36 bg-brand-red flex items-center justify-center text-xl sm:text-5xl md:text-7xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b md:border-b-4 border-black/20 uppercase shrink-0">
@@ -2234,11 +2202,7 @@ function PublicView({ state }: { state: TournamentState }) {
                   {blueScore}
                 </div>
                 <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
-                  {blueP?.photo ? (
-                    <img src={blueP.photo} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="text-[5px] md:text-[8px] font-black text-white/10 uppercase tracking-widest italic">img</span>
-                  )}
+                  <img src={blueP?.photo || DEFAULT_SILHOUETTE} className="w-full h-full object-cover transition-all duration-700" referrerPolicy="no-referrer" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               </div>
