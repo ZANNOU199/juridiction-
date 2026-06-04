@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id                String   @id @default(cuid())
+  eventName         String   // ex: "ARENA CHAMPIONSHIP"
+  eventSlug         String   @unique // ex: "arenachampionship"
+  eventLogo         String   @default("")
+  selectedCategory  String   @default("B-BOY") // Category sync across browsers
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  tournaments  Tournament[]
+  juryAccounts JuryAccount[]
+}
+
+model Tournament {
+  id              String   @id @default(cuid())
+  eventId         String
+  event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category        String   // ex: "B-BOY", "B-GIRL", "POPPING"
+  competitionName String   @default("ARENA CHAMPIONSHIP")
+  competitionLogo String   @default("")
+  configured      Boolean  @default(false)
+  tournamentSize  Int      @default(16)
+  currentMatchId  String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  participants Participant[]
+  warnedJuries WarnedJury[]
+  matches      Match[]
+  juryAssignments TournamentJury[]
+
+  @@unique([eventId, category])
+}
+
+model Participant {
+  id           String     @id
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  photo        String     @default("")
+  countryCode  String     @default("")
+  countryName  String     @default("")
+  countryFlag  String     @default("")
+  createdAt    DateTime   @default(now())
+}
+
+model JuryAccount {
+  id           String   @id @default(cuid())
+  eventId      String
+  event        Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  username     String
+  password     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  votes              JuryVote[]
+  warnedIn           WarnedJury[]
+  finalizedMatches   FinalizedMatch[]
+  tournamentAssignments TournamentJury[]
+
+  @@unique([eventId, username])
+}
+
+model Match {
+  id           String     @id
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  redTeamId    String
+  blueTeamId   String
+  redVotes     Int        @default(0)
+  blueVotes    Int        @default(0)
+  winnerId     String?
+  status       String     @default("pending")
+  round        String     @default("")
+  votingMode   String     @default("match")
+  roundCount   Int        @default(1)
+  currentRound Int        @default(1)
+  roundResults String     @default("[]")
+  revealed     Boolean    @default(false)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  votes       JuryVote[]
+  finalizedBy FinalizedMatch[]
+}
+
+model JuryVote {
+  id        String      @id @default(cuid())
+  matchId   String
+  match     Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  juryId    String
+  jury      JuryAccount @relation(fields: [juryId], references: [id], onDelete: Cascade)
+  vote      String
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  @@unique([matchId, juryId])
+}
+
+model WarnedJury {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  juryId       String
+  jury         JuryAccount @relation(fields: [juryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@unique([tournamentId, juryId])
+}
+
+model FinalizedMatch {
+  id        String      @id @default(cuid())
+  matchId   String
+  match     Match       @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  juryId    String
+  jury      JuryAccount @relation(fields: [juryId], references: [id], onDelete: Cascade)
+  createdAt DateTime    @default(now())
+
+  @@unique([matchId, juryId])
+}
+
+model TournamentJury {
+  id           String      @id @default(cuid())
+  tournamentId String
+  tournament   Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  juryId       String
+  jury         JuryAccount @relation(fields: [juryId], references: [id], onDelete: Cascade)
+  createdAt    DateTime    @default(now())
+
+  @@unique([tournamentId, juryId])
+}

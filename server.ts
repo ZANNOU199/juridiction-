@@ -1,430 +1,605 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-
-interface Participant {
-  id: string;
-  name: string;
-  photo: string;
-  countryCode?: string;
-  countryName?: string;
-  countryFlag?: string;
-}
-
-const DEFAULT_PARTICIPANTS: Participant[] = Array.from({ length: 16 }, (_, i) => ({
-  id: `p-${i + 1}`,
-  name: `B-BOY ${i + 1}`,
-  photo: "",
-  countryCode: "",
-  countryName: "",
-  countryFlag: ""
-}));
-
-interface Match {
-  id: string;
-  redTeamId: string;
-  blueTeamId: string;
-  redVotes: number;
-  blueVotes: number;
-  winnerId: string | null;
-  status: 'pending' | 'active' | 'finished';
-  allVotesCastAt?: number;
-  round: string;
-  // New fields for multi-round support
-  votingMode: 'match' | 'round';
-  roundCount: number;
-  currentRound: number;
-  roundResults: { red: number; blue: number }[]; // Index matches round index (0-based)
-  finishedJuries: string[]; // List of juryIds who finalized this match
-  revealed?: boolean;
-}
-
-interface JuryAccount {
-  id: string;
-  username: string;
-  password: string;
-}
-
-interface TournamentState {
-  competitionName: string;
-  competitionLogo: string;
-  participants: Participant[];
-  juryAccounts: JuryAccount[];
-  juryCount: number;
-  currentMatchId: string | null;
-  matches: Match[];
-  juryVotes: Record<string, 'red' | 'blue' | null>;
-  warnedJuries: string[];
-  configured: boolean;
-  tournamentSize: 16 | 8 | 4 | 2;
-}
-
-// Helper to check if a match is finished and update winner
-function advanceWinner(finishedMatch: Match, state: TournamentState) {
-  const winnerId = finishedMatch.winnerId;
-  if (!winnerId) return;
-
-  const matches = state.matches;
-  const matchId = finishedMatch.id;
-
-  // Progression map: which match indices/IDs flow into which
-  const progression: Record<string, { nextMatchId: string; side: 'red' | 'blue' }> = {
-    // Round 1 (indices 0-7) -> Round 2 (indices 8-11)
-    't16-1': { nextMatchId: 't8-1', side: 'red' },
-    't16-2': { nextMatchId: 't8-1', side: 'blue' },
-    't16-3': { nextMatchId: 't8-2', side: 'red' },
-    't16-4': { nextMatchId: 't8-2', side: 'blue' },
-    't16-5': { nextMatchId: 't8-3', side: 'red' },
-    't16-6': { nextMatchId: 't8-3', side: 'blue' },
-    't16-7': { nextMatchId: 't8-4', side: 'red' },
-    't16-8': { nextMatchId: 't8-4', side: 'blue' },
-    // Round 2 (indices 8-11) -> Semi-Finals (indices 12-13)
-    't8-1': { nextMatchId: 'semi-1', side: 'red' },
-    't8-2': { nextMatchId: 'semi-1', side: 'blue' },
-    't8-3': { nextMatchId: 'semi-2', side: 'red' },
-    't8-4': { nextMatchId: 'semi-2', side: 'blue' },
-    // Semi-Finals (indices 12-13) -> Finale (index 14)
-    'semi-1': { nextMatchId: 'final-1', side: 'red' },
-    'semi-2': { nextMatchId: 'final-1', side: 'blue' },
-  };
-
-  const nextInfo = progression[matchId];
-  if (nextInfo) {
-    const nextMatch = matches.find(m => m.id === nextInfo.nextMatchId);
-    if (nextMatch) {
-      if (nextInfo.side === 'red') {
-        nextMatch.redTeamId = winnerId;
-      } else {
-        nextMatch.blueTeamId = winnerId;
-      }
-    }
-  }
-}
-
-function updateMatchResult(match: Match, votes: Record<string, 'red' | 'blue' | null>, juryCount: number) {
-  const voteList = Object.values(votes).filter(v => v !== null && v !== undefined);
-  
-  const redCount = voteList.filter(v => v === 'red').length;
-  const blueCount = voteList.filter(v => v === 'blue').length;
-
-  if (match.votingMode === 'match') {
-    match.redVotes = redCount;
-    match.blueVotes = blueCount;
-
-    if (voteList.length >= juryCount) {
-      match.allVotesCastAt = Date.now();
-      match.winnerId = redCount > blueCount ? match.redTeamId : match.blueTeamId;
-      advanceWinner(match, tournamentState);
-    } else {
-      match.allVotesCastAt = undefined;
-      match.winnerId = null;
-    }
-  } else {
-    // Round-based voting
-    // We update the results for the CURRENT round
-    if (voteList.length >= juryCount) {
-      // Current round is finished locally in this update
-      match.allVotesCastAt = Date.now();
-    } else {
-      match.allVotesCastAt = undefined;
-    }
-    
-    // The actual "point" addition happens when moving to next round
-    // But we can store temporary current round votes if needed
-  }
-}
-
-let tournamentState: TournamentState = {
-  competitionName: "ARENA CHAMPIONSHIP",
-  competitionLogo: "",
-  participants: DEFAULT_PARTICIPANTS,
-  juryAccounts: [],
-  juryCount: 3,
-  currentMatchId: null,
-  matches: [],
-  juryVotes: {},
-  warnedJuries: [],
-  configured: false,
-  tournamentSize: 16
-};
+import { OAuth2Client } from "google-auth-library";
+import multer from "multer";
+import * as db from "./server/db.js";
+import { uploadToR2 } from "./server/r2.js";
 
 const app = express();
 const PORT = 3000;
 
+// Google OAuth Client
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || "";
+const googleClient = new OAuth2Client(GOOGLE_CLIENT_ID);
+
+// Authorized admin emails (stored in memory, can be extended to database)
+let authorizedEmails: string[] = ["zannoharry@gmail.com"];
+
+// Middleware
 app.use(express.json());
 
-// --- API Routes ---
-
-app.get("/api/state", (req, res) => {
-  try {
-    res.json(tournamentState);
-  } catch (error) {
-    console.error("Error in /api/state:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/api/admin/warn-juries", (req, res) => {
-  // Aliasing warn-juries and warn-judges for compatibility
-  try {
-    if (!tournamentState.currentMatchId) return res.status(400).json({ error: "Aucun match actif" });
-    
-    const missingVotes = (tournamentState.juryAccounts || [])
-      .filter(j => !tournamentState.juryVotes[j.id])
-      .map(j => j.id);
-    
-    tournamentState.warnedJuries = missingVotes;
-    res.json({ success: true, state: tournamentState });
-  } catch (error) {
-    console.error("Error in /api/admin/warn-juries:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/api/admin/warn-judges", (req, res) => {
-  try {
-    if (!tournamentState.currentMatchId) return res.status(400).json({ error: "Aucun match actif" });
-    
-    const missingVotes = (tournamentState.juryAccounts || [])
-      .filter(j => !tournamentState.juryVotes[j.id])
-      .map(j => j.id);
-    
-    tournamentState.warnedJuries = missingVotes;
-    res.json({ success: true, state: tournamentState });
-  } catch (error) {
-    console.error("Error in /api/admin/warn-judges:", error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
-
-app.post("/api/jury/login", (req, res) => {
-  const { username, password } = req.body;
-  const normalizedUser = (username || "").trim().toLowerCase();
-  const normalizedPass = (password || "").trim();
-
-  const jury = tournamentState.juryAccounts.find(j => 
-    j.username.trim().toLowerCase() === normalizedUser && 
-    j.password.trim() === normalizedPass
-  );
-  if (jury) {
-    res.json({ success: true, juryId: jury.id });
-  } else {
-    res.status(401).json({ error: "Username ou mot de passe incorrect" });
-  }
-});
-
-app.post("/api/admin/configure", (req, res) => {
-  const { competitionName, competitionLogo, participants, juryAccounts, matches, tournamentSize } = req.body;
-  
-  const processedMatches = (matches || []).map((m: any, i: number) => ({
-    ...m,
-    votingMode: m.votingMode || 'match',
-    roundCount: m.roundCount || 1,
-    currentRound: m.currentRound || 1,
-    roundResults: m.roundResults || [],
-    redVotes: 0,
-    blueVotes: 0,
-    winnerId: null,
-    status: i === 0 ? 'active' : 'pending',
-    finishedJuries: []
-  }));
-
-  tournamentState = {
-    competitionName: competitionName || "ARENA CHAMPIONSHIP",
-    competitionLogo: competitionLogo || "",
-    participants: participants || [],
-    juryAccounts: juryAccounts || [],
-    juryCount: juryAccounts ? juryAccounts.length : 3,
-    currentMatchId: processedMatches.length > 0 ? processedMatches[0].id : null,
-    matches: processedMatches,
-    juryVotes: {},
-    warnedJuries: [],
-    configured: true,
-    tournamentSize: tournamentSize || 16
-  };
-  
-  const active = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
-  if (active) active.status = 'active';
-
-  res.json({ success: true, state: tournamentState });
-});
-
-app.post("/api/admin/confirm-round", (req, res) => {
-  const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
-  if (!match || match.status !== 'active') return res.status(400).json({ error: "No active match" });
-
-  const voteList = Object.values(tournamentState.juryVotes).filter(v => v !== null && v !== undefined);
-  if (voteList.length < tournamentState.juryCount) {
-    return res.status(400).json({ error: "En attente des votes de tous les jurés" });
-  }
-
-  const redCount = voteList.filter(v => v === 'red').length;
-  const blueCount = voteList.filter(v => v === 'blue').length;
-
-  if (match.votingMode === 'round') {
-    // Save current round result
-    if (!match.roundResults) match.roundResults = [];
-    match.roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount };
-
-    // Update overall score
-    if (redCount > blueCount) {
-      match.redVotes += 1;
-    } else if (blueCount > redCount) {
-      match.blueVotes += 1;
-    }
-
-    if (match.currentRound < match.roundCount) {
-      match.currentRound += 1;
-      tournamentState.juryVotes = {}; // Reset for next round
-      match.allVotesCastAt = undefined;
+// Multer configuration for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024, // 50MB max
+  },
+  fileFilter: (req, file, cb) => {
+    // Allow images and videos
+    const allowedMimes = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+    ];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
     } else {
-      // All rounds finished
-      if (match.redVotes > match.blueVotes) {
-        match.winnerId = match.redTeamId;
-      } else if (match.blueVotes > match.redVotes) {
-        match.winnerId = match.blueTeamId;
-      } else {
-        match.winnerId = null; // Absolute tie
-      }
-      advanceWinner(match, tournamentState);
-      // Manual finish required
+      cb(new Error("Invalid file type"));
     }
-  }
-
-  res.json({ success: true, state: tournamentState });
+  },
 });
 
-app.post("/api/admin/reveal", (req, res) => {
+// ===== UPLOAD ENDPOINT =====
+app.post("/api/upload", upload.single("file"), async (req, res) => {
   try {
-    const { matchId } = req.body;
-    const match = (tournamentState.matches || []).find(m => m.id === matchId);
-    if (match) {
-      match.revealed = true;
-      res.json({ success: true, state: tournamentState });
-    } else {
-      res.status(404).json({ error: "Match non trouvé" });
+    if (!req.file) {
+      return res.status(400).json({ error: "No file provided" });
     }
+
+    // Upload to R2
+    const publicUrl = await uploadToR2(
+      req.file.buffer,
+      req.file.originalname,
+      req.file.mimetype
+    );
+
+    res.json({ success: true, url: publicUrl });
   } catch (error) {
-    console.error("Error in /api/admin/reveal:", error);
+    console.error("Error uploading file:", error);
+    res.status(500).json({ error: "Failed to upload file" });
+  }
+});
+
+// ===== API ROUTES =====
+
+// --- Tournament State ---
+app.get("/api/:eventSlug/:category/state", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.getTournamentStateForEvent(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Event or tournament not found" });
+    }
+    res.json(tournament);
+  } catch (error) {
+    console.error("Error in /api/:eventSlug/:category/state:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/api/admin/cancel-match", (req, res) => {
+// --- Get All Categories Champions (for finals display) ---
+app.get("/api/:eventSlug/all-categories-champions", async (req, res) => {
   try {
-    tournamentState.currentMatchId = null;
-    tournamentState.juryVotes = {};
-    tournamentState.warnedJuries = [];
-    tournamentState.matches = (tournamentState.matches || []).map(m => {
-      if (m.status === 'active') {
-        return { ...m, status: 'pending', revealed: false, allVotesCastAt: null };
-      }
-      return m;
+    const { eventSlug } = req.params;
+    const championsData = await db.getAllCategoriesChampions(eventSlug);
+    if (!championsData) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    res.json(championsData);
+  } catch (error) {
+    console.error("Error in /api/:eventSlug/all-categories-champions:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+
+// --- Events ---
+app.get("/api/events", async (req, res) => {
+  try {
+    const events = await db.getAllEvents();
+    res.json(events);
+  } catch (error) {
+    console.error("Error in /api/events:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/api/events/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const event = await db.getEventBySlug(eventSlug);
+    if (!event) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    res.json(event);
+  } catch (error) {
+    console.error("Error in /api/events/:eventSlug:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Get Selected Category (for multi-browser sync) ---
+app.get("/api/:eventSlug/selected-category", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const category = await db.getSelectedCategory(eventSlug);
+    res.json({ category });
+  } catch (error) {
+    console.error("Error in /api/:eventSlug/selected-category:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Update Selected Category (for multi-browser sync) ---
+app.post("/api/:eventSlug/select-category", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { category } = req.body;
+    if (!category) {
+      return res.status(400).json({ error: "Category is required" });
+    }
+    await db.updateSelectedCategory(eventSlug, category);
+    res.json({ success: true, category });
+  } catch (error) {
+    console.error("Error in /api/:eventSlug/select-category:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Create Event ---
+app.post("/api/events/create", async (req, res) => {
+  try {
+    const { eventName, eventLogo, category } = req.body;
+    if (!eventName || !eventName.trim()) {
+      return res.status(400).json({ error: "Event name is required" });
+    }
+
+    const slug = eventName
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
+
+    // Create or get event with proper eventName
+    const event = await db.getOrCreateEventWithName(eventName, slug, eventLogo || "");
+    
+    // Create tournament for first category
+    const tournament = await db.createOrGetTournamentWithEventName(slug, category, eventName, eventLogo || "");
+    
+    res.json(tournament);
+  } catch (error) {
+    console.error("Error in /api/events/create:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Jury Login ---
+app.post("/api/jury/:eventSlug/login", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { username, password } = req.body;
+    const jury = await db.authenticateJury(eventSlug, username, password);
+
+    if (jury) {
+      res.json({ success: true, juryId: jury.id });
+    } else {
+      res.status(401).json({ error: "Username ou mot de passe incorrect" });
+    }
+  } catch (error) {
+    console.error("Error in /api/jury/:eventSlug/login:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Admin Configure Tournament ---
+app.post("/api/admin/:eventSlug/:category/configure", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { competitionName, competitionLogo, participants, juryAccounts, matches, tournamentSize } = req.body;
+
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not created" });
+    }
+
+    const state = await db.configureTournament(tournament.id, {
+      competitionName: competitionName || "ARENA CHAMPIONSHIP",
+      competitionLogo: competitionLogo || "",
+      participants: participants || [],
+      juryAccounts: juryAccounts || [],
+      matches: matches || [],
+      tournamentSize: tournamentSize || 16,
     });
-    res.json({ success: true, state: tournamentState });
+
+    res.json({ success: true, state });
   } catch (error) {
-    console.error("Error in /api/admin/cancel-match:", error);
+    console.error("Error in /api/admin/:eventSlug/:category/configure:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/api/admin/finish-match", (req, res) => {
-  const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
-  if (match) {
-    match.status = 'finished';
-    advanceWinner(match, tournamentState);
-    res.json({ success: true, state: tournamentState });
-  } else {
-    res.status(404).json({ error: "Aucun match actif" });
+// --- Jury Voting ---
+app.post("/api/:eventSlug/:category/vote", async (req, res) => {
+  try {
+    const { matchId, juryId, vote } = req.body;
+    await db.castVote(matchId, juryId, vote);
+    const tournament = await db.createOrGetTournament(req.params.eventSlug, req.params.category);
+    const state = await db.getTournamentState(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in vote:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/api/admin/select-match", (req, res) => {
-  const { matchId } = req.body;
-  const match = tournamentState.matches.find(m => m.id === matchId);
-  if (match) {
-    // Finish current if exists
-    const current = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
-    if (current && current.status !== 'finished') current.status = 'finished';
-
-    tournamentState.currentMatchId = matchId;
-    match.status = 'active';
-    match.finishedJuries = [];
-    tournamentState.juryVotes = {};
-    tournamentState.warnedJuries = [];
-    res.json({ success: true, state: tournamentState });
-  } else {
-    res.status(404).json({ error: "Match non trouvé" });
+// --- Admin Actions ---
+app.post("/api/admin/:eventSlug/:category/warn-juries", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    await db.warnMissingVotes(tournament.id);
+    const state = await db.getTournamentState(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in warn-juries:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 });
 
-app.post("/api/admin/next-match", (req, res) => {
-  const activeIdx = tournamentState.matches.findIndex(m => m.id === tournamentState.currentMatchId);
-  if (activeIdx !== -1) {
-    const match = tournamentState.matches[activeIdx];
-    match.status = 'finished';
-    advanceWinner(match, tournamentState);
-    const next = tournamentState.matches.find((m, i) => i > activeIdx && m.status === 'pending');
-    if (next) {
-      tournamentState.currentMatchId = next.id;
-      next.status = 'active';
-      next.finishedJuries = [];
-      tournamentState.juryVotes = {}; 
-      tournamentState.warnedJuries = [];
+app.post("/api/admin/:eventSlug/:category/confirm-round", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.confirmRound(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in confirm-round:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/:eventSlug/:category/reveal", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { matchId } = req.body;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.revealMatch(tournament.id, matchId);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in reveal:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/:eventSlug/:category/finish-match", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.finishMatch(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in finish-match:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/:eventSlug/:category/select-match", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { matchId } = req.body;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.selectMatch(tournament.id, matchId);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in select-match:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/admin/:eventSlug/:category/reset", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.resetTournament(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in reset:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Jury Finalize (end voting on a match) ---
+app.post("/api/:eventSlug/:category/finalize", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { juryId, matchId } = req.body;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    // Mark this jury as finalized and check if all juries have finalized
+    const state = await db.finalizeJury(tournament.id, juryId, matchId);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in finalize:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Admin Cancel Match ---
+app.post("/api/admin/:eventSlug/:category/cancel-match", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.cancelMatch(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in cancel-match:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Admin Next Match ---
+app.post("/api/admin/:eventSlug/:category/next-match", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not found" });
+    }
+    
+    const state = await db.getTournamentState(tournament.id);
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in next-match:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Delete Event ---
+app.delete("/api/admin/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const success = await db.deleteEvent(eventSlug);
+    if (!success) {
+      return res.status(404).json({ error: "Event not found" });
+    }
+    res.json({ success: true, message: "Event deleted" });
+  } catch (error) {
+    console.error("Error deleting event:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Delete Category ---
+app.delete("/api/admin/:eventSlug/:category", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const success = await db.deleteCategory(eventSlug, category);
+    if (!success) {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.json({ success: true, message: "Category deleted" });
+  } catch (error) {
+    console.error("Error deleting category:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ===== JURY MANAGEMENT =====
+
+// --- Get Jury Accounts ---
+app.get("/api/jury-accounts/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const juries = await db.getJuryAccounts(eventSlug);
+    res.json(juries);
+  } catch (error) {
+    console.error("Error fetching jury accounts:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Create Jury Account ---
+app.post("/api/jury-accounts/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ error: "Username and password required" });
+    }
+
+    const jury = await db.createJuryAccount(eventSlug, username, password);
+    res.json(jury);
+  } catch (error: any) {
+    console.error("Error creating jury account:", error);
+    if (error.message.includes("already exists")) {
+      return res.status(409).json({ error: error.message });
+    }
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Delete Jury Account ---
+app.delete("/api/jury-accounts/:eventSlug/:juryId", async (req, res) => {
+  try {
+    const { eventSlug, juryId } = req.params;
+    const success = await db.deleteJuryAccount(eventSlug, juryId);
+    if (!success) {
+      return res.status(404).json({ error: "Jury not found" });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting jury account:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Get Jury Assignments ---
+app.get("/api/jury-assignments/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const assignments = await db.getJuryAssignments(eventSlug);
+    res.json(assignments);
+  } catch (error) {
+    console.error("Error fetching jury assignments:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// --- Assign Jury to Tournament ---
+app.post("/api/jury-assignments/:eventSlug/:tournamentId/:juryId", async (req, res) => {
+  try {
+    const { tournamentId, juryId } = req.params;
+    
+    await db.assignJuryToTournament(tournamentId, juryId);
+    
+    // Return updated assignments for this tournament
+    const event = await db.getEventBySlug(req.params.eventSlug);
+    const tournament = event?.tournaments.find(t => t.id === tournamentId);
+    
+    if (tournament) {
+      const assignments = tournament.juryAccounts || [];
+      res.json(assignments);
     } else {
-      tournamentState.currentMatchId = null;
+      res.json([]);
     }
+  } catch (error) {
+    console.error("Error assigning jury:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-  res.json({ success: true, state: tournamentState });
 });
 
-app.post("/api/jury/vote", (req, res) => {
-  const { juryId, vote } = req.body;
-  if (!tournamentState.currentMatchId) return res.status(400).json({ error: "No match active" });
-
-  tournamentState.juryVotes[juryId] = vote;
-  
-  // Clear warning if they voted
-  tournamentState.warnedJuries = tournamentState.warnedJuries.filter(id => id !== juryId);
-  
-  const match = tournamentState.matches.find(m => m.id === tournamentState.currentMatchId);
-  if (match) {
-    updateMatchResult(match, tournamentState.juryVotes, tournamentState.juryCount);
+// --- Remove Jury from Tournament ---
+app.delete("/api/jury-assignments/:eventSlug/:tournamentId/:juryId", async (req, res) => {
+  try {
+    const { tournamentId, juryId } = req.params;
+    
+    await db.removeJuryFromTournament(tournamentId, juryId);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error removing jury assignment:", error);
+    res.status(500).json({ error: "Internal Server Error" });
   }
-
-  res.json({ success: true, state: tournamentState });
 });
 
-app.post("/api/jury/finalize", (req, res) => {
-  const { juryId, matchId } = req.body;
-  const match = tournamentState.matches.find(m => m.id === matchId);
-  if (match) {
-    if (!match.finishedJuries) match.finishedJuries = [];
-    if (!match.finishedJuries.includes(juryId)) {
-      match.finishedJuries.push(juryId);
+// ===== GOOGLE AUTH ROUTES =====
+
+// Verify Google Token
+app.post("/api/auth/verify-google", async (req, res) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ error: "Token is required" });
     }
-    res.json({ success: true, state: tournamentState });
-  } else {
-    res.status(404).json({ error: "Match non trouvé" });
+
+    const ticket = await googleClient.verifyIdToken({
+      idToken: token,
+      audience: GOOGLE_CLIENT_ID,
+    });
+
+    const payload = ticket.getPayload();
+    const email = payload?.email || "";
+
+    // Check if email is authorized
+    const authorized = authorizedEmails.includes(email);
+
+    res.json({
+      success: true,
+      authorized,
+      email,
+    });
+  } catch (error) {
+    console.error("Error verifying Google token:", error);
+    res.status(401).json({ error: "Invalid token" });
   }
 });
 
-app.post("/api/admin/reset", (req, res) => {
-  tournamentState = {
-    competitionName: "ARENA CHAMPIONSHIP",
-    competitionLogo: "",
-    participants: [],
-    juryAccounts: [],
-    juryCount: 3,
-    currentMatchId: null,
-    matches: [],
-    juryVotes: {},
-    warnedJuries: [],
-    configured: false,
-    tournamentSize: 16
-  };
-  res.json({ success: true, state: tournamentState });
+// Get authorized emails
+app.get("/api/auth/authorized-emails", (req, res) => {
+  res.json({ emails: authorizedEmails });
 });
+
+// Add authorized email
+app.post("/api/auth/add-email", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!authorizedEmails.includes(trimmedEmail)) {
+      authorizedEmails.push(trimmedEmail);
+    }
+
+    res.json({ success: true, emails: authorizedEmails });
+  } catch (error) {
+    console.error("Error adding email:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Remove authorized email
+app.post("/api/auth/remove-email", (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email || !email.trim()) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
+    const trimmedEmail = email.trim().toLowerCase();
+    // Prevent removing the last email
+    if (authorizedEmails.length <= 1) {
+      return res.status(400).json({ error: "Cannot remove the last email" });
+    }
+
+    authorizedEmails = authorizedEmails.filter(
+      (e) => e.toLowerCase() !== trimmedEmail
+    );
+
+    res.json({ success: true, emails: authorizedEmails });
+  } catch (error) {
+    console.error("Error removing email:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// ===== VITE & STATIC FILES =====
 
 async function setupVite() {
   if (process.env.NODE_ENV !== "production") {
@@ -434,29 +609,39 @@ async function setupVite() {
     });
     app.use(vite.middlewares);
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
+    const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+    app.get("*", (req, res) => {
+      res.sendFile(path.join(distPath, "index.html"));
     });
   }
 }
 
+// ===== START SERVER =====
+
+async function startServer() {
+  try {
+    // Setup Vite
+    await setupVite();
+
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`✅ Server running on http://localhost:${PORT}`);
+      console.log(`📊 Database: ${process.env.DATABASE_URL}`);
+    });
+  } catch (error) {
+    console.error("❌ Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
 if (process.env.NODE_ENV !== "production") {
+  startServer();
+} else {
   setupVite().then(() => {
     app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(`✅ Server running on http://localhost:${PORT}`);
     });
   });
-} else {
-  // In production (Vercel/CloudRun), setup handles static files
-  setupVite();
-  // Listen only if not on Vercel (Vercel uses the exported app)
-  if (!process.env.VERCEL) {
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on port ${PORT}`);
-    });
-  }
 }
 
 export default app;

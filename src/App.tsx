@@ -27,6 +27,10 @@ import {
   XCircle,
   Bell,
 } from "lucide-react";
+import { COUNTRIES } from "./data/countries";
+import { AdminHub, EventSelector } from "./components/EventHub";
+import { JuryManager } from "./components/JuryManager";
+import { useGlobalCategory } from "./useGlobalCategory";
 
 // --- Types ---
 
@@ -133,6 +137,7 @@ interface TournamentState {
   warnedJuries: string[];
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
+  currentCategory?: string;
 }
 
 const DEFAULT_STATE: TournamentState = {
@@ -147,21 +152,95 @@ const DEFAULT_STATE: TournamentState = {
   warnedJuries: [],
   configured: false,
   tournamentSize: 16,
+  currentCategory: "",
 };
 
 const STORAGE_KEY = "arena_tournament_state";
+const ADMIN_PIN = "9090";
+const ADMIN_AUTH_KEY = "admin_authenticated";
+
+// --- Admin Auth Guard Component ---
+function AdminAuthGuard({ children }: { children: React.ReactNode }) {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem(ADMIN_AUTH_KEY) === "true";
+  });
+  const [pin, setPin] = useState("");
+  const [error, setError] = useState("");
+
+  const handlePinSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+
+    if (pin === ADMIN_PIN) {
+      localStorage.setItem(ADMIN_AUTH_KEY, "true");
+      setIsAuthenticated(true);
+    } else {
+      setError("PIN incorrect");
+      setPin("");
+    }
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem(ADMIN_AUTH_KEY);
+    window.location.reload();
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark">
+        <div className="w-full max-w-sm bg-white/5 border border-white/10 p-8">
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-black italic text-white uppercase">
+              Admin Access
+            </h1>
+            <p className="text-white/40 text-sm mt-2">Entrez le PIN d'accès</p>
+          </div>
+
+          <form onSubmit={handlePinSubmit} className="space-y-4">
+            <input
+              type="password"
+              value={pin}
+              onChange={(e) => setPin(e.target.value)}
+              placeholder="Entrez le PIN"
+              className="w-full bg-white/5 border border-white/10 text-white px-4 py-2 placeholder-white/20 focus:outline-none focus:border-white/30 text-center text-2xl tracking-widest"
+              maxLength={4}
+            />
+            {error && (
+              <div className="text-red-400 text-sm text-center font-bold">{error}</div>
+            )}
+            <button
+              type="submit"
+              className="w-full bg-white text-black px-4 py-2 font-bold uppercase hover:bg-white/90"
+            >
+              Accès Admin
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button
+        onClick={handleLogout}
+        className="fixed top-4 right-4 z-[999] p-2 bg-white text-black rounded-full hover:scale-110 transition-all shadow-lg"
+        title="Déconnexion"
+      >
+        <LogOut size={20} />
+      </button>
+      {children}
+    </div>
+  );
+}
 
 // --- Main App ---
 
 export default function App() {
-  const [state, setState] = useState<TournamentState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : DEFAULT_STATE;
-  });
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
 
   const saveStateLocal = (newState: TournamentState) => {
     setState(newState);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(newState));
   };
 
   const fetchState = async () => {
@@ -172,7 +251,7 @@ export default function App() {
         // Check if data is valid before updating
         if (data && typeof data === "object" && data.matches) {
           setState(data);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
         }
       }
     } catch (err) {
@@ -207,20 +286,508 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PublicView state={state} />} />
+        {/* Default route redirects to admin */}
+        <Route path="/" element={<Navigate to="/admin" replace />} />
+        
+        {/* Legacy single-tournament routes */}
         <Route path="/bracket" element={<BracketView state={state} />} />
         <Route
-          path="/admin"
-          element={<AdminView state={state} onSave={saveStateLocal} />}
+          path="/admin/legacy"
+          element={
+            <AdminAuthGuard>
+              <AdminView state={state} onSave={saveStateLocal} />
+            </AdminAuthGuard>
+          }
         />
         <Route
           path="/jury"
           element={<JuryGateway state={state} onSave={saveStateLocal} />}
         />
+
+        {/* Multi-event routes */}
+        <Route path="/admin" element={<AdminAuthGuard><AdminHub /></AdminAuthGuard>} />
+        <Route path="/admin/:eventSlug/jury-manager" element={<AdminAuthGuard><JuryManager /></AdminAuthGuard>} />
+        <Route
+          path="/admin/:eventSlug/:category"
+          element={
+            <AdminAuthGuard>
+              <AdminViewMultiEvent onSave={saveStateLocal} />
+            </AdminAuthGuard>
+          }
+        />
+        <Route path="/jury/:eventSlug/:category" element={<JuryGatewayMultiEvent />} />
+        <Route path="/bracket/:eventSlug/:category" element={<BracketViewMultiEvent />} />
+        <Route path="/:eventSlug/:category" element={<PublicViewMultiEvent />} />
+
+        {/* Role selection */}
         <Route path="/select" element={<RoleSelection state={state} />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
+  );
+}
+
+// === NEW MULTI-EVENT COMPONENTS ===
+
+function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
+  const { eventSlug, category } = useParams<{
+    eventSlug: string;
+    category: string;
+  }>();
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  
+  // Use global category hook for cross-tab synchronization
+  const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
+
+  // Sync URL category with global state
+  useEffect(() => {
+    if (category && category !== currentCategory) {
+      updateCategory(category);
+    }
+  }, [category]);
+
+  // Navigate when global category changes (from another tab/page)
+  useEffect(() => {
+    if (currentCategory && category && currentCategory !== category) {
+      console.log("🔄 Category changed globally, navigating to:", currentCategory);
+      navigate(`/admin/${eventSlug}/${currentCategory}`, { replace: true });
+    }
+  }, [currentCategory]);
+
+  useEffect(() => {
+    if (!eventSlug || !currentCategory) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchState = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
+        if (res.ok) {
+          const data = await res.json();
+          
+          setState(prevState => {
+            // If match ID changed, ALWAYS clear votes
+            if (prevState && data.currentMatchId !== prevState.currentMatchId) {
+              console.log("🔄 Match changed! Old:", prevState.currentMatchId, "New:", data.currentMatchId, "Clearing votes");
+              data.juryVotes = {};
+            }
+            return data;
+          });
+        } else {
+          // Event doesn't exist - use DEFAULT_STATE to show configuration screen
+          console.warn(`Tournament state not found, using DEFAULT_STATE`);
+          setState(DEFAULT_STATE);
+        }
+      } catch (error) {
+        console.error("Failed to fetch tournament state:", error);
+        setState(DEFAULT_STATE);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchState();
+    const interval = setInterval(fetchState, 5000);
+    return () => clearInterval(interval);
+  }, [eventSlug, currentCategory]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-surface-dark">
+      {/* Header with event and category selector */}
+      <div className="border-b border-white/10 p-4 flex items-center justify-between">
+        <div>
+          <button
+            onClick={() => navigate("/admin")}
+            className="text-sm font-bold text-white/40 hover:text-white mb-2"
+          >
+            ← Back to Events
+          </button>
+          <h1 className="text-2xl font-black italic text-white uppercase">
+            {state.competitionName}
+          </h1>
+        </div>
+        {eventSlug && (
+          <EventSelector
+            eventSlug={eventSlug}
+            category={currentCategory}
+            onCategoryChange={updateCategory}
+          />
+        )}
+      </div>
+
+      {/* Admin controls */}
+      <AdminView
+        state={state}
+        onSave={(newState) => {
+          setState(newState);
+          onSave(newState);
+        }}
+        eventSlug={eventSlug}
+        category={currentCategory}
+      />
+    </div>
+  );
+}
+
+function JuryGatewayMultiEvent() {
+  const { eventSlug, category: categoryFromRoute } = useParams<{ eventSlug: string; category: string }>();
+  const navigate = useNavigate();
+  const [juryId, setJuryId] = useState<string | null>(
+    sessionStorage.getItem(`juryId_${eventSlug}`)
+  );
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [loading, setLoading] = useState(true);
+
+  // Use global category hook for cross-tab synchronization
+  const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
+
+  // Sync URL category with global state
+  useEffect(() => {
+    if (categoryFromRoute && categoryFromRoute !== currentCategory) {
+      updateCategory(categoryFromRoute);
+    }
+  }, [categoryFromRoute]);
+
+  // Navigate when global category changes (from another tab/page)
+  useEffect(() => {
+    if (currentCategory && categoryFromRoute && currentCategory !== categoryFromRoute) {
+      console.log("🔄 [JURY] Category changed globally, navigating to:", currentCategory);
+      navigate(`/jury/${eventSlug}/${currentCategory}`, { replace: true });
+    }
+  }, [currentCategory]);
+
+  useEffect(() => {
+    if (!eventSlug || !currentCategory) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchState = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
+        if (res.ok) {
+          const newState = await res.json();
+          setState(prevState => {
+            // If match ID changed, ALWAYS clear votes
+            if (prevState && newState.currentMatchId !== prevState.currentMatchId) {
+              console.log("🔄 [JURY] Match changed! Clearing votes");
+              newState.juryVotes = {};
+            }
+            return newState;
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch tournament state:", error);
+        setState(DEFAULT_STATE);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchState();
+    const interval = setInterval(fetchState, 2000);
+    return () => clearInterval(interval);
+  }, [eventSlug, currentCategory]);
+
+  const handleJuryLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError("");
+
+    if (!eventSlug || !currentCategory) {
+      setLoginError("No event or category specified");
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/jury/${eventSlug}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username.trim(),
+          password: password.trim(),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        sessionStorage.setItem(`juryId_${eventSlug}`, data.juryId);
+        setJuryId(data.juryId);
+      } else {
+        setLoginError(data.error || "Identifiants incorrects");
+      }
+    } catch (err) {
+      setLoginError("Identifiants incorrects");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  if (juryId && state && !loading) {
+    return (
+      <div className="min-h-screen bg-surface-dark">
+        {/* Header with event and category selector */}
+        <div className="border-b border-white/10 p-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-black italic text-white uppercase">
+              {state.competitionName}
+            </h1>
+          </div>
+          {eventSlug && currentCategory && (
+            <EventSelector
+              eventSlug={eventSlug}
+              category={currentCategory}
+              onCategoryChange={updateCategory}
+            />
+          )}
+        </div>
+        <JuryView
+          state={state}
+          juryId={juryId}
+          onSave={(newState) => {
+            setState(newState);
+          }}
+          onLogout={() => {
+            sessionStorage.removeItem(`juryId_${eventSlug}`);
+            setJuryId(null);
+          }}
+          eventSlug={eventSlug}
+          category={currentCategory}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark">
+      <div className="w-full max-w-sm bg-white/5 border border-white/10 p-8">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-black italic text-white uppercase">
+            Jury Console
+          </h1>
+          <p className="text-white/40 text-sm mt-2">Authentification requise</p>
+        </div>
+
+        <form onSubmit={handleJuryLogin} className="space-y-4">
+          <input
+            type="text"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="Nom d'utilisateur"
+            className="w-full bg-white/5 border border-white/10 text-white px-4 py-2 placeholder-white/20 focus:outline-none focus:border-white/30"
+          />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Mot de passe"
+            className="w-full bg-white/5 border border-white/10 text-white px-4 py-2 placeholder-white/20 focus:outline-none focus:border-white/30"
+          />
+          {loginError && (
+            <div className="text-red-400 text-sm text-center">{loginError}</div>
+          )}
+          <button
+            type="submit"
+            className="w-full bg-white text-black px-4 py-2 font-bold uppercase hover:bg-white/90"
+          >
+            Connexion
+          </button>
+        </form>
+
+        <button
+          onClick={() => navigate("/select")}
+          className="w-full mt-4 bg-white/10 border border-white/10 text-white px-4 py-2 text-sm font-bold uppercase hover:bg-white/20"
+        >
+          Retour au Menu
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function BracketViewMultiEvent() {
+  const { eventSlug, category: categoryFromRoute } = useParams<{ eventSlug: string; category: string }>();
+  const navigate = useNavigate();
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [loading, setLoading] = useState(true);
+
+  // Use global category hook for cross-tab synchronization
+  const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
+
+  // Sync URL category with global state
+  useEffect(() => {
+    if (categoryFromRoute && categoryFromRoute !== currentCategory) {
+      updateCategory(categoryFromRoute);
+    }
+  }, [categoryFromRoute]);
+
+  // Navigate when global category changes (from another tab/page)
+  useEffect(() => {
+    if (currentCategory && categoryFromRoute && currentCategory !== categoryFromRoute) {
+      console.log("🔄 [BRACKET] Category changed globally, navigating to:", currentCategory);
+      navigate(`/bracket/${eventSlug}/${currentCategory}`, { replace: true });
+    }
+  }, [currentCategory]);
+
+  useEffect(() => {
+    if (!eventSlug || !currentCategory) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchBracketData = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
+        if (res.ok) {
+          const tournamentData = await res.json();
+          setState(prevState => {
+            // If match ID changed, ALWAYS clear votes
+            if (prevState && tournamentData.currentMatchId !== prevState.currentMatchId) {
+              console.log("🔄 [BRACKET] Match changed! Clearing votes");
+              tournamentData.juryVotes = {};
+            }
+            return tournamentData;
+          });
+        } else {
+          setState(DEFAULT_STATE);
+        }
+      } catch (error) {
+        console.error("Failed to fetch bracket data:", error);
+        setState(DEFAULT_STATE);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBracketData();
+    const interval = setInterval(fetchBracketData, 2000);
+    return () => clearInterval(interval);
+  }, [eventSlug, currentCategory]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  return <BracketView state={{ ...state, currentCategory }} />;
+}
+
+function PublicViewMultiEvent() {
+  const { eventSlug, category: categoryFromRoute } = useParams<{ eventSlug: string; category: string }>();
+  const navigate = useNavigate();
+  const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
+  const [loading, setLoading] = useState(true);
+
+  // Use global category hook for cross-tab synchronization
+  const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
+
+  // Sync URL category with global state
+  useEffect(() => {
+    if (categoryFromRoute && categoryFromRoute !== currentCategory) {
+      updateCategory(categoryFromRoute);
+    }
+  }, [categoryFromRoute]);
+
+  // Navigate when global category changes (from another tab/page)
+  useEffect(() => {
+    if (currentCategory && categoryFromRoute && currentCategory !== categoryFromRoute) {
+      console.log("🔄 [PUBLIC] Category changed globally, navigating to:", currentCategory);
+      navigate(`/${eventSlug}/${currentCategory}`, { replace: true });
+    }
+  }, [currentCategory]);
+
+  useEffect(() => {
+    if (!eventSlug || !currentCategory) {
+      setLoading(false);
+      return;
+    }
+
+    const fetchPublicData = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
+        if (res.ok) {
+          const tournamentData = await res.json();
+          setState(prevState => {
+            // If match ID changed, ALWAYS clear votes
+            if (prevState && tournamentData.currentMatchId !== prevState.currentMatchId) {
+              console.log("🔄 [PUBLIC] Match changed! Clearing votes");
+              tournamentData.juryVotes = {};
+            }
+            return tournamentData;
+          });
+        } else {
+          setState(DEFAULT_STATE);
+        }
+      } catch (error) {
+        console.error("Failed to fetch public data:", error);
+        setState(DEFAULT_STATE);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPublicData();
+    const interval = setInterval(fetchPublicData, 2000);
+    return () => clearInterval(interval);
+  }, [eventSlug, currentCategory]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  // Display tournament data with category selector
+  if (!state) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="text-white">Event not configured yet</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-surface-dark">
+      {/* Header with event and category selector */}
+      <div className=" hidden border-b border-white/10 p-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black italic text-white uppercase">
+            {state.competitionName}
+          </h1>
+        </div>
+        {eventSlug && currentCategory && (
+          <EventSelector
+            eventSlug={eventSlug}
+            category={currentCategory}
+            onCategoryChange={updateCategory}
+          />
+        )}
+      </div>
+      <PublicView state={{ ...state, currentCategory }} />
+    </div>
   );
 }
 
@@ -306,20 +873,6 @@ function JuryGateway({
     e.preventDefault();
     setLoginError("");
 
-    const normalizedUser = username.trim().toLowerCase();
-    const normalizedPass = password.trim();
-
-    const jury = state.juryAccounts.find(
-      (j) =>
-        j.username.trim().toLowerCase() === normalizedUser &&
-        j.password.trim() === normalizedPass,
-    );
-    if (jury) {
-      sessionStorage.setItem("juryId", jury.id);
-      setJuryId(jury.id);
-      return;
-    }
-
     try {
       const res = await fetch("/api/jury/login", {
         method: "POST",
@@ -334,7 +887,7 @@ function JuryGateway({
         sessionStorage.setItem("juryId", data.juryId);
         setJuryId(data.juryId);
       } else {
-        setLoginError(data.error);
+        setLoginError(data.error || "Identifiants incorrects");
       }
     } catch (err) {
       setLoginError("Identifiants incorrects");
@@ -407,7 +960,7 @@ function JuryGateway({
             <button
               type="submit"
               className="w-full py-4 bg-white text-black font-black italic uppercase text-xs tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50"
-              disabled={!username}
+              disabled={!username || !password}
             >
               Accéder au Vote
             </button>
@@ -432,7 +985,7 @@ function JuryGateway({
                       type="button"
                       onClick={() => {
                         setUsername(j.username);
-                        setPassword(j.password || "");
+                        setPassword("");
                       }}
                       className="px-2.5 py-1 bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-sm text-[8px] font-mono tracking-tight transition-all uppercase border border-white/5 hover:border-white/10"
                     >
@@ -452,11 +1005,33 @@ function JuryGateway({
 function AdminView({
   state,
   onSave,
+  eventSlug,
+  category,
 }: {
   state: TournamentState;
   onSave: (s: TournamentState) => void;
+  eventSlug?: string;
+  category?: string;
 }) {
   const navigate = useNavigate();
+
+  // Helper to build API endpoint URLs - admin endpoints
+  const buildAdminUrl = (endpoint: string) => {
+    if (eventSlug && category) {
+      return `/api/admin/${eventSlug}/${category}${endpoint}`;
+    }
+    return `/api/admin${endpoint}`;
+  };
+  
+  // Helper to build API endpoint URLs - common endpoints (vote, etc)
+  const buildApiUrl = (endpoint: string) => {
+    if (eventSlug && category) {
+      return `/api/${eventSlug}/${category}${endpoint}`;
+    }
+    console.warn(`buildApiUrl called without eventSlug/category: eventSlug="${eventSlug}", category="${category}"`);
+    console.warn(`buildApiUrl called without eventSlug/category: eventSlug="${eventSlug}", category="${category}"`);
+    return endpoint;
+  };
   const [competitionName, setCompetitionName] = useState(
     state.competitionName || "",
   );
@@ -471,131 +1046,19 @@ function AdminView({
       return state.participants;
     return DEFAULT_PARTICIPANTS;
   });
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+
+  // Admin voting feature
+  const [selectedJuryId, setSelectedJuryId] = useState<string | null>(null);
 
   // --- REST Countries API & Fallback List ---
   const FALLBACK_COUNTRIES = useMemo(
-    () => [
-      {
-        cca2: "FR",
-        name: "France",
-        flag: "🇫🇷",
-        flagUrl: "https://flagcdn.com/w40/fr.png",
-      },
-      {
-        cca2: "US",
-        name: "États-Unis",
-        flag: "🇺🇸",
-        flagUrl: "https://flagcdn.com/w40/us.png",
-      },
-      {
-        cca2: "KR",
-        name: "Corée du Sud",
-        flag: "🇰🇷",
-        flagUrl: "https://flagcdn.com/w40/kr.png",
-      },
-      {
-        cca2: "JP",
-        name: "Japon",
-        flag: "🇯🇵",
-        flagUrl: "https://flagcdn.com/w40/jp.png",
-      },
-      {
-        cca2: "CA",
-        name: "Canada",
-        flag: "🇨🇦",
-        flagUrl: "https://flagcdn.com/w40/ca.png",
-      },
-      {
-        cca2: "NL",
-        name: "Pays-Bas",
-        flag: "🇳🇱",
-        flagUrl: "https://flagcdn.com/w40/nl.png",
-      },
-      {
-        cca2: "BE",
-        name: "Belgique",
-        flag: "🇧🇪",
-        flagUrl: "https://flagcdn.com/w40/be.png",
-      },
-      {
-        cca2: "CH",
-        name: "Suisse",
-        flag: "🇨🇭",
-        flagUrl: "https://flagcdn.com/w40/ch.png",
-      },
-      {
-        cca2: "GB",
-        name: "Royaume-Uni",
-        flag: "🇬🇧",
-        flagUrl: "https://flagcdn.com/w40/gb.png",
-      },
-      {
-        cca2: "DE",
-        name: "Allemagne",
-        flag: "🇩🇪",
-        flagUrl: "https://flagcdn.com/w40/de.png",
-      },
-      {
-        cca2: "ES",
-        name: "Espagne",
-        flag: "🇪🇸",
-        flagUrl: "https://flagcdn.com/w40/es.png",
-      },
-      {
-        cca2: "IT",
-        name: "Italie",
-        flag: "🇮🇹",
-        flagUrl: "https://flagcdn.com/w40/it.png",
-      },
-      {
-        cca2: "BR",
-        name: "Brésil",
-        flag: "🇧🇷",
-        flagUrl: "https://flagcdn.com/w40/br.png",
-      },
-      {
-        cca2: "UA",
-        name: "Ukraine",
-        flag: "🇺🇦",
-        flagUrl: "https://flagcdn.com/w40/ua.png",
-      },
-      {
-        cca2: "KZ",
-        name: "Kazakhstan",
-        flag: "🇰🇿",
-        flagUrl: "https://flagcdn.com/w40/kz.png",
-      },
-      {
-        cca2: "CN",
-        name: "Chine",
-        flag: "🇨🇳",
-        flagUrl: "https://flagcdn.com/w40/cn.png",
-      },
-      {
-        cca2: "MA",
-        name: "Maroc",
-        flag: "🇲🇦",
-        flagUrl: "https://flagcdn.com/w40/ma.png",
-      },
-      {
-        cca2: "DZ",
-        name: "Algérie",
-        flag: "🇩🇿",
-        flagUrl: "https://flagcdn.com/w40/dz.png",
-      },
-      {
-        cca2: "TN",
-        name: "Tunisie",
-        flag: "🇹🇳",
-        flagUrl: "https://flagcdn.com/w40/tn.png",
-      },
-      {
-        cca2: "SN",
-        name: "Sénégal",
-        flag: "🇸🇳",
-        flagUrl: "https://flagcdn.com/w40/sn.png",
-      },
-    ],
+    () => COUNTRIES.map((country) => ({
+      cca2: country.code,
+      name: country.name,
+      flag: country.flag,
+      flagUrl: `https://flagcdn.com/w40/${country.code.toLowerCase()}.png`,
+    })),
     [],
   );
 
@@ -610,6 +1073,17 @@ function AdminView({
   });
 
   const [loadingCountries, setLoadingCountries] = useState(false);
+
+  // Ensure state always has required properties for safe rendering
+  const safeState: TournamentState = {
+    ...DEFAULT_STATE,
+    ...state,
+    matches: state.matches || [],
+    juryVotes: state.juryVotes || {},
+    participants: state.participants || [],
+    juryAccounts: state.juryAccounts || [],
+    warnedJuries: state.warnedJuries || [],
+  };
 
   useEffect(() => {
     setLoadingCountries(true);
@@ -708,6 +1182,28 @@ function AdminView({
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const previewMeasureRef = useRef<HTMLDivElement>(null);
   const [previewScale, setPreviewScale] = useState(1);
+  
+  // Upload progress tracking
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploading, setUploading] = useState<Record<string, boolean>>({});
+
+  // CRITICAL: Sync local state with incoming state prop when category changes
+  useEffect(() => {
+    // Update local state from incoming state prop
+    setCompetitionName(state.competitionName || "");
+    setCompetitionLogo(state.competitionLogo || "");
+    setTournamentSize(state.tournamentSize || 16);
+    setMatches(state.matches || []);
+    setJuryCount(state.juryCount || 3);
+    setJuryAccounts(state.juryAccounts || []);
+    
+    // Reset participants from state or use defaults if not configured
+    if (state.participants && state.participants.length > 0) {
+      setParticipants(state.participants);
+    } else {
+      setParticipants(DEFAULT_PARTICIPANTS);
+    }
+  }, [state.id, category]); // Re-sync when tournament ID or category changes
 
   const updateMatchTeam = (
     matchId: string,
@@ -809,6 +1305,56 @@ function AdminView({
     const newParticipants = [...participants];
     newParticipants[index] = { ...newParticipants[index], [field]: value };
     setParticipants(newParticipants);
+  };
+
+  const handlePhotoUpload = async (
+    fileId: string,
+    file: File,
+    onSuccess: (url: string) => void
+  ) => {
+    try {
+      setUploading((prev) => ({ ...prev, [fileId]: true }));
+      setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }));
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const xhr = new XMLHttpRequest();
+
+      // Track upload progress
+      xhr.upload.addEventListener("progress", (e) => {
+        if (e.lengthComputable) {
+          const percentComplete = (e.loaded / e.total) * 100;
+          setUploadProgress((prev) => ({ ...prev, [fileId]: percentComplete }));
+        }
+      });
+
+      xhr.addEventListener("load", () => {
+        if (xhr.status === 200) {
+          const data = JSON.parse(xhr.responseText);
+          setUploadProgress((prev) => ({ ...prev, [fileId]: 100 }));
+          setTimeout(() => {
+            setUploading((prev) => ({ ...prev, [fileId]: false }));
+            setUploadProgress((prev) => ({ ...prev, [fileId]: 0 }));
+          }, 500);
+          onSuccess(data.url);
+        } else {
+          console.error("Upload failed:", xhr.statusText);
+          setUploading((prev) => ({ ...prev, [fileId]: false }));
+        }
+      });
+
+      xhr.addEventListener("error", () => {
+        console.error("Error uploading file");
+        setUploading((prev) => ({ ...prev, [fileId]: false }));
+      });
+
+      xhr.open("POST", "/api/upload");
+      xhr.send(formData);
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      setUploading((prev) => ({ ...prev, [fileId]: false }));
+    }
   };
 
   const generateBracket = (size: 16 | 8 | 4 | 2) => {
@@ -945,25 +1491,9 @@ function AdminView({
 
   const configure = async () => {
     const finalParticipants = participants.slice(0, tournamentSize);
-    const newState: TournamentState = {
-      ...state,
-      competitionName,
-      competitionLogo,
-      participants: finalParticipants,
-      juryAccounts,
-      juryCount: juryAccounts.length,
-      currentMatchId: matches.length > 0 ? matches[0].id : null,
-      matches: matches.map((m, i) =>
-        i === 0 ? { ...m, status: "active" } : m,
-      ),
-      configured: true,
-      juryVotes: {},
-      tournamentSize,
-    };
-    onSave(newState);
 
     try {
-      await fetch("/api/admin/configure", {
+      const res = await fetch(buildAdminUrl("/configure"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -975,8 +1505,17 @@ function AdminView({
           tournamentSize,
         }),
       });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+        }
+      } else {
+        console.error("Configuration failed:", res.status);
+      }
     } catch (e) {
-      console.warn("Server sync failed during configure");
+      console.error("Server error during configure:", e);
     }
   };
 
@@ -992,100 +1531,50 @@ function AdminView({
       (m) => m.id === state.currentMatchId,
     );
     if (activeIdx !== -1) {
-      const newMatches = [...state.matches];
-      newMatches[activeIdx] = { ...newMatches[activeIdx], revealed: true };
-      onSave({ ...state, matches: newMatches });
-
       try {
-        await fetch("/api/admin/reveal", {
+        const res = await fetch(buildAdminUrl("/reveal"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ matchId: state.currentMatchId }),
         });
+        
+        if (res.ok) {
+          const data = await res.json();
+          if (data.state) {
+            onSave(data.state);
+          }
+        }
       } catch (e) {
-        console.warn("Server sync failed during reveal");
+        console.error("Server error during reveal:", e);
       }
     }
   };
 
   const finishMatch = async () => {
-    const activeIdx = state.matches.findIndex(
-      (m) => m.id === state.currentMatchId,
-    );
-    if (activeIdx !== -1) {
-      let newMatches = [...state.matches];
-      const finishedMatch = {
-        ...newMatches[activeIdx],
-        status: "finished" as const,
-      };
-      newMatches[activeIdx] = finishedMatch;
-
-      // ADVANCE WINNER LOCALLY
-      const winnerId = finishedMatch.winnerId;
-      if (winnerId) {
-        const progression: Record<
-          string,
-          { nextMatchId: string; side: "red" | "blue" }
-        > = {
-          "t16-1": { nextMatchId: "t8-1", side: "red" },
-          "t16-2": { nextMatchId: "t8-1", side: "blue" },
-          "t16-3": { nextMatchId: "t8-2", side: "red" },
-          "t16-4": { nextMatchId: "t8-2", side: "blue" },
-          "t16-5": { nextMatchId: "t8-3", side: "red" },
-          "t16-6": { nextMatchId: "t8-3", side: "blue" },
-          "t16-7": { nextMatchId: "t8-4", side: "red" },
-          "t16-8": { nextMatchId: "t8-4", side: "blue" },
-          "t8-1": { nextMatchId: "semi-1", side: "red" },
-          "t8-2": { nextMatchId: "semi-1", side: "blue" },
-          "t8-3": { nextMatchId: "semi-2", side: "red" },
-          "t8-4": { nextMatchId: "semi-2", side: "blue" },
-          "semi-1": { nextMatchId: "final-1", side: "red" },
-          "semi-2": { nextMatchId: "final-1", side: "blue" },
-        };
-
-        const nextInfo = progression[finishedMatch.id];
-        if (nextInfo) {
-          newMatches = newMatches.map((m) => {
-            if (m.id === nextInfo.nextMatchId) {
-              return {
-                ...m,
-                [nextInfo.side === "red" ? "redTeamId" : "blueTeamId"]:
-                  winnerId,
-              };
-            }
-            return m;
-          });
+    try {
+      const res = await fetch(buildAdminUrl("/finish-match"), { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
         }
       }
-
-      const newState = { ...state, matches: newMatches };
-      onSave(newState);
-
-      try {
-        await fetch("/api/admin/finish-match", { method: "POST" });
-      } catch (e) {
-        console.warn("Server sync failed during finishMatch");
-      }
+    } catch (e) {
+      console.error("Server error during finishMatch:", e);
     }
   };
 
   const warnJudges = async () => {
-    // Local update first
-    const missingVotes = state.juryAccounts
-      .filter((j) => !state.juryVotes[j.id])
-      .map((j) => j.id);
-
-    const newState = { ...state, warnedJuries: missingVotes };
-    onSave(newState);
-
     try {
-      const res = await fetch("/api/admin/warn-judges", { method: "POST" });
+      const res = await fetch(buildAdminUrl("/warn-juries"), { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        onSave(data.state);
+        if (data.state) {
+          onSave(data.state);
+        }
       }
     } catch (e) {
-      console.warn("Server sync failed during warnJudges");
+      console.error("Server error during warnJudges:", e);
     }
   };
 
@@ -1097,121 +1586,92 @@ function AdminView({
     )
       return;
 
-    const newState = {
-      ...state,
-      currentMatchId: null,
-      juryVotes: {},
-      matches: state.matches.map((m) => {
-        if (m.id === state.currentMatchId) {
-          return {
-            ...m,
-            status: "pending" as const,
-            revealed: false,
-            allVotesCastAt: null,
-          };
-        }
-        return m;
-      }),
-    };
-    onSave(newState);
-
     try {
-      await fetch("/api/admin/cancel-match", { method: "POST" });
+      const res = await fetch(buildAdminUrl("/cancel-match"), { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+        }
+      }
     } catch (e) {
-      console.warn("Server sync failed during cancelMatch");
+      console.error("Server error during cancelMatch:", e);
     }
   };
 
   const confirmRound = async () => {
-    // Round confirmation usually has complex logic, better to try server first but handle local
     try {
-      const res = await fetch("/api/admin/confirm-round", { method: "POST" });
+      const res = await fetch(buildAdminUrl("/confirm-round"), { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        onSave(data.state);
-        return;
+        if (data.state) {
+          onSave(data.state);
+        }
       }
     } catch (e) {
-      console.warn("Server sync failed during confirmRound");
-    }
-
-    // Fallback local logic for confirmRound if server fails
-    const match = state.matches.find((m) => m.id === state.currentMatchId);
-    if (match && match.votingMode === "round" && match.status === "active") {
-      const redV = Object.values(state.juryVotes).filter(
-        (v) => v === "red",
-      ).length;
-      const blueV = Object.values(state.juryVotes).filter(
-        (v) => v === "blue",
-      ).length;
-
-      const newMatches = state.matches.map((m) => {
-        if (m.id === state.currentMatchId) {
-          const newRoundResults = [
-            ...(m.roundResults || []),
-            { red: redV, blue: blueV },
-          ];
-          const isLastRound = m.currentRound >= m.roundCount;
-
-          let finalRed = m.redVotes;
-          let finalBlue = m.blueVotes;
-          if (redV > blueV) finalRed++;
-          else if (blueV > redV) finalBlue++;
-
-          return {
-            ...m,
-            currentRound: isLastRound ? m.currentRound : m.currentRound + 1,
-            roundResults: newRoundResults,
-            redVotes: finalRed,
-            blueVotes: finalBlue,
-            // status: isLastRound ? 'finished' : 'active' // Manual finish requested by user now
-          };
-        }
-        return m;
-      });
-
-      onSave({ ...state, matches: newMatches, juryVotes: {} });
+      console.error("Server error during confirmRound:", e);
     }
   };
 
   const selectMatch = async (matchId: string) => {
-    const newMatches = state.matches.map((m) => {
-      if (m.id === matchId) return { ...m, status: "active" as const };
-      // if (m.status === 'active') return { ...m, status: 'finished' as const }; // Don't auto finish
-      return m;
-    });
-
-    const newState: TournamentState = {
-      ...state,
-      currentMatchId: matchId,
-      matches: newMatches,
-      juryVotes: {},
-    };
-    onSave(newState);
-
     try {
-      await fetch("/api/admin/select-match", {
+      const res = await fetch(buildAdminUrl("/select-match"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matchId }),
       });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+        }
+      }
     } catch (e) {
-      console.warn("Server sync failed during selectMatch");
+      console.error("Server error during selectMatch:", e);
     }
   };
 
   const reset = async () => {
-    onSave(DEFAULT_STATE);
     try {
-      await fetch("/api/admin/reset", { method: "POST" });
+      const res = await fetch(buildAdminUrl("/reset"), { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        onSave(data.state || DEFAULT_STATE);
+      } else {
+        onSave(DEFAULT_STATE);
+      }
     } catch (e) {
       console.warn("Server sync failed during reset");
+      onSave(DEFAULT_STATE);
     }
   };
 
-  const activeMatch = state.matches.find((m) => m.id === state.currentMatchId);
+  const adminCastVote = async (juryId: string, vote: "red" | "blue") => {
+    if (!state.currentMatchId) return;
 
-  if (!state.configured) {
+    try {
+      const res = await fetch(buildApiUrl("/vote"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ matchId: state.currentMatchId, juryId, vote }),
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+          setSelectedJuryId(null);
+          // Vote is now recorded - admin can manually finalize if needed
+        }
+      }
+    } catch (e) {
+      console.error("Server error during admin vote:", e);
+    }
+  };
+
+  const activeMatch = safeState.matches.find((m) => m.id === safeState.currentMatchId);
+
+  if (!safeState.configured) {
     return (
       <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-7xl mx-auto font-sans text-white bg-surface-dark">
         <header className="w-full flex justify-between items-center mb-12 border-b border-white/5 pb-8">
@@ -1253,97 +1713,56 @@ function AdminView({
                   </div>
                 </div>
 
-                <input
-                  type="text"
-                  value={competitionName}
-                  onChange={(e) => setCompetitionName(e.target.value)}
-                  placeholder="NOM DE L'ÉVÉNEMENT"
-                  className="w-full bg-black/40 border border-white/10 px-4 py-4 font-black focus:border-white transition-all outline-none italic uppercase text-sm"
-                />
-                <input
-                  type="text"
-                  value={competitionLogo}
-                  onChange={(e) => setCompetitionLogo(e.target.value)}
-                  placeholder="URL LOGO (OPTIONNEL)"
-                  className="w-full bg-black/40 border border-white/10 px-4 py-4 font-bold focus:border-white transition-all outline-none italic text-xs"
-                />
-
-                <div className="pt-4">
+                <div className="pt-4 border-t border-white/10">
                   <p className="text-[9px] font-black uppercase text-white/40 mb-3 tracking-widest">
-                    Configuration des Juges
+                    Logo Événement
                   </p>
-                  {/* Presets */}
-                  <div className="grid grid-cols-4 gap-2 mb-3">
-                    {[2, 3, 5, 7].map((n) => (
-                      <button
-                        type="button"
-                        key={n}
-                        onClick={() => handleJuryCountChange(n)}
-                        className={`py-3 font-black italic border-2 transition-all text-[9px] tracking-widest ${juryCount === n ? "bg-white border-white text-black" : "border-white/10 text-white/40 hover:border-white/30"}`}
-                      >
-                        {n} JUGES
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Ajusteur personnalisé de juges */}
-                  <div className="flex items-center gap-2 mb-6 bg-black/30 p-2 border border-white/5 rounded-sm">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleJuryCountChange(Math.max(1, juryCount - 1))
-                      }
-                      className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all font-black text-sm rounded-sm"
-                      title="Réduire le nombre de juges"
-                    >
-                      -
-                    </button>
-                    <input
-                      type="number"
-                      min={1}
-                      max={30}
-                      value={juryCount}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val) && val >= 1) {
-                          handleJuryCountChange(val);
-                        }
-                      }}
-                      className="flex-1 bg-black/40 border border-white/10 h-10 font-black text-center text-xs focus:border-white transition-all outline-none italic text-white"
-                      placeholder="NB"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => handleJuryCountChange(juryCount + 1)}
-                      className="w-10 h-10 flex items-center justify-center bg-white/5 border border-white/10 text-white hover:bg-white/10 active:scale-95 transition-all font-black text-sm rounded-sm"
-                      title="Augmenter le nombre de juges"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="space-y-2">
-                    {juryAccounts.map((jury, i) => (
-                      <div key={jury.id} className="flex gap-2">
-                        <input
-                          type="text"
-                          value={jury.username}
-                          onChange={(e) =>
-                            updateJuryAccount(i, "username", e.target.value)
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <input
+                        type="text"
+                        value={competitionLogo}
+                        onChange={(e) => setCompetitionLogo(e.target.value)}
+                        placeholder="URL du logo..."
+                        className="w-full bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
+                        disabled={uploading["logo"]}
+                      />
+                      {uploading["logo"] && (
+                        <div className="mt-2 w-full bg-black/40 border border-white/15 rounded h-2 overflow-hidden">
+                          <div
+                            className="h-full bg-gradient-to-r from-color-primary to-brand-red transition-all"
+                            style={{ width: `${uploadProgress["logo"] || 0}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <label className={`${uploading["logo"] ? "bg-gray-600" : "bg-color-primary hover:bg-[#d47a31]"} text-white font-black px-3 py-2 cursor-pointer transition-all text-[10px] italic whitespace-nowrap`}>
+                      {uploading["logo"] ? `${Math.round(uploadProgress["logo"] || 0)}%` : "Upload"}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => {
+                          if (e.target.files?.[0]) {
+                            handlePhotoUpload("logo", e.target.files[0], (url) => {
+                              setCompetitionLogo(url);
+                            });
                           }
-                          className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px] uppercase"
-                        />
-                        <input
-                          type="text"
-                          value={jury.password}
-                          onChange={(e) =>
-                            updateJuryAccount(i, "password", e.target.value)
-                          }
-                          className="flex-1 bg-black/40 border border-white/5 px-3 py-2 font-black focus:border-white transition-all outline-none italic text-[10px] uppercase"
-                        />
-                      </div>
-                    ))}
+                        }}
+                        className="hidden"
+                        disabled={uploading["logo"]}
+                      />
+                    </label>
                   </div>
+                  {competitionLogo && (
+                    <div className="mt-3 w-16 h-16 border border-white/15 rounded overflow-hidden bg-black/40">
+                      <img
+                        src={competitionLogo}
+                        alt="Logo"
+                        className="w-full h-full object-contain p-1"
+                        onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -1448,15 +1867,42 @@ function AdminView({
                         <p className="text-[8px] font-black tracking-widest text-white/30 uppercase mb-1">
                           Photo URL
                         </p>
-                        <input
-                          type="text"
-                          value={p.photo}
-                          onChange={(e) =>
-                            updateParticipant(i, "photo", e.target.value)
-                          }
-                          placeholder="https://images.unsplash.com/..."
-                          className="w-full bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
-                        />
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            value={p.photo}
+                            onChange={(e) =>
+                              updateParticipant(i, "photo", e.target.value)
+                            }
+                            placeholder="https://images.unsplash.com/..."
+                            className="flex-1 bg-black/40 border border-white/15 focus:border-white px-3 py-2 font-black transition-all outline-none italic text-[10px]"
+                            disabled={uploading[`participant-${p.id}`]}
+                          />
+                          <label className={`${uploading[`participant-${p.id}`] ? "bg-gray-600" : "bg-brand-blue hover:bg-blue-600"} text-white font-black px-3 py-2 cursor-pointer transition-all text-[10px] italic whitespace-nowrap`}>
+                            {uploading[`participant-${p.id}`] ? `${Math.round(uploadProgress[`participant-${p.id}`] || 0)}%` : "Upload"}
+                            <input
+                              type="file"
+                              accept="image/*,video/*"
+                              onChange={(e) => {
+                                if (e.target.files?.[0]) {
+                                  handlePhotoUpload(`participant-${p.id}`, e.target.files[0], (url) => {
+                                    updateParticipant(i, "photo", url);
+                                  });
+                                }
+                              }}
+                              className="hidden"
+                              disabled={uploading[`participant-${p.id}`]}
+                            />
+                          </label>
+                        </div>
+                        {uploading[`participant-${p.id}`] && (
+                          <div className="mt-2 w-full bg-black/40 border border-white/15 rounded h-2 overflow-hidden">
+                            <div
+                              className="h-full bg-gradient-to-r from-brand-blue to-brand-blue transition-all"
+                              style={{ width: `${uploadProgress[`participant-${p.id}`] || 0}%` }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1671,12 +2117,7 @@ function AdminView({
           </div>
         </div>
         <div className="flex items-center gap-8">
-          <button
-            onClick={() => navigate("/bracket")}
-            className="text-[10px] font-black uppercase tracking-widest text-white/40 hover:text-white transition-all border-b border-white/10 hover:border-white pb-1 italic"
-          >
-            View Bracket
-          </button>
+          
           <button
             onClick={() => navigate("/select")}
             className="text-white/20 hover:text-white transition-colors"
@@ -1701,12 +2142,30 @@ function AdminView({
           </div>
 
           <div className="grid grid-cols-1 gap-2 overflow-y-auto max-h-[60vh] pr-2 scrollbar-hide">
-            {state.matches.map((m, i) => {
-              const red = state.participants.find((p) => p.id === m.redTeamId);
-              const blue = state.participants.find(
-                (p) => p.id === m.blueTeamId,
-              );
-              return (
+            {(() => {
+              // Show active match first, pending in middle, finished at bottom
+              const displayMatches = [...state.matches].sort((a, b) => {
+                // Active match first
+                if (a.id === state.currentMatchId) return -1;
+                if (b.id === state.currentMatchId) return 1;
+                // Pending matches in middle, finished at bottom
+                const statusPriority: Record<string, number> = {
+                  "pending": 0,
+                  "active": 0,
+                  "finished": 1,
+                };
+                const priorityA = statusPriority[a.status] ?? 999;
+                const priorityB = statusPriority[b.status] ?? 999;
+                if (priorityA !== priorityB) return priorityA - priorityB;
+                // Keep order as received from server
+                return 0;
+              });
+              return displayMatches.map((m, i) => {
+                const red = state.participants.find((p) => p.id === m.redTeamId);
+                const blue = state.participants.find(
+                  (p) => p.id === m.blueTeamId,
+                );
+                return (
                 <div
                   key={m.id}
                   className={`p-5 md:p-6 flex flex-col md:flex-row justify-between items-center gap-4 transition-all border ${m.status === "active" ? "bg-white/10 border-white ring-1 ring-white/20" : "bg-white/5 border-white/5 opacity-50"}`}
@@ -1737,7 +2196,9 @@ function AdminView({
                       (!state.currentMatchId ||
                         state.matches.find(
                           (ex) => ex.id === state.currentMatchId,
-                        )?.status === "finished") && (
+                        )?.status === "finished") &&
+                      red &&
+                      blue && (
                         <button
                           onClick={() => selectMatch(m.id)}
                           className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest hover:scale-105 transition-all"
@@ -1776,7 +2237,8 @@ function AdminView({
                   </div>
                 </div>
               );
-            })}
+              });
+            })()}
           </div>
         </div>
 
@@ -1803,28 +2265,78 @@ function AdminView({
                 État des Votes ({Object.keys(state.juryVotes).length}/
                 {state.juryCount})
               </p>
-              <div className="flex justify-between gap-1">
+              <div className="flex justify-between gap-1 relative">
                 {state.juryAccounts.map((jury) => {
                   const vote = state.juryVotes[jury.id];
+                  const isSelected = selectedJuryId === jury.id;
                   return (
                     <div
                       key={jury.id}
-                      className="flex-1 flex flex-col items-center gap-2"
+                      className="flex-1 flex flex-col items-center gap-2 relative"
                     >
-                      <div
-                        className={`w-full aspect-square border-2 flex items-center justify-center transition-all duration-500 
+                      <button
+                        onClick={() =>
+                          setSelectedJuryId(isSelected ? null : jury.id)
+                        }
+                        className={`w-full aspect-square border-2 flex items-center justify-center transition-all duration-500 cursor-pointer hover:scale-105 active:scale-95 relative
                                ${
                                  vote
                                    ? vote === "red"
                                      ? "bg-brand-red border-brand-red"
                                      : "bg-brand-blue border-brand-blue"
-                                   : "bg-white/5 border-white/10"
-                               }`}
+                                   : "bg-white/5 border-white/10 hover:border-white/40"
+                               }
+                               ${isSelected ? "ring-2 ring-white/60 scale-110" : ""}
+                        `}
                       >
                         {vote && (
                           <CheckCircle2 size={12} className="text-white" />
                         )}
-                      </div>
+                      </button>
+
+                      {/* Voting Menu */}
+                      {isSelected && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -10 }}
+                          className="absolute top-full mt-2 z-50 flex gap-1 bg-black/60 border border-white/20 p-1 rounded-sm backdrop-blur-md"
+                        >
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              adminCastVote(jury.id, "red");
+                            }}
+                            className="px-2 py-1 bg-brand-red text-white text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
+                          >
+                            RED
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              adminCastVote(jury.id, "blue");
+                            }}
+                            className="px-2 py-1 bg-brand-blue text-white text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
+                          >
+                            BLUE
+                          </button>
+                          {vote && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const newVotes = { ...state.juryVotes };
+                                delete newVotes[jury.id];
+                                onSave({ ...state, juryVotes: newVotes });
+                                setSelectedJuryId(null);
+                              }}
+                              className="px-2 py-1 bg-white/10 text-white/60 text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
+                            >
+                              Clear
+                            </button>
+                          )}
+                        </motion.div>
+                      )}
+
                       <span className="text-[8px] font-black opacity-30 uppercase truncate w-full text-center leading-none mt-1">
                         {jury.username}
                       </span>
@@ -1929,7 +2441,7 @@ function AdminView({
                 <SkipForward size={18} /> MATCH SUIVANT
               </button>
               <button
-                onClick={reset}
+                onClick={() => setShowResetConfirmation(true)}
                 className="w-full py-4 border border-white/10 text-white/30 font-black italic hover:bg-red-500 hover:text-black hover:border-red-500 transition-all rounded-sm"
               >
                 <RotateCcw size={18} /> RÉINITIALISER TOUT
@@ -1938,6 +2450,37 @@ function AdminView({
           </div>
         </div>
       </div>
+
+      {/* Reset Confirmation Modal */}
+      {showResetConfirmation && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-black border-2 border-red-500 p-8 max-w-md w-full shadow-[0_0_40px_rgba(225,29,72,0.3)]">
+            <h2 className="text-2xl font-black italic text-white uppercase mb-4">
+              Confirmation
+            </h2>
+            <p className="text-white/80 mb-8">
+              Êtes-vous sûr de vouloir réinitialiser tous les données du tournoi ? Cette action est irréversible.
+            </p>
+            <div className="flex gap-4">
+              <button
+                onClick={() => {
+                  setShowResetConfirmation(false);
+                  reset();
+                }}
+                className="flex-1 py-3 bg-red-500 text-black font-black italic uppercase hover:scale-105 transition-all"
+              >
+                OK
+              </button>
+              <button
+                onClick={() => setShowResetConfirmation(false)}
+                className="flex-1 py-3 bg-white/10 text-white font-black italic uppercase hover:bg-white/20 transition-all border border-white/10"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1947,17 +2490,29 @@ function JuryView({
   juryId,
   onSave,
   onLogout,
+  eventSlug,
+  category,
 }: {
   state: TournamentState;
   juryId: string;
   onSave: (s: TournamentState) => void;
   onLogout: () => void;
+  eventSlug?: string;
+  category?: string;
 }) {
+  // Helper to build API endpoint URLs based on whether we have eventSlug/category
+  const buildApiUrl = (endpoint: string) => {
+    if (eventSlug && category) {
+      return `/api/${eventSlug}/${category}${endpoint}`;
+    }
+    return endpoint;
+  };
   const currentMatch = state.matches.find((m) => m.id === state.currentMatchId);
   const [view, setView] = useState<"list" | "vote">("list");
 
   useEffect(() => {
     // Auto-exit vote console if match is cancelled or finished by admin
+    // Also reset isChanging flag when match changes
     if (view === "vote") {
       const liveMatch = state.matches.find(
         (m) => m.id === state.currentMatchId,
@@ -1966,6 +2521,7 @@ function JuryView({
         setView("list");
       }
     }
+    setIsChanging(false);
   }, [state.currentMatchId, state.matches, view]);
   const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
@@ -1995,7 +2551,7 @@ function JuryView({
 
   const confirmRound = async () => {
     try {
-      const res = await fetch("/api/admin/confirm-round", { method: "POST" });
+      const res = await fetch(buildApiUrl("/confirm-round"), { method: "POST" });
       if (res.ok) {
         const data = await res.json();
         onSave(data.state);
@@ -2007,7 +2563,7 @@ function JuryView({
 
   const nextMatch = async () => {
     try {
-      const res = await fetch("/api/admin/next-match", { method: "POST" });
+      const res = await fetch(buildApiUrl("/next-match"), { method: "POST" });
       if (res.ok) {
         // State will update via polling
       }
@@ -2017,13 +2573,9 @@ function JuryView({
   };
 
   const selectMatch = async (matchId: string) => {
-    const localFinished = JSON.parse(
-      localStorage.getItem(`finished_${juryId}`) || "[]",
-    );
-    if (localFinished.includes(matchId)) return;
 
     try {
-      const res = await fetch("/api/admin/select-match", {
+      const res = await fetch(buildApiUrl("/select-match"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ matchId }),
@@ -2044,86 +2596,47 @@ function JuryView({
       return;
     }
 
-    // Optimistic UI update: local storage and state
-    const juryFinishedMatches = JSON.parse(
-      localStorage.getItem(`finished_${juryId}`) || "[]",
-    );
-    if (!juryFinishedMatches.includes(cid)) {
-      juryFinishedMatches.push(cid);
-      localStorage.setItem(
-        `finished_${juryId}`,
-        JSON.stringify(juryFinishedMatches),
-      );
-    }
-
-    setView("list");
-
     try {
-      const res = await fetch("/api/jury/finalize", {
+      const res = await fetch(buildApiUrl("/finalize"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ juryId, matchId: cid }),
       });
       if (res.ok) {
         const data = await res.json();
-        onSave(data.state);
+        if (data.state) {
+          onSave(data.state);
+        }
       }
     } catch (e) {
-      console.warn("Server sync failed during finalizeMatch");
+      console.error("Server error during finalizeMatch:", e);
     }
+
+    setView("list");
   };
 
   const castVote = async (vote: "red" | "blue") => {
-    const newVotes = { ...state.juryVotes, [juryId]: vote };
-    const currentMatchRef = state.matches.find(
-      (m) => m.id === state.currentMatchId,
-    );
-
-    if (currentMatchRef) {
-      const redVotes = Object.values(newVotes).filter(
-        (v) => v === "red",
-      ).length;
-      const blueVotes = Object.values(newVotes).filter(
-        (v) => v === "blue",
-      ).length;
-      const totalVotes = redVotes + blueVotes;
-
-      const newMatches = state.matches.map((m) => {
-        if (m.id === state.currentMatchId) {
-          const allVoted = totalVotes >= state.juryCount;
-          return {
-            ...m,
-            redVotes: m.votingMode === "match" ? redVotes : m.redVotes,
-            blueVotes: m.votingMode === "match" ? blueVotes : m.blueVotes,
-            allVotesCastAt: allVoted ? Date.now() : undefined,
-            winnerId:
-              allVoted && m.votingMode === "match"
-                ? redVotes > blueVotes
-                  ? m.redTeamId
-                  : m.blueTeamId
-                : m.winnerId,
-          };
-        }
-        return m;
-      });
-
-      const newState: TournamentState = {
-        ...state,
-        juryVotes: newVotes,
-        matches: newMatches,
-      };
-      onSave(newState);
-      setIsChanging(false);
-    }
+    if (!state.currentMatchId) return;
 
     try {
-      await fetch("/api/jury/vote", {
+      const res = await fetch(buildApiUrl("/vote"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ juryId, vote }),
+        body: JSON.stringify({ matchId: state.currentMatchId, juryId, vote }),
       });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+          setIsChanging(false);
+          // Vote is now recorded - jury must click VALIDER button to finalize
+        }
+      } else {
+        console.error("Vote failed:", res.status);
+      }
     } catch (err) {
-      console.warn("Server sync failed during vote");
+      console.error("Server error during vote:", err);
     }
   };
 
@@ -2136,6 +2649,26 @@ function JuryView({
         </h2>
         <p className="text-white/20 text-xs tracking-widest uppercase">
           L'administrateur n'a pas encore lancé le tournoi
+        </p>
+      </div>
+    );
+  }
+
+  // Check if this jury is assigned to this category
+  const isJuryAssignedToCategory = state.juryAccounts.some((j) => j.id === juryId);
+
+  if (!isJuryAssignedToCategory) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center font-black p-6 text-center">
+        <div className="text-6xl mb-8 animate-pulse">⏳</div>
+        <h2 className="text-3xl italic tracking-tighter uppercase mb-4 text-white">
+          BIENTOT
+        </h2>
+        <p className="text-white/60 text-lg tracking-widest uppercase">
+          Patientez...
+        </p>
+        <p className="text-white/40 text-sm mt-6">
+          Vous n'êtes pas assigné à cette catégorie
         </p>
       </div>
     );
@@ -2412,23 +2945,37 @@ function JuryView({
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                {state.matches.map((m, i) => {
-                  const red = state.participants.find(
-                    (p) => p.id === m.redTeamId,
-                  );
-                  const blue = state.participants.find(
-                    (p) => p.id === m.blueTeamId,
-                  );
-                  const isActive = m.status === "active";
-                  const isFinishedGlobal = m.status === "finished";
-                  const localFinished = JSON.parse(
-                    localStorage.getItem(`finished_${juryId}`) || "[]",
-                  );
-                  const isFinishedByMe =
-                    (m.finishedJuries &&
+                {(() => {
+                  // Show active match first, pending in middle, finished at bottom
+                  const displayMatches = [...state.matches].sort((a, b) => {
+                    // Active match first
+                    if (a.id === state.currentMatchId) return -1;
+                    if (b.id === state.currentMatchId) return 1;
+                    // Pending matches in middle, finished at bottom
+                    const statusPriority: Record<string, number> = {
+                      "pending": 0,
+                      "active": 0,
+                      "finished": 1,
+                    };
+                    const priorityA = statusPriority[a.status] ?? 999;
+                    const priorityB = statusPriority[b.status] ?? 999;
+                    if (priorityA !== priorityB) return priorityA - priorityB;
+                    // Keep order as received from server
+                    return 0;
+                  });
+                  return displayMatches.map((m, i) => {
+                    const red = state.participants.find(
+                      (p) => p.id === m.redTeamId,
+                    );
+                    const blue = state.participants.find(
+                      (p) => p.id === m.blueTeamId,
+                    );
+                    const isActive = m.status === "active";
+                    const isFinishedGlobal = m.status === "finished";
+                    const isFinishedByMe =
+                      m.finishedJuries &&
                       Array.isArray(m.finishedJuries) &&
-                      m.finishedJuries.includes(juryId)) ||
-                    localFinished.includes(m.id);
+                      m.finishedJuries.includes(juryId);
                   const isFinished = isFinishedGlobal || isFinishedByMe;
 
                   return (
@@ -2474,7 +3021,7 @@ function JuryView({
                       </div>
 
                       <div className="flex items-center gap-4 w-full md:w-auto">
-                        {isActive && !isFinishedByMe ? (
+                        {isActive && !isFinishedByMe && red && blue ? (
                           <button
                             onClick={() => setView("vote")}
                             className="w-full md:w-auto px-8 py-3 bg-brand-red text-white font-black italic uppercase text-xs tracking-widest hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(225,29,72,0.4)] animate-pulse"
@@ -2500,7 +3047,8 @@ function JuryView({
                       </div>
                     </div>
                   );
-                })}
+                  });
+                })()}
               </div>
             </div>
           </motion.div>
@@ -2522,11 +3070,11 @@ function BracketView({ state }: { state: TournamentState }) {
       if (bracketContainerRef.current && measureRef.current) {
         const containerWidth = bracketContainerRef.current.offsetWidth;
         const containerHeight = bracketContainerRef.current.offsetHeight;
-        const contentWidth = 2200;
+        const contentWidth = 2450;
         const contentHeight = measureRef.current.offsetHeight;
 
-        const scaleW = (containerWidth - 80) / contentWidth;
-        const scaleH = (containerHeight - 80) / contentHeight;
+        const scaleW = (containerWidth - 20) / contentWidth;
+        const scaleH = (containerHeight - 20) / contentHeight;
         const scale = Math.min(1, scaleW, scaleH);
 
         setBracketScale(scale);
@@ -2547,39 +3095,45 @@ function BracketView({ state }: { state: TournamentState }) {
     <div className="h-screen bg-[#0a0807] overflow-hidden flex flex-col selection:bg-primary/30">
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] diagonal-lines z-0"></div>
 
-      <header className="px-6 md:px-12 py-3 flex justify-between items-center border-b border-white/5 bg-black/60 backdrop-blur-md z-50 shrink-0">
-        <div className="flex items-center gap-4">
-          <button
-            onClick={() => navigate("/select")}
-            className="text-white/20 hover:text-white transition-colors"
-          >
-            <Rocket size={18} />
-          </button>
-          <h2 className="text-xs md:text-sm font-black italic uppercase tracking-[0.3em] text-white/60">
-            {state.competitionName} <span className="mx-2 text-primary">/</span>{" "}
-            Bracket
-          </h2>
-        </div>
-        <div className="flex gap-4">
-          <button
-            onClick={() => navigate("/")}
-            className="px-4 py-1.5 bg-white/5 border border-white/10 text-[9px] font-black uppercase tracking-widest hover:bg-white/10 transition-all italic flex items-center gap-2"
-          >
-            <div className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse"></div>{" "}
-            Scoreboard
-          </button>
-        </div>
-      </header>
+     <header className="px-0 py-3 md:py-4 flex items-center justify-center z-50 shrink-0 bg-black/60 backdrop-blur-md border-b border-white/5 w-full">
+  <div className="flex items-center justify-between gap-4 w-full px-4 md:px-6">
+    <div className="flex items-center flex-1 gap-2 min-w-0">
+      <p className="text-xs md:text-sm font-black uppercase tracking-[0.2em] text-white/40 whitespace-nowrap flex-shrink-0">
+        {state.currentCategory || "Bracket"}
+      </p>
+      <div className="h-1 flex-1 bg-gradient-to-r from-white/60 to-transparent"></div>
+    </div>
+    <div className="flex items-center justify-center gap-4 flex-shrink-0">
+      {state.competitionLogo ? (
+        <img 
+          src={state.competitionLogo} 
+          alt={state.competitionName}
+          className="h-24 md:h-32 object-contain"
+        />
+      ) : (
+        <h1 className="text-lg md:text-2xl font-black italic uppercase tracking-tighter text-white">
+          {state.competitionName}
+        </h1>
+      )}
+    </div>
+    <div className="flex items-center flex-1 gap-2 min-w-0">
+      <div className="h-1 flex-1 bg-gradient-to-l from-primary/60 to-transparent"></div>
+      <p className="text-xs md:text-sm font-black uppercase tracking-widest text-primary whitespace-nowrap flex-shrink-0">
+        {state.tournamentSize === 16 ? "TOP 16" : state.tournamentSize === 8 ? "TOP 8" : state.tournamentSize === 4 ? "TOP 4" : "FINALE"}
+      </p>
+    </div>
+  </div>
+</header>
 
       <main
         ref={bracketContainerRef}
-        className="flex-1 relative z-10 overflow-hidden flex items-center justify-center p-2"
+        className="flex-1 relative z-10 overflow-hidden flex items-center justify-center px-1"
       >
         {/* Hidden clone for measurement */}
         <div
           ref={measureRef}
           className="absolute top-0 left-0 invisible pointer-events-none"
-          style={{ width: "2200px" }}
+          style={{ width: "2450px" }}
         >
           <BracketContent state={state} />
         </div>
@@ -2587,7 +3141,7 @@ function BracketView({ state }: { state: TournamentState }) {
         {/* Scaled visible content */}
         <div
           style={{
-            width: "2200px",
+            width: "2450px",
             transform: `scale(${bracketScale})`,
             transformOrigin: "center center",
             transition: "transform 0.4s ease-out",
@@ -2654,7 +3208,7 @@ function MatchNode({
                     onChange={(e) =>
                       onUpdateMatchTeam(match.id, side, e.target.value)
                     }
-                    className="bg-transparent text-[11px] md:text-[16px] font-black uppercase italic tracking-tight outline-none border-b border-white/10 focus:border-primary flex-1 text-white cursor-pointer hover:text-primary transition-colors appearance-none min-w-0"
+                    className="bg-transparent text-[13px] md:text-[18px] font-black uppercase italic tracking-tight outline-none border-b border-white/10 focus:border-primary flex-1 text-white cursor-pointer hover:text-primary transition-colors appearance-none min-w-0"
                   >
                     <option value="" className="bg-[#0a0807]">
                       -
@@ -2725,7 +3279,7 @@ function MatchNode({
                 </div>
               ) : (
                 <span
-                  className={`text-[11px] md:text-[16px] font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${p ? "text-white" : "text-white/10"} ${p && isWinner(p.id) ? "text-primary" : ""}`}
+                  className={`text-[13px] md:text-[18px] font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${p ? "text-white" : "text-white/10"} ${p && isWinner(p.id) ? "text-primary" : ""}`}
                 >
                   <span>{p?.name || "-"}</span>
                   {p?.countryFlag && (
@@ -2741,7 +3295,7 @@ function MatchNode({
             </div>
             <div className="flex items-center gap-1 md:gap-2 shrink-0 ml-2">
               <span
-                className={`text-[10px] md:text-[13px] font-mono font-black ${p ? "text-white/40" : "text-white/5"}`}
+                className={`text-[12px] md:text-[15px] font-mono font-black ${p ? "text-white/40" : "text-white/5"}`}
               >
                 {match?.status === "finished"
                   ? p?.id === match.redTeamId
@@ -2758,9 +3312,6 @@ function MatchNode({
           </div>
         );
       })}
-      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-[7px] md:text-[10px] font-black text-white/30 uppercase bg-[#0a0807] px-2 italic tracking-widest border border-white/5 whitespace-nowrap">
-        {match?.id || ""}
-      </div>
     </div>
   );
 }
@@ -2821,9 +3372,9 @@ function BracketContent({
           </div>
         )}
         {showSemi && (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-              <span className="absolute -top-3 left-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">
+              <span className="absolute -top-3 left-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">
                 SEMI-FINAL A
               </span>
               <MatchNode
@@ -2835,6 +3386,15 @@ function BracketContent({
                 countries={countries}
               />
             </div>
+            {getMatch("SEMI FINALE", 0)?.winnerId && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-yellow-400/60 bg-yellow-400/10 rounded-sm">
+                <span className="text-[13px] font-black italic uppercase tracking-wide text-yellow-300">
+                  {state.participants.find(p => p.id === getMatch("SEMI FINALE", 0)?.winnerId)?.name}
+                </span>
+                <span className="text-primary font-black">→</span>
+                <span className="text-[12px] font-bold text-yellow-300 uppercase">FINALE</span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2846,9 +3406,6 @@ function BracketContent({
             className="text-primary mx-auto mb-2 animate-pulse drop-shadow-[0_0_20px_rgba(255,255,255,0.3)]"
             size={48}
           />
-          <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white leading-[0.8] mb-1">
-            {state.tournamentSize === 2 ? "SUPER" : "GRANDE"}
-          </h1>
           <h1 className="text-5xl md:text-6xl font-black italic tracking-tighter text-white leading-[0.8]">
             FINALE
           </h1>
@@ -2871,10 +3428,10 @@ function BracketContent({
               )}
             </div>
             <div className="text-center space-y-2">
-              <p className="text-[11px] font-bold text-primary uppercase tracking-[0.3em] italic">
+              <p className="text-[13px] font-bold text-primary uppercase tracking-[0.3em] italic">
                 Champion
               </p>
-              <h2 className="text-3xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
+              <h2 className="text-4xl font-black italic uppercase text-white tracking-tighter truncate w-[220px] drop-shadow-md">
                 {getWinner(getMatch("FINALE", 0))?.name || "-"}
               </h2>
             </div>
@@ -2914,9 +3471,9 @@ function BracketContent({
           </div>
         )}
         {showSemi && (
-          <div className="flex flex-col">
+          <div className="flex flex-col gap-2">
             <div className="p-4 border border-primary/20 bg-primary/5 rounded-sm relative w-[260px] shadow-[0_0_30px_rgba(255,255,255,0.02)]">
-              <span className="absolute -top-3 right-6 text-[9px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">
+              <span className="absolute -top-3 right-6 text-[10px] font-black text-primary uppercase bg-[#0a0807] px-3 italic tracking-widest border border-primary/20 whitespace-nowrap">
                 SEMI-FINAL B
               </span>
               <MatchNode
@@ -2928,6 +3485,15 @@ function BracketContent({
                 countries={countries}
               />
             </div>
+            {getMatch("SEMI FINALE", 1)?.winnerId && (
+              <div className="flex items-center justify-center gap-2 px-4 py-2 border-2 border-yellow-400/60 bg-yellow-400/10 rounded-sm">
+                <span className="text-[10px] font-bold text-yellow-300 uppercase">FINALE</span>
+                <span className="text-primary font-black">←</span>
+                <span className="text-[11px] font-black italic uppercase tracking-wide text-yellow-300">
+                  {state.participants.find(p => p.id === getMatch("SEMI FINALE", 1)?.winnerId)?.name}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -2965,7 +3531,7 @@ function PublicView({ state }: { state: TournamentState }) {
 
         const scaleW = (containerWidth - 60) / contentWidth;
         const scaleH = (containerHeight - 60) / contentHeight;
-        setScale(Math.min(1, scaleW, scaleH));
+        setScale(1);
       }
     };
     updateScale();
@@ -2976,9 +3542,17 @@ function PublicView({ state }: { state: TournamentState }) {
   if (!activeMatch) {
     return (
       <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center p-12 text-center font-sans text-white">
-        <h1 className="text-4xl font-black italic text-white/10 uppercase tracking-widest leading-none mb-8">
-          {state.competitionName || "ARENA SYSTEM"}
-        </h1>
+        {state.competitionLogo ? (
+          <img 
+            src={state.competitionLogo} 
+            alt={state.competitionName}
+            className="h-40 md:h-52 object-contain mb-8"
+          />
+        ) : (
+          <h1 className="text-4xl font-black italic text-white/10 uppercase tracking-widest leading-none mb-8">
+            {state.competitionName || "ARENA SYSTEM"}
+          </h1>
+        )}
         <div className="w-16 h-16 border-2 border-white/5 border-t-white/40 rounded-full animate-spin mb-6" />
         <p className="text-white/10 font-bold uppercase tracking-[0.4em] text-[10px]">
           System Interlink Pending • Waiting for Active Battle
@@ -3022,8 +3596,19 @@ function PublicView({ state }: { state: TournamentState }) {
 
   const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
+  // Get current tournament level from active match round
+  const getCurrentTournamentLevel = () => {
+    if (!activeMatch) return "FINALES";
+    
+    const round = activeMatch.round;
+    if (round === "TOP 16") return "HUITIEMES DE FINALES";
+    if (round === "TOP 8") return "QUART DE FINALE";
+    if (round === "SEMI FINALE") return "DEMI-FINALES";
+    return "FINALES";
+  };
+
   return (
-    <div className="h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative overflow-hidden">
+    <div className="h-screen bg-[#050502] text-white font-sans selection:bg-brand-red selection:text-white flex flex-col relative overflow-hidden pb-14 md:pb-20">
       {/* Background Ambience */}
       <div className="absolute inset-0 pointer-events-none opacity-20">
         <div className="absolute -top-1/4 -left-1/4 w-full h-full bg-brand-red blur-[150px] opacity-10" />
@@ -3031,25 +3616,42 @@ function PublicView({ state }: { state: TournamentState }) {
       </div>
 
       {/* Header Bar */}
-      <header className="px-4 md:px-12 py-3 md:py-6 flex justify-between items-start z-20">
-        <div className="w-20 hidden md:block"></div>
+      <header className="px-0 py-1 md:py-2 flex items-center justify-center z-20 shrink-0">
+        <div className="flex items-center justify-between gap-1 md:gap-2 w-full px-1 sm:px-2 md:px-4">
+          <div className="flex items-center flex-1 gap-0.5 md:gap-1 min-w-0">
+            <p className="text-xs md:text-sm font-black italic uppercase tracking-widest text-white/60 whitespace-nowrap flex-shrink-0">
+              {state.currentCategory || "Battle"}
+            </p>
+            <div className="h-0.5 md:h-1 flex-1 bg-gradient-to-r from-white/60 to-transparent"></div>
+          </div>
 
-        <div className="absolute left-1/2 -translate-x-1/2 text-center top-2 md:top-4 w-full max-w-[90%] pointer-events-none flex flex-col items-center">
-          <h1 className="text-xl md:text-4xl font-black tracking-tighter leading-none italic uppercase truncate mb-4 md:mb-8 text-white/90 drop-shadow-2xl">
-            {state.competitionName}
-          </h1>
-          <div className="text-xs md:text-xl font-black italic uppercase tracking-[0.2em] text-primary bg-primary/5 border-x border-primary/40 py-1 md:py-2 px-6 md:px-12 inline-block transform -skew-x-12 shadow-[0_0_20px_rgba(255,77,0,0.1)]">
-            {activeMatch.round}
+          <div className="flex flex-col items-center pointer-events-none flex-shrink-0 px-1 md:px-2">
+            {state.competitionLogo ? (
+              <img 
+                src={state.competitionLogo} 
+                alt={state.competitionName}
+                className="h-24 md:h-32 object-contain drop-shadow-2xl"
+              />
+            ) : (
+              <h1 className="text-lg md:text-2xl font-black tracking-tighter leading-none italic uppercase truncate text-white/90 drop-shadow-2xl">
+                {state.competitionName}
+              </h1>
+            )}
+          </div>
+
+          <div className="flex items-center flex-1 gap-0.5 md:gap-1 min-w-0">
+            <div className="h-0.5 md:h-1 flex-1 bg-gradient-to-l from-primary/60 to-transparent"></div>
+            <p className="text-xs md:text-sm font-black italic uppercase tracking-widest text-primary whitespace-nowrap flex-shrink-0">
+              {state.tournamentSize === 16 ? "TOP 16" : state.tournamentSize === 8 ? "TOP 8" : state.tournamentSize === 4 ? "TOP 4" : "FINALE"}
+            </p>
           </div>
         </div>
-
-        <div className="w-20 hidden md:block"></div>
       </header>
 
       {/* Main Battle Area */}
       <main
         ref={containerRef}
-        className="flex-1 flex flex-col items-center justify-center px-4 md:px-12 z-10 overflow-hidden w-full relative"
+        className="flex-1 flex flex-col items-center justify-center px-1 sm:px-2 md:px-4 z-10 overflow-hidden w-full relative"
       >
         <div
           ref={contentRef}
@@ -3058,13 +3660,13 @@ function PublicView({ state }: { state: TournamentState }) {
             transformOrigin: "center center",
             transition: "transform 0.5s ease-out",
           }}
-          className="w-full max-w-7xl flex flex-col items-center shrink-0"
+          className="w-full max-w-6xl flex flex-col items-center shrink-0"
         >
-          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-1 md:gap-8 relative py-4">
+          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 md:gap-1 relative py-1">
             {/* Red Side */}
-            <div className="space-y-1 md:space-y-4 flex flex-col min-w-0">
-              <div className="flex justify-end gap-1.5 md:gap-6 items-end flex-1">
-                <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
+            <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
+              <div className="flex justify-end gap-0.5 md:gap-1 items-end flex-1">
+                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={redP?.photo}
                     alt={redP?.name}
@@ -3072,37 +3674,37 @@ function PublicView({ state }: { state: TournamentState }) {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
-                <div className="w-10 h-10 sm:w-24 sm:h-24 md:w-36 md:h-36 bg-brand-red flex items-center justify-center text-xl sm:text-5xl md:text-7xl font-black italic shadow-[0_0_80px_rgba(225,29,72,0.3)] border-b md:border-b-4 border-black/20 uppercase shrink-0">
+                <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-brand-red flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(225,29,72,0.3)] border-b border-black/20 uppercase shrink-0">
                   {redScore}
                 </div>
               </div>
-              <div className="bg-brand-red font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-start gap-2.5 md:gap-4 border-l-[3px] md:border-l-[8px] border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+              <div className="bg-brand-red font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-start gap-0.5 md:gap-1 border-l border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
                 {redP?.countryFlag && (
                   <img
                     src={redP.countryFlag}
                     alt={redP.countryCode}
-                    className="w-6 h-4 md:w-10 md:h-6.5 object-cover border border-white/10 shrink-0"
+                    className="w-3 h-2 md:w-4 md:h-3 object-cover border border-white/10 shrink-0"
                     referrerPolicy="no-referrer"
                   />
                 )}
-                <span className="truncate uppercase tracking-tighter">
+                <span className="truncate uppercase tracking-tighter text-[7px] md:text-sm">
                   {redP?.name || "-"}
                 </span>
               </div>
             </div>
 
             {/* VS Divider */}
-            <div className="text-lg md:text-5xl font-black italic text-white/95 px-1 pt-4 md:pt-20 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+            <div className="text-[10px] md:text-xl font-black italic text-white/95 px-0.5 pt-1 md:pt-2 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
               VS
             </div>
 
             {/* Blue Side */}
-            <div className="space-y-1 md:space-y-4 flex flex-col min-w-0">
-              <div className="flex justify-start gap-1.5 md:gap-6 items-end flex-1">
-                <div className="w-10 h-10 sm:w-24 sm:h-24 md:w-36 md:h-36 bg-brand-blue flex items-center justify-center text-xl sm:text-5xl md:text-7xl font-black italic shadow-[0_0_80px_rgba(37,99,235,0.3)] border-b md:border-b-4 border-black/20 uppercase shrink-0">
+            <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
+              <div className="flex justify-start gap-0.5 md:gap-1 items-end flex-1">
+                <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-brand-blue flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(37,99,235,0.3)] border-b border-black/20 uppercase shrink-0">
                   {blueScore}
                 </div>
-                <div className="w-16 h-12 sm:w-32 sm:h-24 md:w-48 md:h-32 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 md:p-1 relative group overflow-hidden shrink-0">
+                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={blueP?.photo}
                     alt={blueP?.name}
@@ -3111,15 +3713,15 @@ function PublicView({ state }: { state: TournamentState }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               </div>
-              <div className="bg-brand-blue font-black italic text-[10px] sm:text-xl md:text-3xl px-2 md:px-8 py-1.5 md:py-4 flex items-center justify-end gap-2.5 md:gap-4 border-r-[3px] md:border-r-[8px] border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-                <span className="truncate uppercase tracking-tighter text-right">
+              <div className="bg-brand-blue font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-end gap-0.5 md:gap-1 border-r border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                <span className="truncate uppercase tracking-tighter text-right text-[7px] md:text-sm">
                   {blueP?.name || "-"}
                 </span>
                 {blueP?.countryFlag && (
                   <img
                     src={blueP.countryFlag}
                     alt={blueP.countryCode}
-                    className="w-6 h-4 md:w-10 md:h-6.5 object-cover border border-white/10 shrink-0"
+                    className="w-3 h-2 md:w-4 md:h-3 object-cover border border-white/10 shrink-0"
                     referrerPolicy="no-referrer"
                   />
                 )}
@@ -3128,7 +3730,7 @@ function PublicView({ state }: { state: TournamentState }) {
           </div>
 
           {/* Jury Table */}
-          <div className="w-full mt-4 md:mt-12 relative overflow-hidden">
+          <div className="w-full mt-1 md:mt-2 relative overflow-hidden">
             <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
               <div
                 className="grid border-b border-white/10 min-w-full"
@@ -3140,17 +3742,17 @@ function PublicView({ state }: { state: TournamentState }) {
                   return (
                     <div
                       key={jury.id}
-                      className="py-2 md:py-3 text-center border-r border-white/5 last:border-r-0 overflow-hidden"
+                      className="py-1 md:py-1.5 text-center border-r border-white/5 last:border-r-0 overflow-hidden"
                     >
-                      <span className="text-[7px] md:text-[10px] font-black uppercase tracking-widest italic text-white/50 block truncate px-0.5">
+                      <span className="text-[6px] md:text-[8px] font-black uppercase tracking-widest italic text-white block truncate px-0.5">
                         {jury.username}
                       </span>
                     </div>
                   );
                 })}
               </div>
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex gap-2">
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex gap-1">
                   {activeMatch.votingMode === "round"
                     ? Array.from({ length: activeMatch.roundCount }).map(
                         (_, i) => {
@@ -3158,13 +3760,13 @@ function PublicView({ state }: { state: TournamentState }) {
                           return (
                             <div
                               key={i}
-                              className="flex flex-col gap-1 items-center"
+                              className="flex flex-col gap-0.5 items-center"
                             >
                               <div
-                                className={`w-8 h-8 flex items-center justify-center border ${result ? (result.red > result.blue ? "bg-brand-red border-brand-red" : result.blue > result.red ? "bg-brand-blue border-brand-blue" : "bg-white/20 border-white/40") : "bg-white/5 border-white/10"}`}
+                                className={`w-4 h-4 flex items-center justify-center border text-[6px] ${result ? (result.red > result.blue ? "bg-brand-red border-brand-red" : result.blue > result.red ? "bg-brand-blue border-brand-blue" : "bg-white/20 border-white/40") : "bg-white/5 border-white/10"}`}
                               >
                                 {result && (
-                                  <span className="text-[10px] font-black italic">
+                                  <span className="text-[6px] font-black italic">
                                     {result.red > result.blue
                                       ? "R"
                                       : result.blue > result.red
@@ -3173,7 +3775,7 @@ function PublicView({ state }: { state: TournamentState }) {
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[8px] font-black opacity-20 uppercase">
+                              <span className="text-[5px] font-black opacity-20 uppercase">
                                 R{i + 1}
                               </span>
                             </div>
@@ -3191,22 +3793,31 @@ function PublicView({ state }: { state: TournamentState }) {
                 }}
               >
                 {state.juryAccounts.map((jury, i) => {
-                  const showVotes =
+                  const hasVoted = !!state.juryVotes[jury.id];
+                  const showActualVote =
                     activeMatch.status === "finished" || activeMatch.revealed;
-                  const vote = showVotes ? state.juryVotes[jury.id] : null;
+                  const vote = showActualVote ? state.juryVotes[jury.id] : null;
+                  
+                  // Determine background color:
+                  // - If results revealed and has vote: show actual color (red/blue)
+                  // - If results NOT revealed but has voted: show WHITE
+                  // - Otherwise: show dark
+                  let bgColor = "bg-white/5";
+                  if (showActualVote && vote) {
+                    bgColor = vote === "red"
+                      ? "bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]"
+                      : "bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]";
+                  } else if (hasVoted && !showActualVote) {
+                    bgColor = "bg-white shadow-[inset_0_0_20px_rgba(255,255,255,0.3)]";
+                  }
+                  
                   return (
                     <div
                       key={jury.id}
                       className="border-r border-white/5 last:border-r-0 flex flex-col p-2 relative overflow-hidden"
                     >
                       <div
-                        className={`flex-1 transition-all duration-700 ${
-                          vote
-                            ? vote === "red"
-                              ? "bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]"
-                              : "bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]"
-                            : "bg-white/5"
-                        }`}
+                        className={`flex-1 transition-all duration-700 ${bgColor}`}
                       />
                     </div>
                   );
@@ -3221,21 +3832,21 @@ function PublicView({ state }: { state: TournamentState }) {
               <motion.div
                 initial={{ height: 0, opacity: 0, scale: 0.95 }}
                 animate={{ height: "auto", opacity: 1, scale: 1 }}
-                className="w-full max-w-7xl mt-16 overflow-hidden"
+                className="w-full max-w-6xl mt-0.5 overflow-hidden"
               >
                 <div
-                  className={`py-10 flex items-center justify-center gap-10 font-black italic text-5xl tracking-widest uppercase shadow-[0_0_120px_rgba(0,0,0,1)] relative overflow-hidden border-y-2 border-white/10
+                  className={`py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase shadow-[0_0_60px_rgba(0,0,0,1)] relative overflow-hidden border border-white/10
                 ${winner.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}
               `}
                 >
                   <div className="absolute inset-0 bg-white/10 animate-pulse mix-blend-overlay" />
-                  <div className="z-10 flex items-center gap-8 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-                    <Trophy size={48} className="text-white fill-white/20" />
-                    {winner.name} WINS
+                  <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                    <Trophy size={24} className="text-white fill-white/20" />
+                    <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
                   </div>
                   {/* Glowing Outer Light */}
                   <div
-                    className={`absolute -inset-1 blur-[40px] -z-10 opacity-60 animate-pulse ${winner.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}`}
+                    className={`absolute -inset-1 blur-[20px] -z-10 opacity-40 ${winner.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}`}
                   />
                 </div>
               </motion.div>
@@ -3243,6 +3854,13 @@ function PublicView({ state }: { state: TournamentState }) {
           </AnimatePresence>
         </div>
       </main>
+
+      {/* Tournament Progression Footer */}
+      <footer className="fixed bottom-0 left-0 right-0 bg-white text-black font-black italic uppercase tracking-tight py-1 md:py-1.5 px-2 z-30 h-auto flex items-center justify-center">
+        <div className="text-center text-[10px] md:text-xl truncate">
+          {getCurrentTournamentLevel()}
+        </div>
+      </footer>
     </div>
   );
 }

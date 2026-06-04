@@ -103,6 +103,22 @@
   }
 }
 
+/* Selects styling - Black background */
+select {
+  background-color: #000000 !important;
+  color: white !important;
+}
+
+select option {
+  background-color: #1a1a1a !important;
+  color: white !important;
+}
+
+select option:checked {
+  background: linear-gradient(#d35f17, #d35f17) !important;
+  background-color: #d35f17 !important;
+}
+
 .orientation-warning {
   display: none;
   position: fixed;
