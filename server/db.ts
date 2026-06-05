@@ -911,37 +911,8 @@ export async function finalizeJury(tournamentId: string, juryId: string, matchId
     },
   });
 
-  // Get the tournament to find out how many juries there are
-  const tournament = await prisma.tournament.findUnique({
-    where: { id: tournamentId },
-    include: {
-      event: {
-        include: {
-          juryAccounts: true,
-        },
-      },
-    },
-  });
-
-  if (!tournament) {
-    return await getTournamentState(tournamentId);
-  }
-
-  const juryCount = tournament.event.juryAccounts.length;
-
-  // Check if all juries have finalized for this match
-  const finalizedCount = await prisma.finalizedMatch.count({
-    where: { matchId },
-  });
-
-  // If all juries have finalized, mark the match as finished
-  if (finalizedCount >= juryCount) {
-    await prisma.match.update({
-      where: { id: matchId },
-      data: { status: "finished" },
-    });
-  }
-
+  // Return state - admin must manually click REVEAL/FINISH to show results
+  // No automatic status change to "finished"
   return await getTournamentState(tournamentId);
 }
 
