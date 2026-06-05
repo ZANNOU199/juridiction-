@@ -545,7 +545,7 @@ function JuryGatewayMultiEvent() {
     return (
       <div className="min-h-screen bg-surface-dark">
         {/* Header with event and category selector */}
-        <div className="border-b border-white/10 p-4 flex items-center justify-between">
+        <div className="hidden border-b border-white/10 p-4 flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-black italic text-white uppercase">
               {state.competitionName}
