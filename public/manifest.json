@@ -1,21 +1,48 @@
 {
-  "name": "Arena Tournament",
-  "short_name": "Arena",
-  "description": "Plateforme de gestion de tournois de danse",
+  "name": "Systeme de Juridiction",
+  "short_name": "ARENA",
+  "description": "Professional tournament judging and voting system",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0a0807",
-  "theme_color": "#ff4d00",
+  "orientation": "portrait-primary",
+  "theme_color": "#FF8C00",
+  "background_color": "#050502",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Jury Console",
+      "short_name": "Jury",
+      "description": "Jury voting console",
+      "url": "/jury",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3135/3135715.png",
-      "sizes": "512x512",
-      "type": "image/png"
+      "name": "Admin Console",
+      "short_name": "Admin",
+      "description": "Tournament administration",
+      "url": "/admin",
+      "icons": [
+        {
+          "src": "/favicon.svg",
+          "sizes": "any",
+          "type": "image/svg+xml"
+        }
+      ]
     }
   ]
 }

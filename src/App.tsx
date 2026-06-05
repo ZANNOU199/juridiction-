@@ -236,22 +236,14 @@ function AdminAuthGuard({ children }: { children: React.ReactNode }) {
 }
 
 // --- Manifest Manager Component ---
+// Note: Manifest is now handled by index.html meta tags
+// This component just ensures theme colors update on route changes
 function ManifestManager() {
   const location = useLocation();
 
   useEffect(() => {
-    const pathname = location.pathname;
     const themeColor = "#FF8C00";
-
-    // Build manifest URL with current pathname as parameter
-    const manifestUrl = `/api/manifest?path=${encodeURIComponent(pathname)}`;
-
-    // Update manifest link to use dynamic API endpoint
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-      manifestLink.setAttribute("href", manifestUrl);
-    }
-
+    
     // Update theme color
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
