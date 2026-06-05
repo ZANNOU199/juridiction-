@@ -235,46 +235,23 @@ function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
-// --- PWA Redirect Hook ---
-// For iOS Safari: localStorage preserves the URL when adding to home screen
-function usePWARedirect() {
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    // Check if running in standalone mode (PWA)
-    const isStandalone = 
-      (navigator as any).standalone === true ||
-      window.matchMedia("(display-mode: standalone)").matches ||
-      window.matchMedia("(display-mode: fullscreen)").matches;
-
-    if (isStandalone) {
-      // Running as PWA - try to restore saved URL
-      const savedUrl = sessionStorage.getItem("pwa_saved_url");
-      if (savedUrl && location.pathname === "/") {
-        // We're at root, redirect to saved URL
-        sessionStorage.removeItem("pwa_saved_url");
-        navigate(savedUrl, { replace: true });
-      }
-    } else {
-      // Running in browser - save current URL for PWA restore
-      if (location.pathname !== "/" && !location.pathname.startsWith("/api")) {
-        sessionStorage.setItem("pwa_saved_url", location.pathname + location.search + location.hash);
-      }
-    }
-  }, [location.pathname, navigate]);
-}
-
 // --- Manifest Manager Component ---
-// Note: Manifest is now handled by index.html meta tags
-// This component just ensures theme colors update on route changes
 function ManifestManager() {
   const location = useLocation();
-  usePWARedirect();
 
   useEffect(() => {
+    const pathname = location.pathname;
     const themeColor = "#FF8C00";
-    
+
+    // Build manifest URL with current pathname as parameter
+    const manifestUrl = `/api/manifest?path=${encodeURIComponent(pathname)}`;
+
+    // Update manifest link to use dynamic API endpoint
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) {
+      manifestLink.setAttribute("href", manifestUrl);
+    }
+
     // Update theme color
     const themeColorMeta = document.querySelector('meta[name="theme-color"]');
     if (themeColorMeta) {
@@ -664,7 +641,12 @@ function JuryGatewayMultiEvent() {
           </button>
         </form>
 
-        
+        <button
+          onClick={() => navigate("/select")}
+          className="w-full mt-4 bg-white/10 border border-white/10 text-white px-4 py-2 text-sm font-bold uppercase hover:bg-white/20"
+        >
+          Retour au Menu
+        </button>
       </div>
     </div>
   );

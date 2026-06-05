@@ -14,6 +14,50 @@ const app = express();
 // Middleware
 app.use(express.json());
 
+// ===== DYNAMIC MANIFEST ENDPOINT =====
+app.get("/manifest", (req, res) => {
+  const pathname = req.query.path as string || "/";
+  let manifestConfig: any = {
+    display: "standalone",
+    orientation: "portrait-primary",
+    theme_color: "#FF8C00",
+    background_color: "#050502",
+    icons: [
+      {
+        src: "/favicon.svg",
+        sizes: "any",
+        type: "image/svg+xml",
+        purpose: "any maskable",
+      },
+    ],
+    categories: ["sports", "productivity"],
+  };
+
+  // Determine manifest type based on pathname
+  if (pathname.startsWith("/jury")) {
+    manifestConfig.name = "Jury Console";
+    manifestConfig.short_name = "JURY";
+    manifestConfig.description = "Jury voting and judging console";
+    manifestConfig.start_url = pathname; // Use the actual current path
+    manifestConfig.scope = "/jury";
+  } else if (pathname.startsWith("/admin")) {
+    manifestConfig.name = "Systeme de Juridiction - Admin Console";
+    manifestConfig.short_name = "ADMIN";
+    manifestConfig.description = "Tournament administration and control";
+    manifestConfig.start_url = pathname;
+    manifestConfig.scope = "/admin";
+  } else {
+    manifestConfig.name = "Systeme de Juridiction - Official Judging System";
+    manifestConfig.short_name = "ARENA";
+    manifestConfig.description = "Professional tournament judging and voting system";
+    manifestConfig.start_url = "/";
+    manifestConfig.scope = "/";
+  }
+
+  res.setHeader("Content-Type", "application/manifest+json");
+  res.json(manifestConfig);
+});
+
 // Multer configuration
 const upload = multer({
   storage: multer.memoryStorage(),
