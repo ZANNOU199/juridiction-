@@ -16,7 +16,19 @@ app.use(express.json());
 
 // ===== DYNAMIC MANIFEST ENDPOINT =====
 app.get("/manifest", (req, res) => {
-  const pathname = req.query.path as string || "/";
+  // Get path from query param (fallback) or from Referer header (for Safari iOS)
+  let pathname = (req.query.path as string) || "/";
+  
+  // If no query param, try to extract from Referer header (Safari iOS compatibility)
+  if (!req.query.path && req.headers.referer) {
+    try {
+      const refererUrl = new URL(req.headers.referer);
+      pathname = refererUrl.pathname;
+    } catch (e) {
+      pathname = "/";
+    }
+  }
+  
   let manifestConfig: any = {
     display: "standalone",
     orientation: "portrait-primary",
