@@ -235,11 +235,42 @@ function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+// --- PWA Redirect Hook ---
+// For iOS Safari: localStorage preserves the URL when adding to home screen
+function usePWARedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    // Check if running in standalone mode (PWA)
+    const isStandalone = 
+      (navigator as any).standalone === true ||
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches;
+
+    if (isStandalone) {
+      // Running as PWA - try to restore saved URL
+      const savedUrl = sessionStorage.getItem("pwa_saved_url");
+      if (savedUrl && location.pathname === "/") {
+        // We're at root, redirect to saved URL
+        sessionStorage.removeItem("pwa_saved_url");
+        navigate(savedUrl, { replace: true });
+      }
+    } else {
+      // Running in browser - save current URL for PWA restore
+      if (location.pathname !== "/" && !location.pathname.startsWith("/api")) {
+        sessionStorage.setItem("pwa_saved_url", location.pathname + location.search + location.hash);
+      }
+    }
+  }, [location.pathname, navigate]);
+}
+
 // --- Manifest Manager Component ---
 // Note: Manifest is now handled by index.html meta tags
 // This component just ensures theme colors update on route changes
 function ManifestManager() {
   const location = useLocation();
+  usePWARedirect();
 
   useEffect(() => {
     const themeColor = "#FF8C00";
