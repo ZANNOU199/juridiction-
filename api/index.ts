@@ -208,6 +208,21 @@ app.post("/:eventSlug/select-category", async (req, res) => {
   }
 });
 
+// All Categories for Shared Screen
+app.get("/:eventSlug/categories", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const categories = await db.getAllCategoriesForEvent(eventSlug);
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ error: "No categories found" });
+    }
+    res.json(categories);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Create Event
 app.post("/events/create", async (req, res) => {
   try {

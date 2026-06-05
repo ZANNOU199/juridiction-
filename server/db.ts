@@ -171,6 +171,17 @@ export async function updateSelectedCategory(eventSlug: string, category: string
   });
 }
 
+export async function getAllCategoriesForEvent(eventSlug: string) {
+  const tournaments = await prisma.tournament.findMany({
+    where: {
+      event: { eventSlug },
+    },
+    select: { category: true },
+    distinct: ["category"],
+  });
+  return tournaments.map(t => t.category);
+}
+
 // ===== TOURNAMENT OPERATIONS =====
 
 export async function getTournamentState(tournamentId: string) {

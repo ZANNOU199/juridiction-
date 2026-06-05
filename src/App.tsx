@@ -365,6 +365,9 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
   }>();
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
+  const [showSharedScreen, setShowSharedScreen] = useState(() => {
+    return localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
+  });
   const navigate = useNavigate();
   
   // Use global category hook for cross-tab synchronization
@@ -464,6 +467,11 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
         }}
         eventSlug={eventSlug}
         category={currentCategory}
+        showSharedScreen={showSharedScreen}
+        onToggleSharedScreen={(value) => {
+          setShowSharedScreen(value);
+          localStorage.setItem(`sharedScreenMode_${eventSlug}`, value ? "true" : "false");
+        }}
       />
     </div>
   );
@@ -727,6 +735,10 @@ function PublicViewMultiEvent() {
   const navigate = useNavigate();
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
+  const [showSharedScreen, setShowSharedScreen] = useState(() => {
+    return localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
+  });
+  const [allCategoriesStates, setAllCategoriesStates] = useState<Record<string, TournamentState>>({});
 
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
@@ -746,8 +758,24 @@ function PublicViewMultiEvent() {
     }
   }, [currentCategory]);
 
+  // Listen for shared screen mode changes from localStorage
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const newMode = localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
+      setShowSharedScreen(newMode);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, [eventSlug]);
+
+  // Fetch single category data (normal mode)
   useEffect(() => {
     if (!eventSlug || !currentCategory) {
+      setLoading(false);
+      return;
+    }
+
+    if (showSharedScreen) {
       setLoading(false);
       return;
     }
@@ -779,9 +807,55 @@ function PublicViewMultiEvent() {
     fetchPublicData();
     const interval = setInterval(fetchPublicData, 2000);
     return () => clearInterval(interval);
-  }, [eventSlug, currentCategory]);
+  }, [eventSlug, currentCategory, showSharedScreen]);
 
-  if (loading) {
+  // Fetch all categories data (shared screen mode)
+  useEffect(() => {
+    if (!eventSlug || !showSharedScreen) {
+      return;
+    }
+
+    const fetchAllCategories = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/categories`);
+        if (res.ok) {
+          const categories = await res.json();
+          
+          // Fetch state for each category
+          const states: Record<string, TournamentState> = {};
+          for (const category of categories) {
+            try {
+              const catRes = await fetch(`/api/${eventSlug}/${category}/state`);
+              if (catRes.ok) {
+                states[category] = await catRes.json();
+              }
+            } catch (err) {
+              console.error(`Failed to fetch state for ${category}:`, err);
+            }
+          }
+          setAllCategoriesStates(states);
+        }
+      } catch (error) {
+        console.error("Failed to fetch categories:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAllCategories();
+    const interval = setInterval(fetchAllCategories, 2000);
+    return () => clearInterval(interval);
+  }, [eventSlug, showSharedScreen]);
+
+  if (loading && showSharedScreen) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  if (loading && !showSharedScreen) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
@@ -790,10 +864,43 @@ function PublicViewMultiEvent() {
   }
 
   // Display tournament data with category selector
-  if (!state) {
+  if (!state && !showSharedScreen) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="text-white">Event not configured yet</div>
+      </div>
+    );
+  }
+
+  // Shared screen mode - display all categories
+  if (showSharedScreen) {
+    const categories = Object.keys(allCategoriesStates);
+    
+    return (
+      <div className="min-h-screen bg-surface-dark overflow-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-2 auto-rows-fr">
+          {categories.length > 0 ? (
+            categories.map((cat) => (
+              <div
+                key={cat}
+                className="bg-surface-dark border border-white/10 rounded-sm overflow-hidden flex flex-col"
+              >
+                <div className="bg-white/5 p-2 border-b border-white/10">
+                  <h2 className="text-[9px] font-black tracking-widest uppercase text-white/60">
+                    {cat}
+                  </h2>
+                </div>
+                <div className="flex-1 overflow-auto">
+                  <PublicView state={{ ...allCategoriesStates[cat], currentCategory: cat }} />
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="text-white text-center col-span-full py-8">
+              Aucune catégorie
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -1036,11 +1143,15 @@ function AdminView({
   onSave,
   eventSlug,
   category,
+  showSharedScreen = false,
+  onToggleSharedScreen = () => {},
 }: {
   state: TournamentState;
   onSave: (s: TournamentState) => void;
   eventSlug?: string;
   category?: string;
+  showSharedScreen?: boolean;
+  onToggleSharedScreen?: (value: boolean) => void;
 }) {
   const navigate = useNavigate();
 
@@ -2273,9 +2384,21 @@ function AdminView({
 
         {/* Controls & Live Votes */}
         <div className="space-y-6">
-          <h3 className="text-[10px] font-black tracking-widest uppercase text-white/30">
-            Contrôle en Direct
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/30">
+              Contrôle en Direct
+            </h3>
+            <button
+              onClick={() => onToggleSharedScreen(!showSharedScreen)}
+              className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
+                showSharedScreen
+                  ? "bg-orange-500 text-black"
+                  : "bg-white/10 text-white/50 hover:bg-white/20"
+              }`}
+            >
+              ÉCRAN PARTAGÉ {showSharedScreen ? "ON" : "OFF"}
+            </button>
+          </div>
           <div className="bg-white/5 p-6 md:p-8 border border-white/10 space-y-8 rounded-sm">
             <div className="text-center">
               <p className="text-[9px] font-black tracking-[0.4em] text-white/20 uppercase mb-3">
