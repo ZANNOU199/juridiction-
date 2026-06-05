@@ -241,47 +241,15 @@ function ManifestManager() {
 
   useEffect(() => {
     const pathname = location.pathname;
-    let manifestPath = "/manifest-home.json";
-    let themeColor = "#FF8C00";
+    const themeColor = "#FF8C00";
 
-    // Determine manifest based on current route
-    if (pathname.startsWith("/jury")) {
-      manifestPath = "/manifest-jury.json";
-      
-      // For jury routes, dynamically update the start_url to current pathname
-      // This ensures PWA launches to the current event/category
-      const manifestLink = document.querySelector('link[rel="manifest"]');
-      if (manifestLink) {
-        // Store the current jury URL for PWA launch
-        sessionStorage.setItem("pwa_start_url", pathname);
-        
-        // Create a data URL with custom start_url for this specific route
-        // Note: We use fetch to get the manifest and modify it
-        fetch(manifestPath)
-          .then(res => res.json())
-          .then(manifest => {
-            // Update start_url to current pathname for this installation
-            manifest.start_url = pathname;
-            const dataUrl = `data:application/manifest+json;charset=UTF-8,${encodeURIComponent(JSON.stringify(manifest))}`;
-            manifestLink.setAttribute("href", dataUrl);
-          })
-          .catch(err => {
-            // Fallback: just use the static manifest
-            manifestLink.setAttribute("href", manifestPath);
-          });
-      }
-    } else if (pathname.startsWith("/admin")) {
-      manifestPath = "/manifest-admin.json";
-      const manifestLink = document.querySelector('link[rel="manifest"]');
-      if (manifestLink) {
-        manifestLink.setAttribute("href", manifestPath);
-      }
-    } else {
-      manifestPath = "/manifest-home.json";
-      const manifestLink = document.querySelector('link[rel="manifest"]');
-      if (manifestLink) {
-        manifestLink.setAttribute("href", manifestPath);
-      }
+    // Build manifest URL with current pathname as parameter
+    const manifestUrl = `/api/manifest?path=${encodeURIComponent(pathname)}`;
+
+    // Update manifest link to use dynamic API endpoint
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) {
+      manifestLink.setAttribute("href", manifestUrl);
     }
 
     // Update theme color
