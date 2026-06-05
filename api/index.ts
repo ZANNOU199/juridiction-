@@ -1,3 +1,4 @@
+import { VercelRequest, VercelResponse } from "@vercel/node";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -466,4 +467,11 @@ app.delete("/jury-assignments/:eventSlug/:tournamentId/:juryId", async (req, res
   }
 });
 
-export default app;
+// Vercel serverless handler
+export default function handler(req: VercelRequest, res: VercelResponse) {
+  // Remove /api prefix from the path
+  const path = req.url?.replace(/^\/api/, "") || "/";
+  req.url = path;
+  
+  return app(req as any, res as any);
+}
