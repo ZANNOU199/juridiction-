@@ -78,7 +78,7 @@ CREATE TABLE "new_Tournament" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "eventId" TEXT NOT NULL,
     "category" TEXT NOT NULL,
-    "competitionName" TEXT NOT NULL DEFAULT 'ARENA CHAMPIONSHIP',
+    "competitionName" TEXT NOT NULL DEFAULT 'Systeme de Juridiction',
     "competitionLogo" TEXT NOT NULL DEFAULT '',
     "configured" BOOLEAN NOT NULL DEFAULT false,
     "tournamentSize" INTEGER NOT NULL DEFAULT 16,

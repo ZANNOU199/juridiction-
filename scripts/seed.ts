@@ -8,7 +8,7 @@ import * as db from "../server/db.js";
 async function main() {
   console.log("🌱 Seeding database...");
 
-  // Create or get a tournament for "Arena Championship" event with "B-BOY" category
+  // Create or get a tournament for "Systeme de Juridiction" event with "B-BOY" category
   const tournament = await db.createOrGetTournament("arenachampionship", "B-BOY");
   if (!tournament?.id) {
     throw new Error("Failed to create tournament");
@@ -40,7 +40,7 @@ async function main() {
 
   // Configure tournament
   const state = await db.configureTournament(tournamentId, {
-    competitionName: "ARENA CHAMPIONSHIP",
+    competitionName: "Systeme de Juridiction",
     competitionLogo: "",
     participants,
     juryAccounts,

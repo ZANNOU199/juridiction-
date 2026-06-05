@@ -1,8 +1,8 @@
 {
-  "name": "ARENA Judge - Jury Console",
+  "name": "Jury Console",
   "short_name": "JURY",
   "description": "Jury voting and judging console",
-  "start_url": "/jury/login",
+  "start_url": "/jury",
   "scope": "/jury",
   "display": "standalone",
   "orientation": "portrait-primary",

@@ -1,7 +1,7 @@
 const http = require('http');
 
 const data = JSON.stringify({
-  competitionName: 'ARENA CHAMPIONSHIP',
+  competitionName: 'Systeme de Juridiction',
   competitionLogo: '',
   tournamentSize: 16,
   juryAccounts: [

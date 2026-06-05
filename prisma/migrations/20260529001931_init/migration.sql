@@ -1,7 +1,7 @@
 -- CreateTable
 CREATE TABLE "Tournament" (
     "id" TEXT NOT NULL PRIMARY KEY,
-    "competitionName" TEXT NOT NULL DEFAULT 'ARENA CHAMPIONSHIP',
+    "competitionName" TEXT NOT NULL DEFAULT 'Systeme de Juridiction',
     "competitionLogo" TEXT NOT NULL DEFAULT '',
     "tournamentSize" INTEGER NOT NULL DEFAULT 16,
     "configured" BOOLEAN NOT NULL DEFAULT false,

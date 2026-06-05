@@ -9,7 +9,7 @@ datasource db {
 
 model Event {
   id                String   @id @default(cuid())
-  eventName         String   // ex: "ARENA CHAMPIONSHIP"
+  eventName         String   // ex: "Systeme de Juridiction"
   eventSlug         String   @unique // ex: "arenachampionship"
   eventLogo         String   @default("")
   selectedCategory  String   @default("B-BOY") // Category sync across browsers
@@ -25,7 +25,7 @@ model Tournament {
   eventId         String
   event           Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   category        String   // ex: "B-BOY", "B-GIRL", "POPPING"
-  competitionName String   @default("ARENA CHAMPIONSHIP")
+  competitionName String   @default("Systeme de Juridiction")
   competitionLogo String   @default("")
   configured      Boolean  @default(false)
   tournamentSize  Int      @default(16)

@@ -400,7 +400,7 @@ export function AdminHub() {
                   type="text"
                   value={newEventName}
                   onChange={(e) => setNewEventName(e.target.value)}
-                  placeholder="e.g. Arena Championship 2026"
+                  placeholder="e.g. Systeme de Juridiction 2026"
                   className="w-full bg-white/5 border border-white/10 text-white px-4 py-2 placeholder-white/20 focus:outline-none focus:border-white/30"
                 />
               </div>

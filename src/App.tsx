@@ -641,12 +641,7 @@ function JuryGatewayMultiEvent() {
           </button>
         </form>
 
-        <button
-          onClick={() => navigate("/select")}
-          className="w-full mt-4 bg-white/10 border border-white/10 text-white px-4 py-2 text-sm font-bold uppercase hover:bg-white/20"
-        >
-          Retour au Menu
-        </button>
+        
       </div>
     </div>
   );

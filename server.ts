@@ -207,7 +207,7 @@ app.post("/api/admin/:eventSlug/:category/configure", async (req, res) => {
     }
 
     const state = await db.configureTournament(tournament.id, {
-      competitionName: competitionName || "ARENA CHAMPIONSHIP",
+      competitionName: competitionName || "Systeme de Juridiction",
       competitionLogo: competitionLogo || "",
       participants: participants || [],
       juryAccounts: juryAccounts || [],

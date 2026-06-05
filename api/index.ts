@@ -35,7 +35,7 @@ app.get("/manifest", (req, res) => {
 
   // Determine manifest type based on pathname
   if (pathname.startsWith("/jury")) {
-    manifestConfig.name = "Systeme de Juridiction - Jury Console";
+    manifestConfig.name = "Jury Console";
     manifestConfig.short_name = "JURY";
     manifestConfig.description = "Jury voting and judging console";
     manifestConfig.start_url = pathname; // Use the actual current path

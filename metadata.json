@@ -1,5 +1,5 @@
 {
-  "name": "Arena Judge Pro",
+  "name": "Systeme de Juridiction Pro",
   "description": "Professional battle judging system for elite competitions featuring real-time jury tallying and high-impact result displays.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
