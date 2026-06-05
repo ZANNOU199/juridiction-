@@ -113,6 +113,30 @@ app.get("/events/:eventSlug", async (req, res) => {
   }
 });
 
+// Default State (for polling)
+app.get("/state", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.query;
+    if (eventSlug && category) {
+      const tournament = await db.getTournamentStateForEvent(eventSlug as string, category as string);
+      if (tournament) {
+        return res.json(tournament);
+      }
+    }
+    // Return default empty state if no params or not found
+    res.json({
+      matches: [],
+      participants: [],
+      juryAccounts: [],
+      currentMatchId: null,
+      revealedMatches: {},
+    });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Selected Category
 app.get("/:eventSlug/selected-category", async (req, res) => {
   try {
