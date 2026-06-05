@@ -1,0 +1,20 @@
+{
+  "name": "ARENA Judge - Admin Console",
+  "short_name": "ADMIN",
+  "description": "Tournament administration and control",
+  "start_url": "/select",
+  "scope": "/admin",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#FF8C00",
+  "background_color": "#050502",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "productivity"]
+}

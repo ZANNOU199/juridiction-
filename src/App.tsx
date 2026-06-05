@@ -6,6 +6,7 @@ import {
   useNavigate,
   Navigate,
   useParams,
+  useLocation,
 } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -234,6 +235,40 @@ function AdminAuthGuard({ children }: { children: React.ReactNode }) {
   );
 }
 
+// --- Manifest Manager Component ---
+function ManifestManager() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const pathname = location.pathname;
+    let manifestPath = "/manifest-home.json";
+    let themeColor = "#FF8C00";
+
+    // Determine manifest based on current route
+    if (pathname.startsWith("/jury")) {
+      manifestPath = "/manifest-jury.json";
+    } else if (pathname.startsWith("/admin")) {
+      manifestPath = "/manifest-admin.json";
+    } else {
+      manifestPath = "/manifest-home.json";
+    }
+
+    // Update manifest link
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (manifestLink) {
+      manifestLink.setAttribute("href", manifestPath);
+    }
+
+    // Update theme color
+    const themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) {
+      themeColorMeta.setAttribute("content", themeColor);
+    }
+  }, [location.pathname]);
+
+  return null;
+}
+
 // --- Main App ---
 
 export default function App() {
@@ -285,6 +320,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
+      <ManifestManager />
       <Routes>
         {/* Default route redirects to admin */}
         <Route path="/" element={<Navigate to="/admin" replace />} />

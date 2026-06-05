@@ -1,0 +1,16 @@
+<svg viewBox="0 0 192 192" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      @media (prefers-color-scheme: dark) {
+        rect { fill: #FF8C00; }
+        text { fill: #000000; }
+      }
+      @media (prefers-color-scheme: light) {
+        rect { fill: #FF8C00; }
+        text { fill: #000000; }
+      }
+    </style>
+  </defs>
+  <rect width="192" height="192" fill="#FF8C00" rx="45"/>
+  <text x="96" y="145" font-family="Arial, sans-serif" font-size="120" font-weight="900" fill="#000000" text-anchor="middle" letter-spacing="-8">A</text>
+</svg>

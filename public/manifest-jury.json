@@ -1,0 +1,20 @@
+{
+  "name": "ARENA Judge - Jury Console",
+  "short_name": "JURY",
+  "description": "Jury voting and judging console",
+  "start_url": "/jury/login",
+  "scope": "/jury",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#FF8C00",
+  "background_color": "#050502",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["sports", "productivity"]
+}
