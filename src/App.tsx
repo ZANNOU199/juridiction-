@@ -142,7 +142,7 @@ interface TournamentState {
 }
 
 const DEFAULT_STATE: TournamentState = {
-  competitionName: "ARENA CHAMPIONSHIP",
+  competitionName: "Systeme de Juridiction",
   competitionLogo: "",
   participants: DEFAULT_PARTICIPANTS,
   juryAccounts: [],
@@ -247,16 +247,41 @@ function ManifestManager() {
     // Determine manifest based on current route
     if (pathname.startsWith("/jury")) {
       manifestPath = "/manifest-jury.json";
+      
+      // For jury routes, dynamically update the start_url to current pathname
+      // This ensures PWA launches to the current event/category
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        // Store the current jury URL for PWA launch
+        sessionStorage.setItem("pwa_start_url", pathname);
+        
+        // Create a data URL with custom start_url for this specific route
+        // Note: We use fetch to get the manifest and modify it
+        fetch(manifestPath)
+          .then(res => res.json())
+          .then(manifest => {
+            // Update start_url to current pathname for this installation
+            manifest.start_url = pathname;
+            const dataUrl = `data:application/manifest+json;charset=UTF-8,${encodeURIComponent(JSON.stringify(manifest))}`;
+            manifestLink.setAttribute("href", dataUrl);
+          })
+          .catch(err => {
+            // Fallback: just use the static manifest
+            manifestLink.setAttribute("href", manifestPath);
+          });
+      }
     } else if (pathname.startsWith("/admin")) {
       manifestPath = "/manifest-admin.json";
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.setAttribute("href", manifestPath);
+      }
     } else {
       manifestPath = "/manifest-home.json";
-    }
-
-    // Update manifest link
-    const manifestLink = document.querySelector('link[rel="manifest"]');
-    if (manifestLink) {
-      manifestLink.setAttribute("href", manifestPath);
+      const manifestLink = document.querySelector('link[rel="manifest"]');
+      if (manifestLink) {
+        manifestLink.setAttribute("href", manifestPath);
+      }
     }
 
     // Update theme color
