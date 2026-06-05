@@ -1,7 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasources: {
+    db: {
+      url: process.env.DATABASE_URL,
+    },
+  },
+  transactionOptions: {
+    timeout: 30000,
+  },
+});
 
 // ===== UTILITY FUNCTIONS =====
 
