@@ -3855,10 +3855,10 @@ function PublicView({ state }: { state: TournamentState }) {
                   <DancerPhoto
                     photoUrl={winner.photo}
                     alt={winner.name}
-                    className="w-full h-full object-contain absolute inset-0"
+                    className="w-full h-full object-contain absolute inset-0 z-10"
                   />
                   {/* Overlay with text - directly on image */}
-                  <div className="absolute bottom-0 left-0 right-0 text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded-t">
+                  <div className="absolute bottom-0 left-0 right-0 z-20 text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded-t">
                     <p className="text-white/70 text-sm md:text-base font-black uppercase tracking-widest mb-1 md:mb-2">
                       Champion
                     </p>
