@@ -2768,6 +2768,8 @@ function JuryView({
   }, [state.currentMatchId, state.matches, view]);
   const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const oldVoteRef = useRef<"red" | "blue" | undefined>(undefined);
   const navigate = useNavigate();
 
   // Redirect to vote if we were already voting or if a match is active and we want to auto-join?
@@ -2777,7 +2779,15 @@ function JuryView({
   // Reset local state when round or match changes
   useEffect(() => {
     setIsChanging(false);
+    if (timerRef.current) clearTimeout(timerRef.current);
   }, [state.currentMatchId, currentMatch?.currentRound]);
+
+  // Cleanup timer on component unmount
+  useEffect(() => {
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current);
+    };
+  }, []);
 
   const redP = state.participants.find((p) => p.id === currentMatch?.redTeamId);
   const blueP = state.participants.find(
@@ -2861,6 +2871,12 @@ function JuryView({
   const castVote = async (vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
+    // If we're in changing mode, clear the timer (new vote was cast)
+    if (isChanging && timerRef.current) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+
     try {
       const res = await fetch(buildApiUrl("/vote"), {
         method: "POST",
@@ -2872,7 +2888,10 @@ function JuryView({
         const data = await res.json();
         if (data.state) {
           onSave(data.state);
-          setIsChanging(false);
+          // If we were changing, restore isChanging to false to show confirmation overlay with new vote
+          if (isChanging) {
+            setIsChanging(false);
+          }
           // Vote is now recorded - jury must click VALIDER button to finalize
         }
       } else {
@@ -2881,6 +2900,20 @@ function JuryView({
     } catch (err) {
       console.error("Server error during vote:", err);
     }
+  };
+
+  const handleChangeVote = () => {
+    // Save the current vote before allowing changes
+    oldVoteRef.current = myVote;
+    setIsChanging(true);
+
+    // Start 10-second timer
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      // If timer expires and still changing, reset to show confirmation with old vote
+      setIsChanging(false);
+      timerRef.current = null;
+    }, 10000);
   };
 
   if (!state.configured) {
@@ -3152,7 +3185,7 @@ function JuryView({
                     </button>
 
                     <button
-                      onClick={() => setIsChanging(true)}
+                      onClick={handleChangeVote}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
                     >
                       Changer
