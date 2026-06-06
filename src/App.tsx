@@ -1812,14 +1812,14 @@ function AdminView({
     try {
       const res = await fetch(buildAdminUrl("/reset"), { method: "POST" });
       if (res.ok) {
-        const data = await res.json();
-        onSave(data.state || DEFAULT_STATE);
+        // Force page reload to clear all UI caches and old match data
+        window.location.reload();
       } else {
-        onSave(DEFAULT_STATE);
+        window.location.reload();
       }
     } catch (e) {
       console.warn("Server sync failed during reset");
-      onSave(DEFAULT_STATE);
+      window.location.reload();
     }
   };
 
@@ -1833,6 +1833,8 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during revealAllFinals:", e);
+    } finally {
+      setLoadingRevealAll(false);
     }
   };
 
@@ -1846,6 +1848,8 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during finishAllFinals:", e);
+    } finally {
+      setLoadingFinishAll(false);
     }
   };
 
