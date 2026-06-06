@@ -3858,7 +3858,7 @@ function PublicView({ state }: { state: TournamentState }) {
                     className="w-full h-full object-contain absolute inset-0"
                   />
                   {/* Overlay with text */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-end p-4 md:p-6">
+                  <div className="absolute inset-0 flex flex-col items-center justify-end p-4 md:p-6 pb-3 md:pb-4">
                     <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
                       <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
                         Champion
