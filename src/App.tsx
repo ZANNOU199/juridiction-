@@ -2752,47 +2752,28 @@ function JuryView({
   };
   const currentMatch = state.matches.find((m) => m.id === state.currentMatchId);
   const [view, setView] = useState<"list" | "vote">("list");
+  const prevMatchIdRef = useRef<string | null>(state.currentMatchId);
 
   useEffect(() => {
     // Auto-exit vote console if match is cancelled or finished by admin
-    // Also reset isChanging flag when match changes
     if (view === "vote") {
       const liveMatch = state.matches.find(
         (m) => m.id === state.currentMatchId,
       );
       if (!liveMatch || liveMatch.status !== "active") {
         setView("list");
+        setIsChanging(false);
       }
     }
-    setIsChanging(false);
+    // Only reset isChanging if match ID has actually changed (not on every state sync)
+    if (state.currentMatchId !== prevMatchIdRef.current) {
+      setIsChanging(false);
+      prevMatchIdRef.current = state.currentMatchId;
+    }
   }, [state.currentMatchId, state.matches, view]);
   const [isChanging, setIsChanging] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
   const myVote = state.juryVotes[juryId];
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const oldVoteRef = useRef<"red" | "blue" | undefined>(undefined);
   const navigate = useNavigate();
-
-  // Redirect to vote if we were already voting or if a match is active and we want to auto-join?
-  // User said: "si le jury se connecte il doit avoir la liste des battles"
-  // So we stay in 'list' by default.
-
-  // Reset local state when round or match changes
-  useEffect(() => {
-    setIsChanging(false);
-    if (timerRef.current) clearTimeout(timerRef.current);
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    setTimeLeft(0);
-  }, [state.currentMatchId, currentMatch?.currentRound]);
-
-  // Cleanup timer on component unmount
-  useEffect(() => {
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-    };
-  }, []);
 
   const redP = state.participants.find((p) => p.id === currentMatch?.redTeamId);
   const blueP = state.participants.find(
@@ -2876,18 +2857,6 @@ function JuryView({
   const castVote = async (vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
-    // If we're in changing mode, clear the timers (new vote was cast)
-    if (isChanging) {
-      if (timerRef.current) {
-        clearTimeout(timerRef.current);
-        timerRef.current = null;
-      }
-      if (countdownRef.current) {
-        clearInterval(countdownRef.current);
-        countdownRef.current = null;
-      }
-    }
-
     try {
       const res = await fetch(buildApiUrl("/vote"), {
         method: "POST",
@@ -2899,11 +2868,7 @@ function JuryView({
         const data = await res.json();
         if (data.state) {
           onSave(data.state);
-          // If we were changing, restore isChanging to false to show confirmation overlay with new vote
-          if (isChanging) {
-            setIsChanging(false);
-            setTimeLeft(0);
-          }
+          setIsChanging(false);
           // Vote is now recorded - jury must click VALIDER button to finalize
         }
       } else {
@@ -2912,36 +2877,6 @@ function JuryView({
     } catch (err) {
       console.error("Server error during vote:", err);
     }
-  };
-
-  const handleChangeVote = () => {
-    // Save the current vote before allowing changes
-    oldVoteRef.current = myVote;
-    setIsChanging(true);
-    setTimeLeft(15); // 15 seconds
-
-    // Start countdown interval
-    if (countdownRef.current) clearInterval(countdownRef.current);
-    countdownRef.current = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          // Time's up
-          if (countdownRef.current) clearInterval(countdownRef.current);
-          setIsChanging(false);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-
-    // Start 15-second timer as backup
-    if (timerRef.current) clearTimeout(timerRef.current);
-    timerRef.current = setTimeout(() => {
-      setIsChanging(false);
-      if (countdownRef.current) clearInterval(countdownRef.current);
-      setTimeLeft(0);
-      timerRef.current = null;
-    }, 15000);
   };
 
   if (!state.configured) {
@@ -3063,7 +2998,6 @@ function JuryView({
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none relative overflow-hidden group
                 ${isChanging && myVote === "red" ? "ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]" : ""}
-                ${isChanging && myVote !== "red" ? "z-10 ring-4 ring-white/20 brightness-110" : ""}
                 ${myVote && !isChanging ? (myVote === "red" ? "opacity-100 rounded-3xl" : "opacity-20 scale-90 rounded-3xl") : "p-4 active:scale-95 active:brightness-90"}
               `}
               style={{ backgroundColor: "rgb(225, 29, 72)" }}
@@ -3119,7 +3053,6 @@ function JuryView({
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
                 ${isChanging && myVote === "blue" ? "ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]" : ""}
-                ${isChanging && myVote !== "blue" ? "z-10 ring-4 ring-white/20 brightness-110" : ""}
                 ${myVote && !isChanging ? (myVote === "blue" ? "opacity-100 rounded-3xl" : "opacity-20 scale-90 rounded-3xl") : "p-4 active:scale-95 active:brightness-90 border-l-2"}
               `}
               style={{ backgroundColor: "rgb(37, 99, 235)" }}
@@ -3213,7 +3146,7 @@ function JuryView({
                     </button>
 
                     <button
-                      onClick={handleChangeVote}
+                      onClick={() => setIsChanging(true)}
                       className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-white/40 hover:text-white text-[9px] font-black uppercase tracking-widest transition-all"
                     >
                       Changer
@@ -3224,36 +3157,12 @@ function JuryView({
             )}
 
             {isChanging && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center z-40 pointer-events-none">
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.8, opacity: 0 }}
-                  className="flex flex-col items-center gap-4 pointer-events-auto"
-                >
-                  <button
-                    onClick={() => {
-                      // Clean up timers before cancelling
-                      if (timerRef.current) clearTimeout(timerRef.current);
-                      if (countdownRef.current) clearInterval(countdownRef.current);
-                      setIsChanging(false);
-                      setTimeLeft(0);
-                    }}
-                    className="bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black rounded-full hover:scale-105 transition-all"
-                  >
-                    Annuler le changement
-                  </button>
-                  
-                  <div className="bg-black/90 backdrop-blur-md border-2 border-white/30 px-6 py-3 rounded-full flex items-center gap-3">
-                    <span className="text-white font-black text-sm">CHOISIR DANS:</span>
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ${
-                      timeLeft <= 5 ? "bg-brand-red text-white shadow-[0_0_20px_rgba(225,29,72,0.6)]" : "bg-white/20 text-white"
-                    }`}>
-                      {timeLeft}s
-                    </div>
-                  </div>
-                </motion.div>
-              </div>
+              <button
+                onClick={() => setIsChanging(false)}
+                className="absolute top-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black rounded-full"
+              >
+                Annuler le changement
+              </button>
             )}
           </motion.div>
         ) : (
