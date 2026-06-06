@@ -3002,6 +3002,7 @@ function JuryView({
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none relative overflow-hidden group
                 ${isChanging && myVote === "red" ? "ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(225,29,72,0.8)]" : ""}
+                ${isChanging && myVote !== "red" ? "z-10 ring-4 ring-white/20 brightness-110" : ""}
                 ${myVote && !isChanging ? (myVote === "red" ? "opacity-100 rounded-3xl" : "opacity-20 scale-90 rounded-3xl") : "p-4 active:scale-95 active:brightness-90"}
               `}
               style={{ backgroundColor: "rgb(225, 29, 72)" }}
@@ -3057,6 +3058,7 @@ function JuryView({
               disabled={!!myVote && !isChanging}
               className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
                 ${isChanging && myVote === "blue" ? "ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(37,99,235,0.8)]" : ""}
+                ${isChanging && myVote !== "blue" ? "z-10 ring-4 ring-white/20 brightness-110" : ""}
                 ${myVote && !isChanging ? (myVote === "blue" ? "opacity-100 rounded-3xl" : "opacity-20 scale-90 rounded-3xl") : "p-4 active:scale-95 active:brightness-90 border-l-2"}
               `}
               style={{ backgroundColor: "rgb(37, 99, 235)" }}
