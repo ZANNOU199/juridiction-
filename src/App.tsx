@@ -878,7 +878,7 @@ function PublicViewMultiEvent() {
     
     return (
       <div className="min-h-screen bg-surface-dark overflow-auto">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 p-2 auto-rows-fr">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 auto-rows-fr">
           {categories.length > 0 ? (
             categories.map((cat) => (
               <div
