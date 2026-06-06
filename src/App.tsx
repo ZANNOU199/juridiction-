@@ -371,7 +371,7 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
 
-  // Fetch initial shared screen mode from API
+  // Fetch initial shared screen mode from API + polling
   useEffect(() => {
     if (!eventSlug) return;
     const fetchSharedScreenMode = async () => {
@@ -386,6 +386,9 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
       }
     };
     fetchSharedScreenMode();
+    // Poll every 500ms to stay in sync instantly with other admin tabs
+    const interval = setInterval(fetchSharedScreenMode, 500);
+    return () => clearInterval(interval);
   }, [eventSlug]);
 
   // Sync URL category with global state
@@ -793,8 +796,8 @@ function PublicViewMultiEvent() {
     };
     
     fetchSharedScreenMode();
-    // Poll every 2 seconds to sync with admin toggle
-    const interval = setInterval(fetchSharedScreenMode, 2000);
+    // Poll every 500ms to sync with admin toggle instantly
+    const interval = setInterval(fetchSharedScreenMode, 500);
     return () => clearInterval(interval);
   }, [eventSlug]);
 
@@ -3852,24 +3855,27 @@ function PublicView({ state }: { state: TournamentState }) {
                   <DancerPhoto
                     photoUrl={winner.photo}
                     alt={winner.name}
-                    className="w-full h-full object-contain"
+                    className="w-full h-full object-contain absolute inset-0"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-3 md:p-6 text-center">
-                    <p className="text-white/40 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
-                      Champion
-                    </p>
-                    <h2 className="text-white font-black italic text-xl md:text-4xl uppercase tracking-tight drop-shadow-lg line-clamp-2">
-                      {winner.name}
-                    </h2>
-                    {winner.countryFlag && (
-                      <img
-                        src={winner.countryFlag}
-                        alt={winner.countryCode}
-                        className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
+                  {/* Overlay with text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6">
+                    <div className="flex-1" />
+                    <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
+                      <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
+                        Champion
+                      </p>
+                      <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+                        {winner.name}
+                      </h2>
+                      {winner.countryFlag && (
+                        <img
+                          src={winner.countryFlag}
+                          alt={winner.countryCode}
+                          className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
