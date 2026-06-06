@@ -11,9 +11,6 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// In-memory storage for shared screen mode state
-const sharedScreenMode = new Map<string, boolean>();
-
 // Middleware
 app.use(express.json());
 
@@ -230,8 +227,8 @@ app.get("/:eventSlug/categories", async (req, res) => {
 app.get("/:eventSlug/shared-screen-mode", async (req, res) => {
   try {
     const { eventSlug } = req.params;
-    const mode = sharedScreenMode.get(eventSlug) ?? false;
-    res.json({ sharedScreenMode: mode });
+    const sharedScreenMode = await db.getSharedScreenMode(eventSlug);
+    res.json({ sharedScreenMode });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -246,7 +243,7 @@ app.post("/:eventSlug/shared-screen-mode", async (req, res) => {
     if (typeof mode !== "boolean") {
       return res.status(400).json({ error: "Mode must be a boolean" });
     }
-    sharedScreenMode.set(eventSlug, mode);
+    await db.setSharedScreenMode(eventSlug, mode);
     res.json({ success: true, sharedScreenMode: mode });
   } catch (error) {
     console.error("Error:", error);

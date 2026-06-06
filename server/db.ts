@@ -182,6 +182,21 @@ export async function getAllCategoriesForEvent(eventSlug: string) {
   return tournaments.map(t => t.category);
 }
 
+export async function getSharedScreenMode(eventSlug: string) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+    select: { sharedScreenMode: true },
+  });
+  return event?.sharedScreenMode ?? false;
+}
+
+export async function setSharedScreenMode(eventSlug: string, mode: boolean) {
+  await prisma.event.update({
+    where: { eventSlug },
+    data: { sharedScreenMode: mode },
+  });
+}
+
 // ===== TOURNAMENT OPERATIONS =====
 
 export async function getTournamentState(tournamentId: string) {
