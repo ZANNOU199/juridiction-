@@ -4043,7 +4043,7 @@ function PublicView({ state }: { state: TournamentState }) {
 
           {/* Winner Banner */}
           <AnimatePresence>
-            {winner && (
+            {winner && !(activeMatch.round === "FINALE" && activeMatch.status === "finished") && (
               <motion.div
                 initial={{ height: 0, opacity: 0, scale: 0.95 }}
                 animate={{ height: "auto", opacity: 1, scale: 1 }}
