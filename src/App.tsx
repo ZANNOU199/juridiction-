@@ -3858,20 +3858,19 @@ function PublicView({ state }: { state: TournamentState }) {
                     className="w-full h-full object-contain absolute inset-0"
                   />
                   {/* Overlay with text */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6">
-                    <div className="flex-1" />
-                    <div className="w-full text-center bg-black/70 backdrop-blur-sm p-4 md:p-6 rounded">
-                      <p className="text-white/70 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
+                  <div className="absolute inset-0 flex flex-col items-center justify-end p-2 md:p-3">
+                    <div className="w-full text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded">
+                      <p className="text-white/70 text-sm md:text-base font-black uppercase tracking-widest mb-1 md:mb-2">
                         Champion
                       </p>
-                      <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight line-clamp-2">
+                      <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight break-words px-1">
                         {winner.name}
                       </h2>
                       {winner.countryFlag && (
                         <img
                           src={winner.countryFlag}
                           alt={winner.countryCode}
-                          className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                          className="w-8 h-6 md:w-12 md:h-10 object-cover border border-white/20 mt-2 md:mt-3 mx-auto rounded"
                           referrerPolicy="no-referrer"
                         />
                       )}
