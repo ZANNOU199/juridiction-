@@ -1833,8 +1833,6 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during revealAllFinals:", e);
-    } finally {
-      setLoadingRevealAll(false);
     }
   };
 
@@ -1848,8 +1846,6 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during finishAllFinals:", e);
-    } finally {
-      setLoadingFinishAll(false);
     }
   };
 
