@@ -3851,14 +3851,14 @@ function PublicView({ state }: { state: TournamentState }) {
           {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
             <div className="w-full flex flex-col items-center justify-center">
               <div className="w-full max-w-sm md:max-w-2xl flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
-                <div className="w-full bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
+                <div className="w-full bg-white/5 border-2 border-white/20 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
                   <DancerPhoto
                     photoUrl={winner.photo}
                     alt={winner.name}
                     className="w-full h-full object-contain absolute inset-0 z-10"
                   />
                   {/* Overlay with text - directly on image */}
-                  <div className="absolute bottom-0 left-0 right-0 z-20 text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded-t">
+                  <div className="absolute left-0 right-0 bottom-0 z-20 text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded-t max-h-[40%] flex flex-col justify-end">
                     <p className="text-white/70 text-sm md:text-base font-black uppercase tracking-widest mb-1 md:mb-2">
                       Champion
                     </p>
