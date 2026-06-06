@@ -10,8 +10,6 @@ import {
 } from "react-router-dom";
 import { motion, AnimatePresence } from "motion/react";
 import {
-  Shield,
-  Rocket,
   Trophy,
   CheckCircle2,
   LogOut,
@@ -3021,9 +3019,6 @@ function JuryView({
               <div
                 className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? "px-4 py-2 scale-75" : "px-4 py-3 sm:px-6 sm:py-4"}`}
               >
-                <Shield
-                  className={`${myVote && !isChanging ? "w-8 h-8 mb-1" : "w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide"} text-white drop-shadow-lg`}
-                />
                 <h2
                   className={`${myVote && !isChanging ? "text-lg sm:text-xl" : "text-xl md:text-4xl short-screen-text-sm"} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}
                 >
@@ -3076,9 +3071,6 @@ function JuryView({
               <div
                 className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? "px-4 py-2 scale-75" : "px-4 py-3 sm:px-6 sm:py-4"}`}
               >
-                <Rocket
-                  className={`${myVote && !isChanging ? "w-8 h-8 mb-1" : "w-10 h-10 md:w-16 md:h-16 mb-2 md:mb-4 short-screen-hide"} text-white drop-shadow-lg`}
-                />
                 <h2
                   className={`${myVote && !isChanging ? "text-lg sm:text-xl" : "text-xl md:text-4xl short-screen-text-sm"} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}
                 >
