@@ -3857,24 +3857,22 @@ function PublicView({ state }: { state: TournamentState }) {
                     alt={winner.name}
                     className="w-full h-full object-contain absolute inset-0"
                   />
-                  {/* Overlay with text */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-end p-2 md:p-2 pb-0">
-                    <div className="w-full text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded -mb-1 md:mb-0">
-                      <p className="text-white/70 text-sm md:text-base font-black uppercase tracking-widest mb-1 md:mb-2">
-                        Champion
-                      </p>
-                      <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight break-words px-1">
-                        {winner.name}
-                      </h2>
-                      {winner.countryFlag && (
-                        <img
-                          src={winner.countryFlag}
-                          alt={winner.countryCode}
-                          className="w-8 h-6 md:w-12 md:h-10 object-cover border border-white/20 mt-2 md:mt-3 mx-auto rounded"
-                          referrerPolicy="no-referrer"
-                        />
-                      )}
-                    </div>
+                  {/* Overlay with text - directly on image */}
+                  <div className="absolute bottom-0 left-0 right-0 text-center bg-black/80 backdrop-blur-sm p-3 md:p-5 rounded-t">
+                    <p className="text-white/70 text-sm md:text-base font-black uppercase tracking-widest mb-1 md:mb-2">
+                      Champion
+                    </p>
+                    <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight break-words px-1">
+                      {winner.name}
+                    </h2>
+                    {winner.countryFlag && (
+                      <img
+                        src={winner.countryFlag}
+                        alt={winner.countryCode}
+                        className="w-8 h-6 md:w-12 md:h-10 object-cover border border-white/20 mt-2 md:mt-3 mx-auto rounded"
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
                   </div>
                 </div>
               </div>
