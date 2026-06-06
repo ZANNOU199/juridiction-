@@ -3848,33 +3848,30 @@ function PublicView({ state }: { state: TournamentState }) {
           className="w-full max-w-6xl flex flex-col items-center shrink-0"
         >
           {/* Final Match Victory Display */}
-          {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
-            <div className="w-full flex flex-col items-center justify-center">
-              <div className="w-full max-w-xs md:max-w-lg flex items-center justify-center p-0 relative group overflow-hidden rounded-lg shadow-2xl">
-                <div className="w-full bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
-                  <DancerPhoto
-                    photoUrl={winner.photo}
-                    alt={winner.name}
-                    className="w-full h-full object-cover absolute inset-0"
-                  />
-                  {/* Overlay with text */}
-                 <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
-  <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
-    {winner.name}
-  </h2>
-  {winner.countryFlag && (
-    <img
-      src={winner.countryFlag}
-      alt={winner.countryCode}
-      className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
-      referrerPolicy="no-referrer"
-    />
-  )}
-</div>
-                </div>
-              </div>
-            </div>
-          ) : (
+         {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
+  <div className="w-full flex flex-col items-center justify-center">
+    <div className="relative w-full max-w-sm md:max-w-md mx-auto">
+      <img
+        src={winner.photo}
+        alt={winner.name}
+        className="w-full h-auto object-contain rounded-lg shadow-2xl"
+      />
+      <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 rounded-b-lg">
+        <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+          {winner.name}
+        </h2>
+        {winner.countryFlag && (
+          <img
+            src={winner.countryFlag}
+            alt={winner.countryCode}
+            className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+            referrerPolicy="no-referrer"
+          />
+        )}
+      </div>
+    </div>
+  </div>
+) : (
             <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 md:gap-1 relative py-1">
             {/* Red Side */}
             <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
