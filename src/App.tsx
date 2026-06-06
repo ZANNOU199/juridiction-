@@ -2178,7 +2178,7 @@ function AdminView({
                                 }
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
-                                <option value="">ROUGE</option>
+                                <option value=""></option>
                                 {participants
                                   .slice(0, tournamentSize)
                                   .map((p) => (
@@ -2198,7 +2198,7 @@ function AdminView({
                                 }
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
-                                <option value="">BLEU</option>
+                                <option value=""></option>
                                 {participants
                                   .slice(0, tournamentSize)
                                   .map((p) => (
