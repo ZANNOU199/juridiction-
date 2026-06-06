@@ -364,6 +364,7 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
   const [showSharedScreen, setShowSharedScreen] = useState(false);
+  const [isConnectionLost, setIsConnectionLost] = useState(false);
   const navigate = useNavigate();
   
   // Use global category hook for cross-tab synchronization
@@ -415,6 +416,7 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
         const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
         if (res.ok) {
           const data = await res.json();
+          setIsConnectionLost(false); // Connexion restored
           
           setState(prevState => {
             // If match ID changed, ALWAYS clear votes
@@ -427,25 +429,52 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
         } else {
           // Event doesn't exist - use DEFAULT_STATE to show configuration screen
           console.warn(`Tournament state not found, using DEFAULT_STATE`);
+          setIsConnectionLost(false);
           setState(DEFAULT_STATE);
         }
       } catch (error) {
         console.error("Failed to fetch tournament state:", error);
-        setState(DEFAULT_STATE);
+        // If event is configured and we lose connection, show reconnection spinner
+        // Don't reset to DEFAULT_STATE - keep the current state
+        setState(prevState => {
+          if (prevState && prevState.configured) {
+            setIsConnectionLost(true);
+          } else {
+            // First load failed and not configured - show config screen
+            setIsConnectionLost(false);
+            return DEFAULT_STATE;
+          }
+          return prevState;
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchState();
-    const interval = setInterval(fetchState, 5000);
+    // Use faster polling (1s) when connection is lost, normal (5s) when working
+    const pollInterval = isConnectionLost ? 1000 : 5000;
+    const interval = setInterval(fetchState, pollInterval);
     return () => clearInterval(interval);
-  }, [eventSlug, currentCategory]);
+  }, [eventSlug, currentCategory, isConnectionLost]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  // Show reconnection spinner when connection is lost (while competition is running)
+  if (isConnectionLost && state.configured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-3 border-white/10 border-t-white rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm font-semibold">Connexion...</p>
+          <p className="text-white/40 text-xs mt-2">Veuillez patienter</p>
+        </div>
       </div>
     );
   }
@@ -509,6 +538,7 @@ function JuryGatewayMultiEvent() {
   const [loginError, setLoginError] = useState("");
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
+  const [isConnectionLost, setIsConnectionLost] = useState(false);
 
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
@@ -539,6 +569,7 @@ function JuryGatewayMultiEvent() {
         const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
         if (res.ok) {
           const newState = await res.json();
+          setIsConnectionLost(false); // Connexion restored
           setState(prevState => {
             // If match ID changed, ALWAYS clear votes
             if (prevState && newState.currentMatchId !== prevState.currentMatchId) {
@@ -550,16 +581,28 @@ function JuryGatewayMultiEvent() {
         }
       } catch (error) {
         console.error("Failed to fetch tournament state:", error);
-        setState(DEFAULT_STATE);
+        // If we already have a state loaded (jury connected) and lose connection, keep it
+        // Don't reset to DEFAULT_STATE - keep the current state
+        setState(prevState => {
+          if (prevState && prevState.configured && juryId) {
+            setIsConnectionLost(true);
+            return prevState; // Keep current state while trying to reconnect
+          } else {
+            setIsConnectionLost(false);
+            return DEFAULT_STATE;
+          }
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchState();
-    const interval = setInterval(fetchState, 2000);
+    // Use faster polling (1s) when connection is lost, normal (2s) when working
+    const pollInterval = isConnectionLost ? 1000 : 2000;
+    const interval = setInterval(fetchState, pollInterval);
     return () => clearInterval(interval);
-  }, [eventSlug, currentCategory]);
+  }, [eventSlug, currentCategory, isConnectionLost, juryId]);
 
   const handleJuryLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -595,6 +638,19 @@ function JuryGatewayMultiEvent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  // Show reconnection spinner when connection is lost (while jury is logged in)
+  if (isConnectionLost && juryId && state.configured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-3 border-white/10 border-t-white rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm font-semibold">Connexion...</p>
+          <p className="text-white/40 text-xs mt-2">Veuillez patienter</p>
+        </div>
       </div>
     );
   }
@@ -680,6 +736,7 @@ function BracketViewMultiEvent() {
   const navigate = useNavigate();
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
+  const [isConnectionLost, setIsConnectionLost] = useState(false);
 
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
@@ -710,6 +767,7 @@ function BracketViewMultiEvent() {
         const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
         if (res.ok) {
           const tournamentData = await res.json();
+          setIsConnectionLost(false); // Connexion restored
           setState(prevState => {
             // If match ID changed, ALWAYS clear votes
             if (prevState && tournamentData.currentMatchId !== prevState.currentMatchId) {
@@ -719,25 +777,49 @@ function BracketViewMultiEvent() {
             return tournamentData;
           });
         } else {
+          setIsConnectionLost(false);
           setState(DEFAULT_STATE);
         }
       } catch (error) {
         console.error("Failed to fetch bracket data:", error);
-        setState(DEFAULT_STATE);
+        // Keep current state when connection is lost if we already have data
+        setState(prevState => {
+          if (prevState && prevState.configured) {
+            setIsConnectionLost(true);
+            return prevState;
+          } else {
+            setIsConnectionLost(false);
+            return DEFAULT_STATE;
+          }
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchBracketData();
-    const interval = setInterval(fetchBracketData, 2000);
+    const pollInterval = isConnectionLost ? 1000 : 2000;
+    const interval = setInterval(fetchBracketData, pollInterval);
     return () => clearInterval(interval);
-  }, [eventSlug, currentCategory]);
+  }, [eventSlug, currentCategory, isConnectionLost]);
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  // Show reconnection spinner when connection is lost (while event is running)
+  if (isConnectionLost && state.configured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-3 border-white/10 border-t-white rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm font-semibold">Connexion...</p>
+          <p className="text-white/40 text-xs mt-2">Veuillez patienter</p>
+        </div>
       </div>
     );
   }
@@ -752,6 +834,7 @@ function PublicViewMultiEvent() {
   const [loading, setLoading] = useState(true);
   const [showSharedScreen, setShowSharedScreen] = useState(false);
   const [allCategoriesStates, setAllCategoriesStates] = useState<Record<string, TournamentState>>({});
+  const [isConnectionLost, setIsConnectionLost] = useState(false);
 
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
@@ -810,6 +893,7 @@ function PublicViewMultiEvent() {
         const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
         if (res.ok) {
           const tournamentData = await res.json();
+          setIsConnectionLost(false); // Connexion restored
           setState(prevState => {
             // If match ID changed, ALWAYS clear votes
             if (prevState && tournamentData.currentMatchId !== prevState.currentMatchId) {
@@ -819,20 +903,31 @@ function PublicViewMultiEvent() {
             return tournamentData;
           });
         } else {
+          setIsConnectionLost(false);
           setState(DEFAULT_STATE);
         }
       } catch (error) {
         console.error("Failed to fetch public data:", error);
-        setState(DEFAULT_STATE);
+        // Keep current state when connection is lost if we already have data
+        setState(prevState => {
+          if (prevState && prevState.configured) {
+            setIsConnectionLost(true);
+            return prevState;
+          } else {
+            setIsConnectionLost(false);
+            return DEFAULT_STATE;
+          }
+        });
       } finally {
         setLoading(false);
       }
     };
 
     fetchPublicData();
-    const interval = setInterval(fetchPublicData, 2000);
+    const pollInterval = isConnectionLost ? 1000 : 2000;
+    const interval = setInterval(fetchPublicData, pollInterval);
     return () => clearInterval(interval);
-  }, [eventSlug, currentCategory, showSharedScreen]);
+  }, [eventSlug, currentCategory, showSharedScreen, isConnectionLost]);
 
   // Fetch all categories data (shared screen mode)
   useEffect(() => {
@@ -845,6 +940,7 @@ function PublicViewMultiEvent() {
         const res = await fetch(`/api/${eventSlug}/categories`);
         if (res.ok) {
           const categories = await res.json();
+          setIsConnectionLost(false); // Connexion restored
           
           // Fetch state for each category
           const states: Record<string, TournamentState> = {};
@@ -862,15 +958,20 @@ function PublicViewMultiEvent() {
         }
       } catch (error) {
         console.error("Failed to fetch categories:", error);
+        // Keep current states when connection is lost
+        if (Object.keys(allCategoriesStates).length > 0) {
+          setIsConnectionLost(true);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchAllCategories();
-    const interval = setInterval(fetchAllCategories, 2000);
+    const pollInterval = isConnectionLost ? 1000 : 2000;
+    const interval = setInterval(fetchAllCategories, pollInterval);
     return () => clearInterval(interval);
-  }, [eventSlug, showSharedScreen]);
+  }, [eventSlug, showSharedScreen, isConnectionLost, allCategoriesStates]);
 
   if (loading && showSharedScreen) {
     return (
@@ -884,6 +985,19 @@ function PublicViewMultiEvent() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-surface-dark">
         <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full" />
+      </div>
+    );
+  }
+
+  // Show reconnection spinner when connection is lost (while event is running)
+  if (isConnectionLost && ((state && state.configured) || Object.keys(allCategoriesStates).length > 0)) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-surface-dark">
+        <div className="text-center">
+          <div className="animate-spin w-12 h-12 border-3 border-white/10 border-t-white rounded-full mx-auto mb-4" />
+          <p className="text-white/60 text-sm font-semibold">Connexion...</p>
+          <p className="text-white/40 text-xs mt-2">Veuillez patienter</p>
+        </div>
       </div>
     );
   }
