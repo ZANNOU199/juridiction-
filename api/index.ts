@@ -578,6 +578,78 @@ app.delete("/jury-assignments/:eventSlug/:tournamentId/:juryId", async (req, res
   }
 });
 
+app.post("/admin/:eventSlug/reveal-all", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    
+    // Get all categories for this event
+    const categories = await db.getAllCategoriesForEvent(eventSlug);
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ error: "No categories found" });
+    }
+    
+    // Reveal all FINALE matches for each category
+    for (const category of categories) {
+      try {
+        const tournament = await db.createOrGetTournament(eventSlug, category);
+        if (tournament) {
+          // Find the FINALE match
+          const state = await db.getTournamentState(tournament.id);
+          if (state && state.matches) {
+            const finaleMatch = state.matches.find((m: any) => m.round === "FINALE");
+            if (finaleMatch && !finaleMatch.revealed) {
+              await db.revealMatch(tournament.id, finaleMatch.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to reveal FINALE for category ${category}:`, error);
+      }
+    }
+    
+    res.json({ success: true, message: "All FINALE matches revealed" });
+  } catch (error) {
+    console.error("Error in reveal-all:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/admin/:eventSlug/finish-all", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    
+    // Get all categories for this event
+    const categories = await db.getAllCategoriesForEvent(eventSlug);
+    if (!categories || categories.length === 0) {
+      return res.status(404).json({ error: "No categories found" });
+    }
+    
+    // Finish all FINALE matches for each category
+    for (const category of categories) {
+      try {
+        const tournament = await db.createOrGetTournament(eventSlug, category);
+        if (tournament) {
+          // Find the FINALE match
+          const state = await db.getTournamentState(tournament.id);
+          if (state && state.matches) {
+            const finaleMatch = state.matches.find((m: any) => m.round === "FINALE");
+            if (finaleMatch && finaleMatch.status !== "finished") {
+              await db.finishMatch(tournament.id);
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`Failed to finish FINALE for category ${category}:`, error);
+      }
+    }
+    
+    res.json({ success: true, message: "All FINALE matches finished" });
+  } catch (error) {
+    console.error("Error in finish-all:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Vercel serverless handler
 export default function handler(req: VercelRequest, res: VercelResponse) {
   // Remove /api prefix from the path
