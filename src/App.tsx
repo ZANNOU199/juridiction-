@@ -365,13 +365,28 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
   }>();
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
-  const [showSharedScreen, setShowSharedScreen] = useState(() => {
-    return localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
-  });
+  const [showSharedScreen, setShowSharedScreen] = useState(false);
   const navigate = useNavigate();
   
   // Use global category hook for cross-tab synchronization
   const { currentCategory, updateCategory } = useGlobalCategory(eventSlug);
+
+  // Fetch initial shared screen mode from API
+  useEffect(() => {
+    if (!eventSlug) return;
+    const fetchSharedScreenMode = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/shared-screen-mode`);
+        if (res.ok) {
+          const data = await res.json();
+          setShowSharedScreen(data.sharedScreenMode);
+        }
+      } catch (error) {
+        console.error("Failed to fetch shared screen mode:", error);
+      }
+    };
+    fetchSharedScreenMode();
+  }, [eventSlug]);
 
   // Sync URL category with global state
   useEffect(() => {
@@ -470,7 +485,12 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
         showSharedScreen={showSharedScreen}
         onToggleSharedScreen={(value) => {
           setShowSharedScreen(value);
-          localStorage.setItem(`sharedScreenMode_${eventSlug}`, value ? "true" : "false");
+          // Send to API to sync across all visitors
+          fetch(`/api/${eventSlug}/shared-screen-mode`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: value }),
+          }).catch((error) => console.error("Failed to update shared screen mode:", error));
         }}
       />
     </div>
@@ -735,9 +755,7 @@ function PublicViewMultiEvent() {
   const navigate = useNavigate();
   const [state, setState] = useState<TournamentState>(DEFAULT_STATE);
   const [loading, setLoading] = useState(true);
-  const [showSharedScreen, setShowSharedScreen] = useState(() => {
-    return localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
-  });
+  const [showSharedScreen, setShowSharedScreen] = useState(false);
   const [allCategoriesStates, setAllCategoriesStates] = useState<Record<string, TournamentState>>({});
 
   // Use global category hook for cross-tab synchronization
@@ -758,14 +776,26 @@ function PublicViewMultiEvent() {
     }
   }, [currentCategory]);
 
-  // Listen for shared screen mode changes from localStorage
+  // Listen for shared screen mode changes from API
   useEffect(() => {
-    const handleStorageChange = () => {
-      const newMode = localStorage.getItem(`sharedScreenMode_${eventSlug}`) === "true";
-      setShowSharedScreen(newMode);
+    if (!eventSlug) return;
+    
+    const fetchSharedScreenMode = async () => {
+      try {
+        const res = await fetch(`/api/${eventSlug}/shared-screen-mode`);
+        if (res.ok) {
+          const data = await res.json();
+          setShowSharedScreen(data.sharedScreenMode);
+        }
+      } catch (error) {
+        console.error("Failed to fetch shared screen mode:", error);
+      }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+    
+    fetchSharedScreenMode();
+    // Poll every 2 seconds to sync with admin toggle
+    const interval = setInterval(fetchSharedScreenMode, 2000);
+    return () => clearInterval(interval);
   }, [eventSlug]);
 
   // Fetch single category data (normal mode)
@@ -3817,28 +3847,30 @@ function PublicView({ state }: { state: TournamentState }) {
           {/* Final Match Victory Display */}
           {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
             <div className="w-full flex flex-col items-center justify-center">
-              <div className="w-full max-w-md md:max-w-2xl aspect-square bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
-                <DancerPhoto
-                  photoUrl={winner.photo}
-                  alt={winner.name}
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-center">
-                  <p className="text-white/40 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
-                    Champion
-                  </p>
-                  <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight drop-shadow-lg">
-                    {winner.name}
-                  </h2>
-                  {winner.countryFlag && (
-                    <img
-                      src={winner.countryFlag}
-                      alt={winner.countryCode}
-                      className="w-8 h-6 md:w-12 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
-                      referrerPolicy="no-referrer"
-                    />
-                  )}
+              <div className="w-full max-w-sm md:max-w-2xl flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
+                <div className="w-full bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
+                  <DancerPhoto
+                    photoUrl={winner.photo}
+                    alt={winner.name}
+                    className="w-full h-full object-contain"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-3 md:p-6 text-center">
+                    <p className="text-white/40 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
+                      Champion
+                    </p>
+                    <h2 className="text-white font-black italic text-xl md:text-4xl uppercase tracking-tight drop-shadow-lg line-clamp-2">
+                      {winner.name}
+                    </h2>
+                    {winner.countryFlag && (
+                      <img
+                        src={winner.countryFlag}
+                        alt={winner.countryCode}
+                        className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                        referrerPolicy="no-referrer"
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
