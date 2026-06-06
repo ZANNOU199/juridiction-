@@ -3850,11 +3850,11 @@ function PublicView({ state }: { state: TournamentState }) {
           {/* Final Match Victory Display */}
          {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
   <div className="w-full flex flex-col items-center justify-center">
-    <div className="relative w-full max-w-sm md:max-w-md mx-auto">
+    <div className="relative w-full max-w-sm md:max-w-md mx-auto max-h-[60vh] md:max-h-[70vh]">
       <img
         src={winner.photo}
         alt={winner.name}
-        className="w-full h-auto object-contain rounded-lg shadow-2xl"
+        className="w-full h-full object-contain rounded-lg shadow-2xl"
       />
       <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 rounded-b-lg">
         <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
@@ -3940,6 +3940,8 @@ function PublicView({ state }: { state: TournamentState }) {
           </div>
           )}
 
+          {!(activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner) && (
+          <>
           {/* Jury Table */}
           <div className="w-full mt-1 md:mt-2 relative overflow-hidden">
             <div className="bg-[#0a0a18]/60 border border-white/10 backdrop-blur-xl shadow-2xl overflow-x-auto no-scrollbar">
@@ -4036,6 +4038,8 @@ function PublicView({ state }: { state: TournamentState }) {
               </div>
             </div>
           </div>
+          </>
+          )}
 
           {/* Winner Banner */}
           <AnimatePresence>
