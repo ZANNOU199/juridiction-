@@ -3850,7 +3850,7 @@ function PublicView({ state }: { state: TournamentState }) {
           {/* Final Match Victory Display */}
           {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
             <div className="w-full flex flex-col items-center justify-center">
-              <div className="w-full max-w-sm md:max-w-2xl flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
+              <div className="w-full max-w-xs md:max-w-lg flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
                 <div className="w-full bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
                   <DancerPhoto
                     photoUrl={winner.photo}
@@ -3858,8 +3858,7 @@ function PublicView({ state }: { state: TournamentState }) {
                     className="w-full h-full object-contain absolute inset-0"
                   />
                   {/* Overlay with text */}
-                  <div className="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6">
-                    <div className="flex-1" />
+                  <div className="absolute inset-0 flex flex-col items-center justify-end p-4 md:p-6">
                     <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
                       <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
                         Champion
