@@ -1819,6 +1819,30 @@ function AdminView({
     }
   };
 
+  const revealAllFinals = async () => {
+    if (!eventSlug) return;
+    try {
+      const res = await fetch(`/api/admin/${eventSlug}/reveal-all`, { method: "POST" });
+      if (res.ok) {
+        console.log("✅ All FINALE results revealed");
+      }
+    } catch (e) {
+      console.error("Server error during revealAllFinals:", e);
+    }
+  };
+
+  const finishAllFinals = async () => {
+    if (!eventSlug) return;
+    try {
+      const res = await fetch(`/api/admin/${eventSlug}/finish-all`, { method: "POST" });
+      if (res.ok) {
+        console.log("✅ All FINALE matches finished");
+      }
+    } catch (e) {
+      console.error("Server error during finishAllFinals:", e);
+    }
+  };
+
   const adminCastVote = async (juryId: string, vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
@@ -2417,20 +2441,34 @@ function AdminView({
 
         {/* Controls & Live Votes */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/30">
+          <div>
+            <h3 className="text-[10px] font-black tracking-widest uppercase text-white/30 mb-2">
               Contrôle en Direct
             </h3>
-            <button
-              onClick={() => onToggleSharedScreen(!showSharedScreen)}
-              className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
-                showSharedScreen
-                  ? "bg-orange-500 text-black"
-                  : "bg-white/10 text-white/50 hover:bg-white/20"
-              }`}
-            >
-              ÉCRAN PARTAGÉ {showSharedScreen ? "ON" : "OFF"}
-            </button>
+            <div className="flex gap-2 flex-wrap">
+              <button
+                onClick={() => onToggleSharedScreen(!showSharedScreen)}
+                className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
+                  showSharedScreen
+                    ? "bg-orange-500 text-black"
+                    : "bg-white/10 text-white/50 hover:bg-white/20"
+                }`}
+              >
+                ÉCRAN PARTAGÉ {showSharedScreen ? "ON" : "OFF"}
+              </button>
+              <button
+                onClick={revealAllFinals}
+                className="text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all bg-green-600 text-white hover:bg-green-500"
+              >
+                AFFICHER TOUS LES RÉSULTATS
+              </button>
+              <button
+                onClick={finishAllFinals}
+                className="text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all bg-brand-red text-white hover:scale-[1.02]"
+              >
+                MARQUER TERMINER TOUS
+              </button>
+            </div>
           </div>
           <div className="bg-white/5 p-6 md:p-8 border border-white/10 space-y-8 rounded-sm">
             <div className="text-center">
