@@ -3814,7 +3814,36 @@ function PublicView({ state }: { state: TournamentState }) {
           }}
           className="w-full max-w-6xl flex flex-col items-center shrink-0"
         >
-          <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 md:gap-1 relative py-1">
+          {/* Final Match Victory Display */}
+          {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
+            <div className="w-full flex flex-col items-center justify-center">
+              <div className="w-full max-w-md md:max-w-2xl aspect-square bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
+                <DancerPhoto
+                  photoUrl={winner.photo}
+                  alt={winner.name}
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-4 md:p-6 text-center">
+                  <p className="text-white/40 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
+                    Champion
+                  </p>
+                  <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight drop-shadow-lg">
+                    {winner.name}
+                  </h2>
+                  {winner.countryFlag && (
+                    <img
+                      src={winner.countryFlag}
+                      alt={winner.countryCode}
+                      className="w-8 h-6 md:w-12 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                      referrerPolicy="no-referrer"
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="w-full grid grid-cols-[1fr_auto_1fr] items-stretch gap-0 md:gap-1 relative py-1">
             {/* Red Side */}
             <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
               <div className="flex justify-end gap-0.5 md:gap-1 items-end flex-1">
@@ -3880,6 +3909,7 @@ function PublicView({ state }: { state: TournamentState }) {
               </div>
             </div>
           </div>
+          )}
 
           {/* Jury Table */}
           <div className="w-full mt-1 md:mt-2 relative overflow-hidden">
