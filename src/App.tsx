@@ -2767,8 +2767,10 @@ function JuryView({
     setIsChanging(false);
   }, [state.currentMatchId, state.matches, view]);
   const [isChanging, setIsChanging] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
   const myVote = state.juryVotes[juryId];
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
   const oldVoteRef = useRef<"red" | "blue" | undefined>(undefined);
   const navigate = useNavigate();
 
@@ -2780,12 +2782,15 @@ function JuryView({
   useEffect(() => {
     setIsChanging(false);
     if (timerRef.current) clearTimeout(timerRef.current);
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    setTimeLeft(0);
   }, [state.currentMatchId, currentMatch?.currentRound]);
 
   // Cleanup timer on component unmount
   useEffect(() => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
+      if (countdownRef.current) clearInterval(countdownRef.current);
     };
   }, []);
 
@@ -2871,10 +2876,16 @@ function JuryView({
   const castVote = async (vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
-    // If we're in changing mode, clear the timer (new vote was cast)
-    if (isChanging && timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
+    // If we're in changing mode, clear the timers (new vote was cast)
+    if (isChanging) {
+      if (timerRef.current) {
+        clearTimeout(timerRef.current);
+        timerRef.current = null;
+      }
+      if (countdownRef.current) {
+        clearInterval(countdownRef.current);
+        countdownRef.current = null;
+      }
     }
 
     try {
@@ -2891,6 +2902,7 @@ function JuryView({
           // If we were changing, restore isChanging to false to show confirmation overlay with new vote
           if (isChanging) {
             setIsChanging(false);
+            setTimeLeft(0);
           }
           // Vote is now recorded - jury must click VALIDER button to finalize
         }
@@ -2906,14 +2918,30 @@ function JuryView({
     // Save the current vote before allowing changes
     oldVoteRef.current = myVote;
     setIsChanging(true);
+    setTimeLeft(15); // 15 seconds
 
-    // Start 10-second timer
+    // Start countdown interval
+    if (countdownRef.current) clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          // Time's up
+          if (countdownRef.current) clearInterval(countdownRef.current);
+          setIsChanging(false);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    // Start 15-second timer as backup
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
-      // If timer expires and still changing, reset to show confirmation with old vote
       setIsChanging(false);
+      if (countdownRef.current) clearInterval(countdownRef.current);
+      setTimeLeft(0);
       timerRef.current = null;
-    }, 10000);
+    }, 15000);
   };
 
   if (!state.configured) {
@@ -3196,12 +3224,36 @@ function JuryView({
             )}
 
             {isChanging && (
-              <button
-                onClick={() => setIsChanging(false)}
-                className="absolute top-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black rounded-full"
-              >
-                Annuler le changement
-              </button>
+              <div className="absolute inset-0 flex flex-col items-center justify-center z-40 pointer-events-none">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  className="flex flex-col items-center gap-4 pointer-events-auto"
+                >
+                  <button
+                    onClick={() => {
+                      // Clean up timers before cancelling
+                      if (timerRef.current) clearTimeout(timerRef.current);
+                      if (countdownRef.current) clearInterval(countdownRef.current);
+                      setIsChanging(false);
+                      setTimeLeft(0);
+                    }}
+                    className="bg-white text-black px-6 py-3 font-black italic uppercase text-xs tracking-widest z-50 shadow-2xl border-2 border-black rounded-full hover:scale-105 transition-all"
+                  >
+                    Annuler le changement
+                  </button>
+                  
+                  <div className="bg-black/90 backdrop-blur-md border-2 border-white/30 px-6 py-3 rounded-full flex items-center gap-3">
+                    <span className="text-white font-black text-sm">CHOISIR DANS:</span>
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center font-black text-xl ${
+                      timeLeft <= 5 ? "bg-brand-red text-white shadow-[0_0_20px_rgba(225,29,72,0.6)]" : "bg-white/20 text-white"
+                    }`}>
+                      {timeLeft}s
+                    </div>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </motion.div>
         ) : (
