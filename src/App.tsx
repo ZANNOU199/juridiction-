@@ -1812,14 +1812,14 @@ function AdminView({
     try {
       const res = await fetch(buildAdminUrl("/reset"), { method: "POST" });
       if (res.ok) {
-        // Force page reload to clear all UI caches and old match data
-        window.location.reload();
+        const data = await res.json();
+        onSave(data.state || DEFAULT_STATE);
       } else {
-        window.location.reload();
+        onSave(DEFAULT_STATE);
       }
     } catch (e) {
       console.warn("Server sync failed during reset");
-      window.location.reload();
+      onSave(DEFAULT_STATE);
     }
   };
 
@@ -2178,7 +2178,7 @@ function AdminView({
                                 }
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
-                                <option value=""></option>
+                                <option value="">ROUGE</option>
                                 {participants
                                   .slice(0, tournamentSize)
                                   .map((p) => (
@@ -2198,7 +2198,7 @@ function AdminView({
                                 }
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
-                                <option value=""></option>
+                                <option value="">BLEU</option>
                                 {participants
                                   .slice(0, tournamentSize)
                                   .map((p) => (
@@ -3046,7 +3046,7 @@ function JuryView({
                     ? "SÉLECTIONNÉ"
                     : isChanging && myVote === "red"
                       ? "VOTE ACTUEL"
-                      : "ROUGE"}
+                      : ""}
                 </div>
               </div>
             </button>
@@ -3101,7 +3101,7 @@ function JuryView({
                     ? "SÉLECTIONNÉ"
                     : isChanging && myVote === "blue"
                       ? "VOTE ACTUEL"
-                      : "BLEU"}
+                      : ""}
                 </div>
               </div>
             </button>
