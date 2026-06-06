@@ -1247,6 +1247,10 @@ function AdminView({
 
   const [loadingCountries, setLoadingCountries] = useState(false);
 
+  // Batch action loading states
+  const [loadingRevealAll, setLoadingRevealAll] = useState(false);
+  const [loadingFinishAll, setLoadingFinishAll] = useState(false);
+
   // Ensure state always has required properties for safe rendering
   const safeState: TournamentState = {
     ...DEFAULT_STATE,
@@ -1821,6 +1825,7 @@ function AdminView({
 
   const revealAllFinals = async () => {
     if (!eventSlug) return;
+    setLoadingRevealAll(true);
     try {
       const res = await fetch(`/api/admin/${eventSlug}/reveal-all`, { method: "POST" });
       if (res.ok) {
@@ -1828,11 +1833,14 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during revealAllFinals:", e);
+    } finally {
+      setLoadingRevealAll(false);
     }
   };
 
   const finishAllFinals = async () => {
     if (!eventSlug) return;
+    setLoadingFinishAll(true);
     try {
       const res = await fetch(`/api/admin/${eventSlug}/finish-all`, { method: "POST" });
       if (res.ok) {
@@ -1840,6 +1848,8 @@ function AdminView({
       }
     } catch (e) {
       console.error("Server error during finishAllFinals:", e);
+    } finally {
+      setLoadingFinishAll(false);
     }
   };
 
@@ -2458,15 +2468,25 @@ function AdminView({
               </button>
               <button
                 onClick={revealAllFinals}
-                className="text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all bg-green-600 text-white hover:bg-green-500"
+                disabled={loadingRevealAll}
+                className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
+                  loadingRevealAll
+                    ? "bg-green-600/50 text-white/50 cursor-not-allowed"
+                    : "bg-green-600 text-white hover:bg-green-500"
+                }`}
               >
-                AFFICHER TOUS LES RÉSULTATS
+                {loadingRevealAll ? "CHARGEMENT..." : "AFFICHER TOUS LES RÉSULTATS"}
               </button>
               <button
                 onClick={finishAllFinals}
-                className="text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all bg-brand-red text-white hover:scale-[1.02]"
+                disabled={loadingFinishAll}
+                className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
+                  loadingFinishAll
+                    ? "bg-brand-red/50 text-white/50 cursor-not-allowed"
+                    : "bg-brand-red text-white hover:scale-[1.02]"
+                }`}
               >
-                MARQUER TERMINER TOUS
+                {loadingFinishAll ? "CHARGEMENT..." : "MARQUER TERMINER TOUS"}
               </button>
             </div>
           </div>
