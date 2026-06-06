@@ -3851,28 +3851,31 @@ function PublicView({ state }: { state: TournamentState }) {
           {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
             <div className="w-full flex flex-col items-center justify-center">
               <div className="w-full max-w-sm md:max-w-2xl flex items-center justify-center p-2 relative group overflow-hidden rounded-lg shadow-2xl">
-                <div className="w-full bg-white/5 border-2 border-white/20 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
+                <div className="w-full bg-white/5 border-2 border-white/20 flex items-center justify-center p-2 relative overflow-hidden rounded-lg" style={{ aspectRatio: "3/4" }}>
                   <DancerPhoto
                     photoUrl={winner.photo}
                     alt={winner.name}
-                    className="w-full h-full object-contain absolute inset-0 z-10"
+                    className="w-full h-full object-contain absolute inset-0"
                   />
-                  {/* Overlay with text - directly on image */}
-                  <div className="absolute left-0 right-0 bottom-0 z-20 text-center bg-black/80 backdrop-blur-sm p-2 md:p-3 rounded-t max-h-[30%] flex flex-col justify-end overflow-hidden">
-                    <p className="text-white/70 text-xs md:text-sm font-black uppercase tracking-widest mb-0.5 md:mb-1">
-                      Champion
-                    </p>
-                    <h2 className="text-white font-black italic text-xl md:text-3xl uppercase tracking-tight break-words px-1 line-clamp-2">
-                      {winner.name}
-                    </h2>
-                    {winner.countryFlag && (
-                      <img
-                        src={winner.countryFlag}
-                        alt={winner.countryCode}
-                        className="w-6 h-5 md:w-8 md:h-6 object-cover border border-white/20 mt-1 md:mt-1.5 mx-auto rounded"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
+                  {/* Overlay with text */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6">
+                    <div className="flex-1" />
+                    <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
+                      <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
+                        Champion
+                      </p>
+                      <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+                        {winner.name}
+                      </h2>
+                      {winner.countryFlag && (
+                        <img
+                          src={winner.countryFlag}
+                          alt={winner.countryCode}
+                          className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
