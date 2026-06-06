@@ -3858,22 +3858,22 @@ function PublicView({ state }: { state: TournamentState }) {
                     className="w-full h-full object-contain absolute inset-0"
                   />
                   {/* Overlay with text */}
-                  <div className="absolute inset-x-0 bottom-0 flex flex-col items-center bg-black/40 backdrop-blur-md p-3 -mb-0">
-  <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
-    Champion
-  </p>
-  <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2 text-center">
-    {winner.name}
-  </h2>
-  {winner.countryFlag && (
-    <img
-      src={winner.countryFlag}
-      alt={winner.countryCode}
-      className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
-      referrerPolicy="no-referrer"
-    />
-  )}
-</div>
+                  <div className="absolute inset-0 flex flex-col items-center justify-end p-4 md:p-6 pb-3 md:pb-4">
+                    <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
+                      
+                      <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+                        {winner.name}
+                      </h2>
+                      {winner.countryFlag && (
+                        <img
+                          src={winner.countryFlag}
+                          alt={winner.countryCode}
+                          className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
