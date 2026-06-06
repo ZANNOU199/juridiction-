@@ -3860,11 +3860,11 @@ function PublicView({ state }: { state: TournamentState }) {
                   {/* Overlay with text */}
                   <div className="absolute inset-0 flex flex-col items-center justify-between p-4 md:p-6">
                     <div className="flex-1" />
-                    <div className="w-full text-center bg-black/50 backdrop-blur-sm p-3 md:p-4 rounded">
-                      <p className="text-white/60 text-[10px] md:text-xs font-black uppercase tracking-widest mb-1">
+                    <div className="w-full text-center bg-black/70 backdrop-blur-sm p-4 md:p-6 rounded">
+                      <p className="text-white/70 text-xs md:text-sm font-black uppercase tracking-widest mb-2">
                         Champion
                       </p>
-                      <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+                      <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight line-clamp-2">
                         {winner.name}
                       </h2>
                       {winner.countryFlag && (
