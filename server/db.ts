@@ -485,7 +485,7 @@ export async function configureTournament(
           votingMode: m.votingMode || "match",
           roundCount: m.roundCount || 1,
           currentRound: 1,
-          roundResults: JSON.stringify(m.roundResults || []),
+          roundResults: JSON.stringify([]),
           redVotes: 0,
           blueVotes: 0,
         },

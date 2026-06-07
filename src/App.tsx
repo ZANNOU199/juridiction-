@@ -29,6 +29,7 @@ import {
 import { COUNTRIES } from "./data/countries";
 import { AdminHub, EventSelector } from "./components/EventHub";
 import { JuryManager } from "./components/JuryManager";
+import { WaitingPage } from "./components/WaitingPage";
 import { useGlobalCategory } from "./useGlobalCategory";
 
 // --- Types ---
@@ -344,6 +345,7 @@ export default function App() {
         />
         <Route path="/jury/:eventSlug/:category" element={<JuryGatewayMultiEvent />} />
         <Route path="/bracket/:eventSlug/:category" element={<BracketViewMultiEvent />} />
+        <Route path="/attente/:eventSlug/:category" element={<WaitingPage />} />
         <Route path="/:eventSlug/:category" element={<PublicViewMultiEvent />} />
 
         {/* Role selection */}
