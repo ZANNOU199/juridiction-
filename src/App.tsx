@@ -4213,7 +4213,17 @@ function PublicView({ state }: { state: TournamentState }) {
                   <div className="absolute inset-0 bg-white/10 animate-pulse mix-blend-overlay" />
                   <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
                     <Trophy size={24} className="text-white fill-white/20" />
-                    <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
+                    <div className="flex items-center gap-1.5 md:gap-2 truncate">
+                      {winner?.countryFlag && (
+                        <img
+                          src={winner.countryFlag}
+                          alt={winner.countryName}
+                          className="h-4 md:h-5 w-6 md:w-7 object-cover rounded-sm"
+                          referrerPolicy="no-referrer"
+                        />
+                      )}
+                      <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
+                    </div>
                   </div>
                   {/* Glowing Outer Light */}
                   <div
