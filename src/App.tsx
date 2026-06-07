@@ -42,17 +42,7 @@ interface Participant {
   countryFlag?: string;
 }
 
-const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
-  { length: 16 },
-  (_, i) => ({
-    id: `p-${i + 1}`,
-    name: `B-BOY ${i + 1}`,
-    photo: "",
-    countryCode: "",
-    countryName: "",
-    countryFlag: "",
-  }),
-);
+const DEFAULT_PARTICIPANTS: Participant[] = [];
 
 const DEFAULT_SILHOUETTE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
