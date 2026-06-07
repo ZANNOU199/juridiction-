@@ -42,7 +42,17 @@ interface Participant {
   countryFlag?: string;
 }
 
-const DEFAULT_PARTICIPANTS: Participant[] = [];
+const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
+  { length: 16 },
+  (_, i) => ({
+    id: `p-${i + 1}`,
+    name: `B-BOY ${i + 1}`,
+    photo: "",
+    countryCode: "",
+    countryName: "",
+    countryFlag: "",
+  }),
+);
 
 const DEFAULT_SILHOUETTE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
@@ -878,21 +888,6 @@ function PublicViewMultiEvent() {
       return;
     }
 
-    // Storage key for this specific event/category
-    const storageKey = `public_tournament_${eventSlug}_${currentCategory}`;
-
-    // Try to load from localStorage first for instant display
-    const cachedData = localStorage.getItem(storageKey);
-    if (cachedData) {
-      try {
-        const parsedData = JSON.parse(cachedData);
-        setState(parsedData);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to parse cached data:", err);
-      }
-    }
-
     const fetchPublicData = async () => {
       try {
         const res = await fetch(`/api/${eventSlug}/${currentCategory}/state`);
@@ -907,8 +902,6 @@ function PublicViewMultiEvent() {
             }
             return tournamentData;
           });
-          // Save to localStorage for next load
-          localStorage.setItem(storageKey, JSON.stringify(tournamentData));
         } else {
           setIsConnectionLost(false);
           setState(DEFAULT_STATE);
@@ -936,45 +929,10 @@ function PublicViewMultiEvent() {
     return () => clearInterval(interval);
   }, [eventSlug, currentCategory, showSharedScreen, isConnectionLost]);
 
-  // Listen for localStorage changes from other tabs (for sync)
-  useEffect(() => {
-    if (!eventSlug || !currentCategory) return;
-
-    const storageKey = `public_tournament_${eventSlug}_${currentCategory}`;
-
-    const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === storageKey && e.newValue) {
-        try {
-          const newData = JSON.parse(e.newValue);
-          setState(newData);
-        } catch (err) {
-          console.error("Failed to parse storage update:", err);
-        }
-      }
-    };
-
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
-  }, [eventSlug, currentCategory]);
-
   // Fetch all categories data (shared screen mode)
   useEffect(() => {
     if (!eventSlug || !showSharedScreen) {
       return;
-    }
-
-    const storageKey = `public_tournament_shared_${eventSlug}`;
-
-    // Try to load from localStorage first for instant display
-    const cachedData = localStorage.getItem(storageKey);
-    if (cachedData) {
-      try {
-        const parsedData = JSON.parse(cachedData);
-        setAllCategoriesStates(parsedData);
-        setLoading(false);
-      } catch (err) {
-        console.error("Failed to parse cached shared screen data:", err);
-      }
     }
 
     const fetchAllCategories = async () => {
@@ -997,8 +955,6 @@ function PublicViewMultiEvent() {
             }
           }
           setAllCategoriesStates(states);
-          // Save to localStorage for next load
-          localStorage.setItem(storageKey, JSON.stringify(states));
         }
       } catch (error) {
         console.error("Failed to fetch categories:", error);
