@@ -4,7 +4,7 @@
   "description": "Professional tournament judging and voting system",
   "start_url": "/",
   "scope": "/",
-  "display": "standalone",
+  "display": "fullscreen",
   "orientation": "portrait-primary",
   "theme_color": "#FF8C00",
   "background_color": "#050502",
