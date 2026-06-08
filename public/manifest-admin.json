@@ -4,7 +4,7 @@
   "description": "Tournament administration and control",
   "start_url": "/select",
   "scope": "/admin",
-  "display": "fullscreen",
+  "display": "minimal-ui",
   "orientation": "portrait-primary",
   "theme_color": "#FF8C00",
   "background_color": "#050502",
