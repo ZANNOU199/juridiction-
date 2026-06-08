@@ -384,13 +384,6 @@ export async function configureTournament(
     throw new Error("No matches provided");
   }
 
-  // Validate that all matches have valid team IDs (not empty)
-  for (const match of data.matches) {
-    if (!match.redTeamId || !match.blueTeamId) {
-      throw new Error("All matches must have both red and blue team IDs assigned. Please ensure all participants have names and the bracket is properly configured.");
-    }
-  }
-
   // Wrap everything in a transaction to avoid race conditions
   await prisma.$transaction(async (tx) => {
     const oldMatches = await tx.match.findMany({
