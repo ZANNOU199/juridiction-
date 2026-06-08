@@ -4,7 +4,7 @@
   "description": "Jury voting and judging console",
   "start_url": "/jury",
   "scope": "/jury",
-  "display": "minimal-ui",
+  "display": "standalone",
   "orientation": "portrait-primary",
   "theme_color": "#FF8C00",
   "background_color": "#050502",
