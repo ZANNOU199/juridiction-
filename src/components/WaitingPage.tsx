@@ -46,7 +46,7 @@ export function WaitingPage() {
           <img
             src={state.competitionLogo}
             alt={state.competitionName}
-            className="w-full h-auto max-w-xs scale-150"
+            className="w-full h-auto max-w-xs scale-200"
           />
         </div>
       ) : (
