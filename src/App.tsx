@@ -1073,11 +1073,6 @@ function PublicViewMultiEvent() {
                 key={cat}
                 className="bg-surface-dark border border-white/10 rounded-sm overflow-hidden flex flex-col"
               >
-                <div className="bg-white/5 p-2 border-b border-white/10">
-                  <h2 className="text-[9px] font-black tracking-widest uppercase text-white/60">
-                    {cat}
-                  </h2>
-                </div>
                 <div className="flex-1 overflow-auto">
                   <PublicView state={{ ...allCategoriesStates[cat], currentCategory: cat }} />
                 </div>
