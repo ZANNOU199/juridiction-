@@ -63,28 +63,60 @@ function GlobeSVG({ className = "w-full h-full" }: { className?: string }) {
   return (
     <svg
       className={className}
-      viewBox="0 0 100 100"
+      viewBox="0 0 200 200"
       xmlns="http://www.w3.org/2000/svg"
     >
-      {/* Ocean background */}
-      <circle cx="50" cy="50" r="45" fill="#3b82f6" />
-      {/* Land masses - stylized continents */}
-      <g fill="#10b981" opacity="0.9">
-        {/* North America */}
-        <ellipse cx="25" cy="35" rx="8" ry="10" />
-        {/* South America */}
-        <ellipse cx="28" cy="55" rx="5" ry="8" />
+      <defs>
+        <radialGradient id="globeGradient" cx="35%" cy="35%">
+          <stop offset="0%" style={{ stopColor: "#86efac", stopOpacity: "0.4" }} />
+          <stop offset="100%" style={{ stopColor: "#0c4a6e", stopOpacity: "1" }} />
+        </radialGradient>
+        <radialGradient id="globeShine" cx="30%" cy="30%">
+          <stop offset="0%" style={{ stopColor: "#ffffff", stopOpacity: "0.6" }} />
+          <stop offset="50%" style={{ stopColor: "#ffffff", stopOpacity: "0.1" }} />
+          <stop offset="100%" style={{ stopColor: "#ffffff", stopOpacity: "0" }} />
+        </radialGradient>
+      </defs>
+      
+      {/* Océan de base */}
+      <circle cx="100" cy="100" r="90" fill="#1e40af" />
+      
+      {/* Gradient océan */}
+      <circle cx="100" cy="100" r="90" fill="url(#globeGradient)" />
+      
+      {/* Continents - formes réalistes */}
+      <g fill="#22c55e" opacity="0.95">
+        {/* Amérique du Nord */}
+        <path d="M 45 65 Q 40 70 42 80 Q 48 78 50 70 Q 48 65 45 65" />
+        {/* Amérique du Sud */}
+        <path d="M 48 85 Q 45 95 48 105 Q 52 100 52 90 Q 50 85 48 85" />
+        
+        {/* Groenland */}
+        <ellipse cx="70" cy="55" rx="5" ry="8" opacity="0.8" />
+        
         {/* Europe */}
-        <ellipse cx="50" cy="28" rx="6" ry="6" />
-        {/* Africa */}
-        <ellipse cx="55" cy="50" rx="7" ry="10" />
-        {/* Asia */}
-        <ellipse cx="65" cy="38" rx="12" ry="9" />
-        {/* Australia */}
-        <ellipse cx="70" cy="65" rx="4" ry="5" />
+        <path d="M 95 60 Q 100 58 105 62 Q 102 68 95 65 Q 94 63 95 60" />
+        {/* Afrique */}
+        <ellipse cx="105" cy="95" rx="12" ry="18" opacity="0.9" />
+        
+        {/* Asie */}
+        <path d="M 115 75 Q 135 70 145 80 Q 140 95 120 90 Q 115 85 115 75" />
+        
+        {/* Australie */}
+        <ellipse cx="145" cy="125" rx="8" ry="10" opacity="0.85" />
+        
+        {/* Nouvelle-Zélande */}
+        <ellipse cx="160" cy="130" rx="3" ry="5" opacity="0.8" />
       </g>
-      {/* Circle border */}
-      <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.5" />
+      
+      {/* Effet 3D - Highlight lumineux */}
+      <ellipse cx="70" cy="70" rx="45" ry="40" fill="url(#globeShine)" />
+      
+      {/* Bordure subtile */}
+      <circle cx="100" cy="100" r="90" fill="none" stroke="#ffffff" strokeWidth="1" opacity="0.2" />
+      
+      {/* Ombre interne pour la profondeur */}
+      <circle cx="100" cy="100" r="90" fill="none" stroke="#000000" strokeWidth="1" opacity="0.1" />
     </svg>
   );
 }
