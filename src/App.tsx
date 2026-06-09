@@ -1459,6 +1459,19 @@ function AdminView({
   }, [FALLBACK_COUNTRIES]);
 
   const handleCountryChange = (index: number, countryCca2: string) => {
+    // Handle WORLD WIDE special case
+    if (countryCca2 === "WW") {
+      const newParticipants = [...participants];
+      newParticipants[index] = {
+        ...newParticipants[index],
+        countryCode: "WW",
+        countryName: "WORLD WIDE",
+        countryFlag: "",
+      };
+      setParticipants(newParticipants);
+      return;
+    }
+
     const selected = countries.find((c) => c.cca2 === countryCca2);
     if (selected) {
       const flagUrl = selected.flags?.png || selected.flags?.svg || "";
@@ -1488,6 +1501,23 @@ function AdminView({
   };
 
   const handleCountryChangeById = (pId: string, countryCca2: string) => {
+    // Handle WORLD WIDE special case
+    if (countryCca2 === "WW") {
+      setParticipants((prev) =>
+        prev.map((p) =>
+          p.id === pId
+            ? {
+                ...p,
+                countryCode: "WW",
+                countryName: "WORLD WIDE",
+                countryFlag: "",
+              }
+            : p,
+        ),
+      );
+      return;
+    }
+
     const selected = countries.find((c) => c.cca2 === countryCca2);
     if (selected) {
       const flagUrl = selected.flags?.png || selected.flags?.svg || "";
