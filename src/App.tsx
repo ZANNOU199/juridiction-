@@ -1065,15 +1065,15 @@ function PublicViewMultiEvent() {
     const categories = Object.keys(allCategoriesStates);
     
     return (
-      <div className="min-h-screen bg-surface-dark overflow-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 p-2 auto-rows-fr">
+      <div className="min-h-screen bg-surface-dark overflow-hidden">
+        <div className="h-screen grid grid-cols-1 lg:grid-cols-2 gap-2 p-2">
           {categories.length > 0 ? (
             categories.map((cat) => (
               <div
                 key={cat}
                 className="bg-surface-dark border border-white/10 rounded-sm overflow-hidden flex flex-col"
               >
-                <div className="flex-1 overflow-auto">
+                <div className="flex-1 overflow-hidden">
                   <PublicView state={{ ...allCategoriesStates[cat], currentCategory: cat }} />
                 </div>
               </div>
