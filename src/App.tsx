@@ -58,6 +58,71 @@ const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
 const DEFAULT_SILHOUETTE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
 
+// SVG Globe for World Wide
+function GlobeSVG({ className = "w-full h-full" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 100 100"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      {/* Ocean background */}
+      <circle cx="50" cy="50" r="45" fill="#3b82f6" />
+      {/* Land masses - stylized continents */}
+      <g fill="#10b981" opacity="0.9">
+        {/* North America */}
+        <ellipse cx="25" cy="35" rx="8" ry="10" />
+        {/* South America */}
+        <ellipse cx="28" cy="55" rx="5" ry="8" />
+        {/* Europe */}
+        <ellipse cx="50" cy="28" rx="6" ry="6" />
+        {/* Africa */}
+        <ellipse cx="55" cy="50" rx="7" ry="10" />
+        {/* Asia */}
+        <ellipse cx="65" cy="38" rx="12" ry="9" />
+        {/* Australia */}
+        <ellipse cx="70" cy="65" rx="4" ry="5" />
+      </g>
+      {/* Circle border */}
+      <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" strokeWidth="1" opacity="0.5" />
+    </svg>
+  );
+}
+
+// Helper to display flag or globe
+function FlagOrGlobe({
+  countryCode,
+  countryFlag,
+  countryName,
+  className = "w-6 h-4 object-cover",
+}: {
+  countryCode?: string;
+  countryFlag?: string;
+  countryName?: string;
+  className?: string;
+}) {
+  if (countryCode === "WW") {
+    return (
+      <div className={className} title="World Wide">
+        <GlobeSVG />
+      </div>
+    );
+  }
+
+  if (countryFlag) {
+    return (
+      <img
+        src={countryFlag}
+        alt={countryName || "Flag"}
+        className={className}
+        referrerPolicy="no-referrer"
+      />
+    );
+  }
+
+  return null;
+}
+
 function DancerPhoto({
   photoUrl,
   className = "w-full h-full object-cover",
@@ -2115,13 +2180,13 @@ function AdminView({
                         </div>
                       </div>
 
-                      {p.countryFlag && (
+                      {(p.countryCode === "WW" || p.countryFlag) && (
                         <div className="flex items-center gap-1.5 px-2 py-0.5 bg-white/5 border border-white/5 text-[9px] font-bold text-white/50 rounded-sm">
-                          <img
-                            src={p.countryFlag}
-                            alt={p.countryName}
+                          <FlagOrGlobe
+                            countryCode={p.countryCode}
+                            countryFlag={p.countryFlag}
+                            countryName={p.countryName}
                             className="w-3.5 h-2.5 object-cover"
-                            referrerPolicy="no-referrer"
                           />
                           <span className="uppercase">{p.countryCode}</span>
                         </div>
@@ -2157,6 +2222,9 @@ function AdminView({
                         >
                           <option value="" className="bg-[#101015]">
                             PAYS NON DÉFINI
+                          </option>
+                          <option value="WW" className="bg-[#101015]">
+                            🌍 WORLD WIDE
                           </option>
                           {countries.map((country) => {
                             const cca = country.cca2;
@@ -3132,12 +3200,12 @@ function JuryView({
                 <h2
                   className={`${myVote && !isChanging ? "text-lg sm:text-xl" : "text-xl md:text-4xl short-screen-text-sm"} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}
                 >
-                  {redP?.countryFlag && (
-                    <img
-                      src={redP.countryFlag}
-                      alt={redP.countryCode}
+                  {redP && (redP.countryCode === "WW" || redP.countryFlag) && (
+                    <FlagOrGlobe
+                      countryCode={redP.countryCode}
+                      countryFlag={redP.countryFlag}
+                      countryName={redP.countryName}
                       className="w-5 h-3.5 sm:w-7 sm:h-5 object-cover shrink-0 border border-white/10"
-                      referrerPolicy="no-referrer"
                     />
                   )}
                   <span>{redP?.name}</span>
@@ -3184,12 +3252,12 @@ function JuryView({
                 <h2
                   className={`${myVote && !isChanging ? "text-lg sm:text-xl" : "text-xl md:text-4xl short-screen-text-sm"} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}
                 >
-                  {blueP?.countryFlag && (
-                    <img
-                      src={blueP.countryFlag}
-                      alt={blueP.countryCode}
+                  {blueP && (blueP.countryCode === "WW" || blueP.countryFlag) && (
+                    <FlagOrGlobe
+                      countryCode={blueP.countryCode}
+                      countryFlag={blueP.countryFlag}
+                      countryName={blueP.countryName}
                       className="w-5 h-3.5 sm:w-7 sm:h-5 object-cover shrink-0 border border-white/10"
-                      referrerPolicy="no-referrer"
                     />
                   )}
                   <span>{blueP?.name}</span>
@@ -3224,14 +3292,17 @@ function JuryView({
                     VOTE ENREGISTRÉ
                   </p>
                   <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm flex items-center gap-2.5 justify-center">
-                    {(myVote === "red" ? redP : blueP)?.countryFlag && (
-                      <img
-                        src={(myVote === "red" ? redP : blueP)?.countryFlag}
-                        alt="Flag"
-                        className="w-6 h-4 md:w-9 md:h-6 object-cover border border-white/10 shrink-0"
-                        referrerPolicy="no-referrer"
-                      />
-                    )}
+                    {(() => {
+                      const p = myVote === "red" ? redP : blueP;
+                      return p && (p.countryCode === "WW" || p.countryFlag) ? (
+                        <FlagOrGlobe
+                          countryCode={p.countryCode}
+                          countryFlag={p.countryFlag}
+                          countryName={p.countryName}
+                          className="w-6 h-4 md:w-9 md:h-6 object-cover border border-white/10 shrink-0"
+                        />
+                      ) : null;
+                    })()}
                     <span>{myVote === "red" ? redP?.name : blueP?.name}</span>
                   </h3>
                   <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-widest mb-6 md:mb-10 italic short-screen-hide">
@@ -3569,13 +3640,15 @@ function MatchNode({
                       className="relative shrink-0 flex items-center justify-center hover:scale-110 transition-transform duration-200"
                       title="Changer le pays"
                     >
-                      {p.countryFlag ? (
-                        <img
-                          src={p.countryFlag}
-                          alt={p.countryCode || "Drapeau"}
-                          className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/20 rounded-xs"
-                          referrerPolicy="no-referrer"
-                        />
+                      {p.countryCode === "WW" || p.countryFlag ? (
+                        <div className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/20 rounded-xs flex items-center justify-center">
+                          <FlagOrGlobe
+                            countryCode={p.countryCode}
+                            countryFlag={p.countryFlag}
+                            countryName={p.countryName}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
                       ) : (
                         <svg
                           className="w-4.5 h-3 md:w-5 md:h-3.5 text-white/30 border border-white/10 border-dashed rounded-xs bg-white/5 flex shrink-0"
@@ -3623,12 +3696,12 @@ function MatchNode({
                   className={`text-[13px] md:text-[18px] font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${p ? "text-white" : "text-white/10"} ${p && isWinner(p.id) ? "text-primary" : ""}`}
                 >
                   <span>{p?.name || "-"}</span>
-                  {p?.countryFlag && (
-                    <img
-                      src={p.countryFlag}
-                      alt={p.countryCode}
+                  {p && (p.countryCode === "WW" || p.countryFlag) && (
+                    <FlagOrGlobe
+                      countryCode={p.countryCode}
+                      countryFlag={p.countryFlag}
+                      countryName={p.countryName}
                       className="w-4.5 h-3 md:w-5 md:h-3.5 object-cover shrink-0 border border-white/10 rounded-xs"
-                      referrerPolicy="no-referrer"
                     />
                   )}
                 </span>
@@ -4016,13 +4089,15 @@ function PublicView({ state }: { state: TournamentState }) {
         <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
           {winner.name}
         </h2>
-        {winner.countryFlag && (
-          <img
-            src={winner.countryFlag}
-            alt={winner.countryCode}
-            className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 mt-2 mx-auto rounded"
-            referrerPolicy="no-referrer"
-          />
+        {winner && (winner.countryCode === "WW" || winner.countryFlag) && (
+          <div className="flex justify-center mt-2">
+            <FlagOrGlobe
+              countryCode={winner.countryCode}
+              countryFlag={winner.countryFlag}
+              countryName={winner.countryName}
+              className="w-6 h-5 md:w-10 md:h-8 object-cover border border-white/20 rounded"
+            />
+          </div>
         )}
       </div>
     </div>
@@ -4045,12 +4120,12 @@ function PublicView({ state }: { state: TournamentState }) {
                 </div>
               </div>
               <div className="bg-brand-red font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-start gap-0.5 md:gap-1 border-l border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-                {redP?.countryFlag && (
-                  <img
-                    src={redP.countryFlag}
-                    alt={redP.countryCode}
+                {redP && (redP.countryCode === "WW" || redP.countryFlag) && (
+                  <FlagOrGlobe
+                    countryCode={redP.countryCode}
+                    countryFlag={redP.countryFlag}
+                    countryName={redP.countryName}
                     className="w-3 h-2 md:w-4 md:h-3 object-cover border border-white/10 shrink-0"
-                    referrerPolicy="no-referrer"
                   />
                 )}
                 <span className="truncate uppercase tracking-tighter text-[7px] md:text-sm">
@@ -4083,12 +4158,12 @@ function PublicView({ state }: { state: TournamentState }) {
                 <span className="truncate uppercase tracking-tighter text-right text-[7px] md:text-sm">
                   {blueP?.name || "-"}
                 </span>
-                {blueP?.countryFlag && (
-                  <img
-                    src={blueP.countryFlag}
-                    alt={blueP.countryCode}
+                {blueP && (blueP.countryCode === "WW" || blueP.countryFlag) && (
+                  <FlagOrGlobe
+                    countryCode={blueP.countryCode}
+                    countryFlag={blueP.countryFlag}
+                    countryName={blueP.countryName}
                     className="w-3 h-2 md:w-4 md:h-3 object-cover border border-white/10 shrink-0"
-                    referrerPolicy="no-referrer"
                   />
                 )}
               </div>
@@ -4214,12 +4289,12 @@ function PublicView({ state }: { state: TournamentState }) {
                   <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
                     <Trophy size={24} className="text-white fill-white/20" />
                     <div className="flex items-center gap-1.5 md:gap-2 truncate">
-                      {winner?.countryFlag && (
-                        <img
-                          src={winner.countryFlag}
-                          alt={winner.countryName}
+                      {winner && (winner.countryCode === "WW" || winner.countryFlag) && (
+                        <FlagOrGlobe
+                          countryCode={winner.countryCode}
+                          countryFlag={winner.countryFlag}
+                          countryName={winner.countryName}
                           className="h-4 md:h-5 w-6 md:w-7 object-cover rounded-sm"
-                          referrerPolicy="no-referrer"
                         />
                       )}
                       <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
