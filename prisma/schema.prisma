@@ -51,6 +51,9 @@ model Participant {
   countryCode  String     @default("")
   countryName  String     @default("")
   countryFlag  String     @default("")
+  countryCode2 String     @default("")
+  countryName2 String     @default("")
+  countryFlag2 String     @default("")
   createdAt    DateTime   @default(now())
 }
 

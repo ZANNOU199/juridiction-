@@ -359,7 +359,7 @@ export async function configureTournament(
   data: {
     competitionName: string;
     competitionLogo: string;
-    participants: Array<{ id: string; name: string; photo: string; countryCode?: string; countryName?: string; countryFlag?: string }>;
+    participants: Array<{ id: string; name: string; photo: string; countryCode?: string; countryName?: string; countryFlag?: string; countryCode2?: string; countryName2?: string; countryFlag2?: string }>;
     juryAccounts: Array<{ username: string; password: string }>;
     matches: Array<any>;
     tournamentSize: 16 | 8 | 4 | 2;
@@ -421,6 +421,9 @@ export async function configureTournament(
           countryCode: p.countryCode || "",
           countryName: p.countryName || "",
           countryFlag: p.countryFlag || "",
+          countryCode2: p.countryCode2 || "",
+          countryName2: p.countryName2 || "",
+          countryFlag2: p.countryFlag2 || "",
         };
       }),
     });
