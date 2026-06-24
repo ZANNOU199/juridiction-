@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Match" ADD COLUMN "greenTeamId" TEXT,
+ADD COLUMN "greenVotes" INTEGER NOT NULL DEFAULT 0;

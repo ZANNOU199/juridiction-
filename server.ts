@@ -487,17 +487,10 @@ app.post("/api/jury-assignments/:eventSlug/:tournamentId/:juryId", async (req, r
     const { tournamentId, juryId } = req.params;
     
     await db.assignJuryToTournament(tournamentId, juryId);
-    
+
     // Return updated assignments for this tournament
-    const event = await db.getEventBySlug(req.params.eventSlug);
-    const tournament = event?.tournaments.find(t => t.id === tournamentId);
-    
-    if (tournament) {
-      const assignments = tournament.juryAccounts || [];
-      res.json(assignments);
-    } else {
-      res.json([]);
-    }
+    const assignments = await db.getJuryAssignments(req.params.eventSlug);
+    res.json(assignments[tournamentId] || []);
   } catch (error) {
     console.error("Error assigning jury:", error);
     res.status(500).json({ error: "Internal Server Error" });

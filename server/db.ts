@@ -144,6 +144,59 @@ export async function getAllEvents() {
   });
 }
 
+export async function getAllCategoriesChampions(eventSlug: string) {
+  const tournaments = await prisma.tournament.findMany({
+    where: { event: { eventSlug } },
+    select: {
+      category: true,
+      matches: {
+        where: {
+          round: "FINALE",
+          status: "finished",
+        },
+        select: {
+          winnerId: true,
+          isTieBrek: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
+    },
+  });
+
+  if (!tournaments) return null;
+
+  const results = await Promise.all(
+    tournaments.map(async (tournament) => {
+      const finaleMatch = tournament.matches[0];
+      const champion = finaleMatch?.winnerId
+        ? await prisma.participant.findUnique({
+            where: { id: finaleMatch.winnerId },
+            select: {
+              id: true,
+              name: true,
+              photo: true,
+              countryCode: true,
+              countryName: true,
+              countryFlag: true,
+              countryCode2: true,
+              countryName2: true,
+              countryFlag2: true,
+            },
+          })
+        : null;
+
+      return {
+        category: tournament.category,
+        champion,
+        isTieBrek: finaleMatch?.isTieBrek ?? false,
+      };
+    }),
+  );
+
+  return results;
+}
+
 export async function getTournamentsByEventSlug(eventSlug: string) {
   return await prisma.tournament.findMany({
     where: {
@@ -542,7 +595,7 @@ export async function authenticateJury(
 export async function castVote(
   matchId: string,
   juryId: string,
-  vote: "red" | "blue"
+  vote: "red" | "blue" | "green"
 ) {
   // Upsert vote
   const juryVote = await prisma.juryVote.upsert({
@@ -636,16 +689,19 @@ export async function confirmRound(tournamentId: string) {
 
   const redCount = votes.filter((v) => v.vote === "red").length;
   const blueCount = votes.filter((v) => v.vote === "blue").length;
+  const greenCount = votes.filter((v) => v.vote === "green").length;
 
   if (match.votingMode === "round") {
     const roundResults = JSON.parse(match.roundResults);
-    roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount };
+    roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount, green: greenCount };
 
     let redVotesTotal = match.redVotes;
     let blueVotesTotal = match.blueVotes;
+    let greenVotesTotal = match.greenVotes;
 
-    if (redCount > blueCount) redVotesTotal += 1;
-    else if (blueCount > redCount) blueVotesTotal += 1;
+    if (redCount > blueCount && redCount > greenCount) redVotesTotal += 1;
+    else if (blueCount > redCount && blueCount > greenCount) blueVotesTotal += 1;
+    else if (greenCount > redCount && greenCount > blueCount) greenVotesTotal += 1;
 
     if (match.currentRound < match.roundCount) {
       // Move to next round
@@ -656,6 +712,7 @@ export async function confirmRound(tournamentId: string) {
           roundResults: JSON.stringify(roundResults),
           redVotes: redVotesTotal,
           blueVotes: blueVotesTotal,
+          greenVotes: greenVotesTotal,
         },
       });
       // Clear votes for next round
@@ -665,7 +722,13 @@ export async function confirmRound(tournamentId: string) {
     } else {
       // All rounds finished
       const winnerId =
-        redVotesTotal > blueVotesTotal ? match.redTeamId : blueVotesTotal > redVotesTotal ? match.blueTeamId : null;
+        redVotesTotal > blueVotesTotal && redVotesTotal > greenVotesTotal
+          ? match.redTeamId
+          : blueVotesTotal > redVotesTotal && blueVotesTotal > greenVotesTotal
+            ? match.blueTeamId
+            : greenVotesTotal > redVotesTotal && greenVotesTotal > blueVotesTotal
+              ? match.greenTeamId
+              : null;
 
       await prisma.match.update({
         where: { id: match.id },
@@ -673,6 +736,7 @@ export async function confirmRound(tournamentId: string) {
           roundResults: JSON.stringify(roundResults),
           redVotes: redVotesTotal,
           blueVotes: blueVotesTotal,
+          greenVotes: greenVotesTotal,
           winnerId,
         },
       });
@@ -696,12 +760,30 @@ export async function revealMatch(tournamentId: string, matchId: string) {
 
   const redCount = votes.filter((v) => v.vote === "red").length;
   const blueCount = votes.filter((v) => v.vote === "blue").length;
+  const greenCount = votes.filter((v) => v.vote === "green").length;
 
-  // Determine winner
-  const winnerId =
-    redCount > blueCount ? match.redTeamId :
-    blueCount > redCount ? match.blueTeamId :
-    null;
+  // Determine winner and if it's a tie
+  let winnerId: string | null = null;
+  let isTieBrek = false;
+
+  // Check if there's a clear winner
+  const counts = [
+    { count: redCount, id: match.redTeamId },
+    { count: blueCount, id: match.blueTeamId },
+    ...(match.greenTeamId ? [{ count: greenCount, id: match.greenTeamId }] : []),
+  ];
+
+  const maxCount = Math.max(...counts.map((c) => c.count));
+  const winnersCount = counts.filter((c) => c.count === maxCount).length;
+
+  if (winnersCount === 1) {
+    // Clear winner
+    winnerId = counts.find((c) => c.count === maxCount)!.id;
+  } else if (winnersCount > 1) {
+    // Tie break situation
+    isTieBrek = true;
+    winnerId = null;
+  }
 
   // Update match with revealed status and winner
   await prisma.match.update({
@@ -709,8 +791,10 @@ export async function revealMatch(tournamentId: string, matchId: string) {
     data: {
       revealed: true,
       winnerId: winnerId,
+      isTieBrek: isTieBrek,
       redVotes: redCount,
       blueVotes: blueCount,
+      greenVotes: greenCount,
     },
   });
 

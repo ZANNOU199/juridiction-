@@ -80,8 +80,10 @@ model Match {
   tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
   redTeamId    String
   blueTeamId   String
+  greenTeamId  String?
   redVotes     Int        @default(0)
   blueVotes    Int        @default(0)
+  greenVotes   Int        @default(0)
   winnerId     String?
   status       String     @default("pending")
   round        String     @default("")
@@ -90,6 +92,7 @@ model Match {
   currentRound Int        @default(1)
   roundResults String     @default("[]")
   revealed     Boolean    @default(false)
+  isTieBrek    Boolean    @default(false)
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
