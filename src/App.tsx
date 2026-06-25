@@ -1893,6 +1893,26 @@ function AdminView({
     setMatches(matches.filter((m) => m.id !== id));
   };
 
+  const saveParticipantsToServer = async (participantsList: Participant[]) => {
+    if (!eventSlug || !category) return;
+    try {
+      await fetch(buildAdminUrl("/configure"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          competitionName,
+          competitionLogo,
+          participants: participantsList,
+          juryAccounts,
+          matches,
+          tournamentSize,
+        }),
+      });
+    } catch (e) {
+      console.error("Error saving participants:", e);
+    }
+  };
+
   const configure = async () => {
     const finalParticipants = participants.slice(0, tournamentSize);
 
@@ -2403,7 +2423,7 @@ function AdminView({
                 <div className="pt-4">
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       const nextIndex = participants.length + 1;
                       const newParticipant: Participant = {
                         id: `p-${Date.now()}`,
@@ -2416,7 +2436,12 @@ function AdminView({
                         countryName2: "",
                         countryFlag2: "",
                       };
-                      setParticipants((prev) => [...prev, newParticipant]);
+                      const updatedParticipants = [...participants, newParticipant];
+                      setParticipants(updatedParticipants);
+                      
+                      // Save to database immediately
+                      await saveParticipantsToServer(updatedParticipants);
+                      
                       // small delay then focus last input if present
                       setTimeout(() => {
                         const container = document.querySelector('.grid.grid-cols-1');
