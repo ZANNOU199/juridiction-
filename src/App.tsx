@@ -1930,10 +1930,23 @@ function AdminView({
         const data = await res.json();
         if (data.state) {
           onSave(data.state);
+          return;
         }
       }
     } catch (e) {
       console.error("Server error during next match:", e);
+    }
+
+    // Fallback: if server route failed or returned no state, try selecting next pending match locally
+    try {
+      const nextPending = state.matches.find((m) => m.status === "pending");
+      if (nextPending) {
+        await selectMatch(nextPending.id);
+      } else {
+        console.warn("No pending matches to activate");
+      }
+    } catch (err) {
+      console.error("Fallback next-match failed:", err);
     }
   };
 

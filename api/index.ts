@@ -458,10 +458,10 @@ app.post("/admin/:eventSlug/:category/next-match", async (req, res) => {
     if (!tournament) {
       return res.status(404).json({ error: "Tournament not found" });
     }
-    const state = await db.getTournamentState(tournament.id);
+    const state = await db.nextMatch(tournament.id);
     res.json({ success: true, state });
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error in next-match:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });
