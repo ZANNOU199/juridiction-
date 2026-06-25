@@ -529,6 +529,7 @@ export async function configureTournament(
       // Map the participant IDs from frontend to new database IDs
       const mappedRedTeamId = participantIdMap[m.redTeamId] || m.redTeamId;
       const mappedBlueTeamId = participantIdMap[m.blueTeamId] || m.blueTeamId;
+      const mappedGreenTeamId = m.greenTeamId ? participantIdMap[m.greenTeamId] || m.greenTeamId : undefined;
       
       const match = await tx.match.create({
         data: {
@@ -536,6 +537,7 @@ export async function configureTournament(
           id: uniqueMatchId,
           redTeamId: mappedRedTeamId,
           blueTeamId: mappedBlueTeamId,
+          greenTeamId: mappedGreenTeamId,
           round: m.round || "",
           status: i === 0 ? "active" : "pending",
           votingMode: m.votingMode || "match",
