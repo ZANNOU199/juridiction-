@@ -152,10 +152,8 @@ interface Match {
   id: string;
   redTeamId: string;
   blueTeamId: string;
-  greenTeamId?: string | null;
   redVotes: number;
   blueVotes: number;
-  greenVotes: number;
   winnerId: string | null;
   status: "pending" | "active" | "finished";
   allVotesCastAt?: number;
@@ -163,10 +161,9 @@ interface Match {
   votingMode: "match" | "round";
   roundCount: number;
   currentRound: number;
-  roundResults: { red: number; blue: number; green?: number }[];
+  roundResults: { red: number; blue: number }[];
   finishedJuries: string[];
   revealed?: boolean;
-  isTieBrek?: boolean;
 }
 
 interface JuryAccount {
@@ -183,7 +180,7 @@ interface TournamentState {
   juryCount: number;
   currentMatchId: string | null;
   matches: Match[];
-  juryVotes: Record<string, "red" | "blue" | "green" | null>;
+  juryVotes: Record<string, "red" | "blue" | null>;
   warnedJuries: string[];
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
@@ -1599,7 +1596,7 @@ function AdminView({
     } else {
       setParticipants(DEFAULT_PARTICIPANTS);
     }
-  }, [state, category]); // Re-sync when the tournament state or category changes
+  }, [state.currentCategory, category]); // Re-sync when tournament category or route category changes
 
   const updateMatchTeam = (
     matchId: string,
@@ -1763,10 +1760,8 @@ function AdminView({
           id: `t16-${i + 1}`,
           redTeamId: participants[i * 2]?.id || "",
           blueTeamId: participants[i * 2 + 1]?.id || "",
-          greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
-          greenVotes: 0,
           winnerId: null,
           status: "pending",
           round: "TOP 16",
@@ -1775,7 +1770,6 @@ function AdminView({
           currentRound: 1,
           roundResults: [],
           finishedJuries: [],
-          isTieBrek: false,
         });
       }
     }
@@ -1787,10 +1781,8 @@ function AdminView({
           id: `t8-${i + 1}`,
           redTeamId: size === 8 ? participants[i * 2]?.id || "" : "",
           blueTeamId: size === 8 ? participants[i * 2 + 1]?.id || "" : "",
-          greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
-          greenVotes: 0,
           winnerId: null,
           status: "pending",
           round: "TOP 8",
@@ -1799,7 +1791,6 @@ function AdminView({
           currentRound: 1,
           roundResults: [],
           finishedJuries: [],
-          isTieBrek: false,
         });
       }
     }
@@ -1811,10 +1802,8 @@ function AdminView({
           id: `semi-${i + 1}`,
           redTeamId: size === 4 ? participants[i * 2]?.id || "" : "",
           blueTeamId: size === 4 ? participants[i * 2 + 1]?.id || "" : "",
-          greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
-          greenVotes: 0,
           winnerId: null,
           status: "pending",
           round: "SEMI FINALE",
@@ -1823,7 +1812,6 @@ function AdminView({
           currentRound: 1,
           roundResults: [],
           finishedJuries: [],
-          isTieBrek: false,
         });
       }
     }
@@ -1833,10 +1821,8 @@ function AdminView({
       id: `final-1`,
       redTeamId: size === 2 ? participants[0]?.id || "" : "",
       blueTeamId: size === 2 ? participants[1]?.id || "" : "",
-      greenTeamId: "",
       redVotes: 0,
       blueVotes: 0,
-      greenVotes: 0,
       winnerId: null,
       status: "pending",
       round: "FINALE",
@@ -1845,32 +1831,14 @@ function AdminView({
       currentRound: 1,
       roundResults: [],
       finishedJuries: [],
-      isTieBrek: false,
     });
 
     setMatches(newMatches);
   };
 
-  const addNinthParticipantToTop8 = () => {
-    const ninth = participants[8];
-    if (!ninth) return;
-
-    setMatches((prev) => {
-      const matchToUpdate = prev.find(
-        (m) => m.round === "TOP 8" && !m.greenTeamId,
-      );
-      if (!matchToUpdate) return prev;
-      return prev.map((m) =>
-        m.id === matchToUpdate.id
-          ? { ...m, greenTeamId: ninth.id }
-          : m,
-      );
-    });
-  };
-
   const updateMatchParticipant = (
     matchId: string,
-    side: "red" | "blue" | "green",
+    side: "red" | "blue",
     participantId: string,
   ) => {
     setMatches(
@@ -1878,13 +1846,7 @@ function AdminView({
         if (m.id === matchId) {
           return {
             ...m,
-            [
-              side === "red"
-                ? "redTeamId"
-                : side === "blue"
-                  ? "blueTeamId"
-                  : "greenTeamId"
-            ]: participantId,
+            [side === "red" ? "redTeamId" : "blueTeamId"]: participantId,
           };
         }
         return m;
@@ -1898,10 +1860,8 @@ function AdminView({
         id: `m-${Date.now()}`,
         redTeamId: redId,
         blueTeamId: blueId,
-        greenTeamId: null,
         redVotes: 0,
         blueVotes: 0,
-        greenVotes: 0,
         winnerId: null,
         status: "pending",
         round: newMatchRound,
@@ -1910,7 +1870,6 @@ function AdminView({
         currentRound: 1,
         roundResults: [],
         finishedJuries: [],
-        isTieBrek: false,
       };
       setMatches([...matches, m]);
       setNewMatchRound("");
@@ -2110,7 +2069,7 @@ function AdminView({
     }
   };
 
-  const adminCastVote = async (juryId: string, vote: "red" | "blue" | "green") => {
+  const adminCastVote = async (juryId: string, vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
     try {
@@ -2168,6 +2127,7 @@ function AdminView({
                     {[16, 8, 4, 2].map((s) => (
                       <button
                         key={s}
+                        type="button"
                         onClick={() => setTournamentSize(s as any)}
                         className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? "bg-white border-white text-black" : "border-white/10 text-white/40"}`}
                       >
@@ -2409,6 +2369,34 @@ function AdminView({
                     </div>
                   </div>
                 ))}
+                <div className="pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextIndex = participants.length + 1;
+                      const newParticipant: Participant = {
+                        id: `p-${Date.now()}`,
+                        name: `B-BOY ${nextIndex}`,
+                        photo: "",
+                        countryCode: "",
+                        countryName: "",
+                        countryFlag: "",
+                        countryCode2: "",
+                        countryName2: "",
+                        countryFlag2: "",
+                      };
+                      setParticipants((prev) => [...prev, newParticipant]);
+                      // small delay then focus last input if present
+                      setTimeout(() => {
+                        const container = document.querySelector('.grid.grid-cols-1');
+                        container?.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                      }, 120);
+                    }}
+                    className="mt-2 w-full bg-white/5 border border-white/10 text-white/80 py-2 font-black uppercase text-sm hover:bg-white/10 transition-all"
+                  >
+                    + Ajouter un participant
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -2421,6 +2409,7 @@ function AdminView({
                   <Trophy size={14} /> 3. Structure du Tableau
                 </h3>
                 <button
+                  type="button"
                   onClick={() => generateBracket(tournamentSize)}
                   className="text-[9px] font-black hover:text-white transition-colors uppercase italic border-b border-white/20"
                 >
@@ -2434,6 +2423,7 @@ function AdminView({
                     Initialiser le tableau Top {tournamentSize}
                   </p>
                   <button
+                    type="button"
                     onClick={() => generateBracket(tournamentSize)}
                     className="px-6 py-3 bg-white text-black font-black italic uppercase text-[10px] tracking-widest hover:scale-105 active:scale-95 transition-all"
                   >
@@ -2452,19 +2442,9 @@ function AdminView({
                     })
                     .map((roundName) => (
                       <div key={roundName} className="space-y-2">
-                        <div className="flex items-center justify-between gap-2">
-                          <h4 className="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase border-b border-white/5 pb-1">
-                            {roundName}
-                          </h4>
-                          {roundName === "TOP 8" && tournamentSize === 8 && participants[8] && matches.some((m) => m.round === "TOP 8" && !m.greenTeamId) && (
-                            <button
-                              onClick={addNinthParticipantToTop8}
-                              className="text-[8px] font-black uppercase tracking-[0.3em] bg-emerald-500/15 border border-emerald-500/30 text-emerald-200 px-2 py-1 rounded-sm hover:bg-emerald-500/25 transition-all"
-                            >
-                              + 9ÈME PARTICIPANT
-                            </button>
-                          )}
-                        </div>
+                        <h4 className="text-[8px] font-black text-white/30 tracking-[0.3em] uppercase border-b border-white/5 pb-1">
+                          {roundName}
+                        </h4>
                         {matches
                           .filter((m) => m.round === roundName)
                           .map((m) => (
@@ -2506,26 +2486,6 @@ function AdminView({
                                 <option value="">BLEU</option>
                                 {participants
                                   .slice(0, tournamentSize)
-                                  .map((p) => (
-                                    <option key={p.id} value={p.id}>
-                                      {p.name}
-                                    </option>
-                                  ))}
-                              </select>
-                              <select
-                                value={m.greenTeamId || ""}
-                                onChange={(e) =>
-                                  updateMatchParticipant(
-                                    m.id,
-                                    "green",
-                                    e.target.value,
-                                  )
-                                }
-                                className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
-                              >
-                                <option value="">VERT</option>
-                                {participants
-                                  .slice(0, tournamentSize + 1)
                                   .map((p) => (
                                     <option key={p.id} value={p.id}>
                                       {p.name}
@@ -3104,9 +3064,6 @@ function JuryView({
   const blueP = state.participants.find(
     (p) => p.id === currentMatch?.blueTeamId,
   );
-  const greenP = state.participants.find(
-    (p) => p.id === currentMatch?.greenTeamId,
-  );
 
   const currentVotesRed = Object.values(state.juryVotes).filter(
     (v) => v === "red",
@@ -3114,10 +3071,7 @@ function JuryView({
   const currentVotesBlue = Object.values(state.juryVotes).filter(
     (v) => v === "blue",
   ).length;
-  const currentVotesGreen = Object.values(state.juryVotes).filter(
-    (v) => v === "green",
-  ).length;
-  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue;
 
   const confirmRound = async () => {
     try {
@@ -3185,7 +3139,7 @@ function JuryView({
     setView("list");
   };
 
-  const castVote = async (vote: "red" | "blue" | "green") => {
+  const castVote = async (vote: "red" | "blue") => {
     if (!state.currentMatchId) return;
 
     try {
@@ -3429,59 +3383,6 @@ function JuryView({
               </div>
             </button>
 
-            {/* Green Button */}
-            <button
-              onClick={() => castVote("green")}
-              disabled={!!myVote && !isChanging}
-              className={`flex-1 flex flex-col items-center justify-center transition-all duration-700 touch-none border-white/20 relative overflow-hidden group
-                ${isChanging && myVote === "green" ? "ring-8 ring-white/30 z-20 shadow-[0_0_100px_rgba(16,185,129,0.8)]" : ""}
-                ${myVote && !isChanging ? (myVote === "green" ? "opacity-100 rounded-3xl" : "opacity-20 scale-90 rounded-3xl") : "p-4 active:scale-95 active:brightness-90 border-l-2"}
-              `}
-              style={{ backgroundColor: "rgb(16, 185, 129)" }}
-            >
-              {greenP && (
-                <div
-                  className={`absolute inset-0 flex items-center justify-center p-2 transition-all duration-700 ${myVote && !isChanging ? "opacity-40 scale-75" : "md:p-8"}`}
-                >
-                  <div
-                    className={`w-full h-full max-w-[85%] max-h-[85%] rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border-4 md:border-8 border-white/20 shadow-2xl relative transition-all duration-700 ${myVote && !isChanging ? "rounded-full" : ""}`}
-                  >
-                    <DancerPhoto
-                      photoUrl={greenP.photo}
-                      alt={greenP.name}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/40 to-transparent" />
-                  </div>
-                </div>
-              )}
-              <div
-                className={`relative z-10 flex flex-col items-center bg-black/40 rounded-xl border border-white/10 transition-all duration-700 short-screen-p-sm ${myVote && !isChanging ? "px-4 py-2 scale-75" : "px-4 py-3 sm:px-6 sm:py-4"}`}
-              >
-                <h2
-                  className={`${myVote && !isChanging ? "text-lg sm:text-xl" : "text-xl md:text-4xl short-screen-text-sm"} font-black italic uppercase tracking-tighter text-center leading-tight mb-1 sm:mb-2 drop-shadow-md flex items-center gap-2 justify-center`}
-                >
-                  {(greenP?.countryFlag || greenP?.countryFlag2) && (
-                    <CountryFlags
-                      countryFlag={greenP?.countryFlag}
-                      countryName={greenP?.countryName}
-                      countryFlag2={greenP?.countryFlag2}
-                      countryName2={greenP?.countryName2}
-                      sizeClass="w-5 h-3.5 sm:w-7 sm:h-5"
-                    />
-                  )}
-                  <span>{greenP?.name}</span>
-                </h2>
-                <div className="px-3 py-1 bg-white text-black font-black italic uppercase text-[8px] sm:text-[10px] tracking-widest shadow-xl short-screen-text-sm">
-                  {myVote === "green" && !isChanging
-                    ? "SÉLECTIONNÉ"
-                    : isChanging && myVote === "green"
-                      ? "VOTE ACTUEL"
-                      : ""}
-                </div>
-              </div>
-            </button>
-
             {/* Confirmation Overlay (Active when vote cast and not changing) */}
             {myVote && !isChanging && (
               <motion.div
@@ -3491,7 +3392,7 @@ function JuryView({
               >
                 <div className="bg-black/90 backdrop-blur-2xl border border-white/20 p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] pointer-events-auto max-w-lg w-full short-screen-p-sm">
                   <div
-                    className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 md:mb-8 border-4 short-screen-hide ${myVote === "red" ? "border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]" : myVote === "blue" ? "border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]" : "border-emerald-500 bg-emerald-500/20 shadow-[0_0_40px_rgba(16,185,129,0.4)]"}`}
+                    className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 md:mb-8 border-4 short-screen-hide ${myVote === "red" ? "border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]" : "border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]"}`}
                   >
                     <CheckCircle2
                       size={32}
@@ -3502,16 +3403,16 @@ function JuryView({
                     VOTE ENREGISTRÉ
                   </p>
                   <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm flex items-center gap-2.5 justify-center">
-                    {((myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag || (myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2) && (
+                    {((myVote === "red" ? redP : blueP)?.countryFlag || (myVote === "red" ? redP : blueP)?.countryFlag2) && (
                       <CountryFlags
-                        countryFlag={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag}
-                        countryName={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName}
-                        countryFlag2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2}
-                        countryName2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName2}
+                        countryFlag={(myVote === "red" ? redP : blueP)?.countryFlag}
+                        countryName={(myVote === "red" ? redP : blueP)?.countryName}
+                        countryFlag2={(myVote === "red" ? redP : blueP)?.countryFlag2}
+                        countryName2={(myVote === "red" ? redP : blueP)?.countryName2}
                         sizeClass="w-6 h-4 md:w-9 md:h-6"
                       />
                     )}
-                    <span>{myVote === "red" ? redP?.name : myVote === "blue" ? blueP?.name : greenP?.name}</span>
+                    <span>{myVote === "red" ? redP?.name : blueP?.name}</span>
                   </h3>
                   <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-widest mb-6 md:mb-10 italic short-screen-hide">
                     SÉLECTION BIEN TRANSMISE AU SYSTÈME
@@ -4132,9 +4033,6 @@ function PublicView({ state }: { state: TournamentState }) {
   const blueP = activeMatch
     ? state.participants.find((p) => p.id === activeMatch.blueTeamId)
     : null;
-  const greenP = activeMatch
-    ? state.participants.find((p) => p.id === activeMatch.greenTeamId)
-    : null;
 
   const [scale, setScale] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -4198,10 +4096,7 @@ function PublicView({ state }: { state: TournamentState }) {
   const currentVotesBlue = Object.values(state.juryVotes).filter(
     (v) => v === "blue",
   ).length;
-  const currentVotesGreen = Object.values(state.juryVotes).filter(
-    (v) => v === "green",
-  ).length;
-  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue;
 
   const gracePeriodPassed = activeMatch.allVotesCastAt
     ? now - activeMatch.allVotesCastAt > 5000
@@ -4222,24 +4117,7 @@ function PublicView({ state }: { state: TournamentState }) {
       : currentVotesBlue
     : 0;
 
-  const greenScore = showResults
-    ? activeMatch.votingMode === "round"
-      ? activeMatch.greenVotes
-      : currentVotesGreen
-    : 0;
-
-  const scoreCandidates = [
-    { score: redScore, participant: redP },
-    { score: blueScore, participant: blueP },
-    ...(greenP ? [{ score: greenScore, participant: greenP }] : []),
-  ].filter((item) => item.participant);
-
-  const maxScore = scoreCandidates.length
-    ? Math.max(...scoreCandidates.map((item) => item.score))
-    : 0;
-  const topWinners = scoreCandidates.filter((item) => item.score === maxScore);
-  const isTie = showResults && topWinners.length > 1;
-  const winner = showResults && !isTie ? topWinners[0].participant : null;
+  const winner = showResults ? (redScore > blueScore ? redP : blueP) : null;
 
   // Get current tournament level from active match round
   const getCurrentTournamentLevel = () => {
@@ -4367,30 +4245,9 @@ function PublicView({ state }: { state: TournamentState }) {
               </div>
             </div>
 
-            {/* VS / Green Participant Divider */}
-            <div className="flex flex-col items-center justify-center gap-2 text-white/95 px-0.5 pt-1 md:pt-2 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-              {greenP ? (
-                <>
-                  <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-emerald-500 flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(16,185,129,0.3)] border-b border-black/20 uppercase shrink-0">
-                    {greenScore}
-                  </div>
-                  <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
-                    <DancerPhoto
-                      photoUrl={greenP.photo}
-                      alt={greenP.name}
-                      className="w-full h-full object-cover transition-all duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  </div>
-                  <div className="bg-emerald-500 font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-center gap-0.5 md:gap-1 border border-emerald-500/40 shadow-[inset_0_0_20px_rgba(16,185,129,0.25)] overflow-hidden uppercase tracking-tighter">
-                    {greenP?.name || "TROISIÈME"}
-                  </div>
-                </>
-              ) : (
-                <div className="text-[10px] md:text-xl font-black italic text-white/95 px-0.5 pt-1 md:pt-2 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
-                  VS
-                </div>
-              )}
+            {/* VS Divider */}
+            <div className="text-[10px] md:text-xl font-black italic text-white/95 px-0.5 pt-1 md:pt-2 select-none self-center shrink-0 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+              VS
             </div>
 
             {/* Blue Side */}
@@ -4462,17 +4319,15 @@ function PublicView({ state }: { state: TournamentState }) {
                               className="flex flex-col gap-0.5 items-center"
                             >
                               <div
-                                className={`w-4 h-4 flex items-center justify-center border text-[6px] ${result ? (result.red > result.blue && result.red > (result.green ?? 0) ? "bg-brand-red border-brand-red" : result.blue > result.red && result.blue > (result.green ?? 0) ? "bg-brand-blue border-brand-blue" : result.green !== undefined && result.green > result.red && result.green > result.blue ? "bg-emerald-500 border-emerald-500" : "bg-white/20 border-white/40") : "bg-white/5 border-white/10"}`}
+                                className={`w-4 h-4 flex items-center justify-center border text-[6px] ${result ? (result.red > result.blue ? "bg-brand-red border-brand-red" : result.blue > result.red ? "bg-brand-blue border-brand-blue" : "bg-white/20 border-white/40") : "bg-white/5 border-white/10"}`}
                               >
                                 {result && (
                                   <span className="text-[6px] font-black italic">
-                                    {result.red > result.blue && result.red > (result.green ?? 0)
+                                    {result.red > result.blue
                                       ? "R"
-                                      : result.blue > result.red && result.blue > (result.green ?? 0)
+                                      : result.blue > result.red
                                         ? "B"
-                                        : result.green !== undefined && result.green > result.red && result.green > result.blue
-                                          ? "G"
-                                          : "="}
+                                        : "="}
                                   </span>
                                 )}
                               </div>
@@ -4507,9 +4362,7 @@ function PublicView({ state }: { state: TournamentState }) {
                   if (showActualVote && vote) {
                     bgColor = vote === "red"
                       ? "bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]"
-                      : vote === "blue"
-                        ? "bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]"
-                        : "bg-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.5)]";
+                      : "bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]";
                   } else if (hasVoted && !showActualVote) {
                     bgColor = "bg-white shadow-[inset_0_0_20px_rgba(255,255,255,0.3)]";
                   }
@@ -4533,7 +4386,7 @@ function PublicView({ state }: { state: TournamentState }) {
 
           {/* Winner Banner */}
           <AnimatePresence>
-            {(winner || isTie) && !(activeMatch.round === "FINALE" && activeMatch.status === "finished") && (
+            {winner && !(activeMatch.round === "FINALE" && activeMatch.status === "finished") && (
               <motion.div
                 initial={{ height: 0, opacity: 0, scale: 0.95 }}
                 animate={{ height: "auto", opacity: 1, scale: 1 }}
@@ -4541,34 +4394,26 @@ function PublicView({ state }: { state: TournamentState }) {
               >
                 <div
                   className={`py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase shadow-[0_0_60px_rgba(0,0,0,1)] relative overflow-hidden border border-white/10
-                ${isTie ? "bg-emerald-500" : winner?.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}
+                ${winner.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}
               `}
                 >
                   <div className="absolute inset-0 bg-white/10 animate-pulse mix-blend-overlay" />
                   <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
-                    {isTie ? (
-                      <div className="flex items-center gap-2 truncate">
-                        <span className="text-sm md:text-lg truncate">TIE BREK</span>
-                      </div>
-                    ) : (
-                      <>
-                        <Trophy size={24} className="text-white fill-white/20" />
-                        <div className="flex items-center gap-1.5 md:gap-2 truncate">
-                          <CountryFlags
-                            countryFlag={winner?.countryFlag}
-                            countryName={winner?.countryName}
-                            countryFlag2={winner?.countryFlag2}
-                            countryName2={winner?.countryName2}
-                            sizeClass="h-4 md:h-5 w-6 md:w-7"
-                          />
-                          <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
-                        </div>
-                      </>
-                    )}
+                    <Trophy size={24} className="text-white fill-white/20" />
+                    <div className="flex items-center gap-1.5 md:gap-2 truncate">
+                      <CountryFlags
+                        countryFlag={winner?.countryFlag}
+                        countryName={winner?.countryName}
+                        countryFlag2={winner?.countryFlag2}
+                        countryName2={winner?.countryName2}
+                        sizeClass="h-4 md:h-5 w-6 md:w-7"
+                      />
+                      <span className="text-sm md:text-lg truncate">{winner.name} WINS</span>
+                    </div>
                   </div>
                   {/* Glowing Outer Light */}
                   <div
-                    className={`absolute -inset-1 blur-[20px] -z-10 opacity-40 ${isTie ? "bg-emerald-500" : winner?.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}`}
+                    className={`absolute -inset-1 blur-[20px] -z-10 opacity-40 ${winner.id === redP?.id ? "bg-brand-red" : "bg-brand-blue"}`}
                   />
                 </div>
               </motion.div>
