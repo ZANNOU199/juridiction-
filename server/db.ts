@@ -581,25 +581,20 @@ export async function updateParticipantsOnly(
     where: { tournamentId },
   });
 
-  // Create participants with unique IDs
-  const participantIdMap: Record<string, string> = {};
+  // Recreate participants while preserving their frontend IDs.
   await prisma.participant.createMany({
-    data: participants.map((p, idx) => {
-      const newId = `${tournamentId}-p${idx + 1}`;
-      participantIdMap[p.id] = newId;
-      return {
-        tournamentId,
-        id: newId,
-        name: p.name,
-        photo: p.photo,
-        countryCode: p.countryCode || "",
-        countryName: p.countryName || "",
-        countryFlag: p.countryFlag || "",
-        countryCode2: p.countryCode2 || "",
-        countryName2: p.countryName2 || "",
-        countryFlag2: p.countryFlag2 || "",
-      };
-    }),
+    data: participants.map((p) => ({
+      tournamentId,
+      id: p.id,
+      name: p.name,
+      photo: p.photo,
+      countryCode: p.countryCode || "",
+      countryName: p.countryName || "",
+      countryFlag: p.countryFlag || "",
+      countryCode2: p.countryCode2 || "",
+      countryName2: p.countryName2 || "",
+      countryFlag2: p.countryFlag2 || "",
+    })),
   });
 
   return await getTournamentState(tournamentId);

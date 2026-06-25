@@ -1894,7 +1894,8 @@ function AdminView({
   };
 
   const saveParticipantsToServer = async (participantsList: Participant[]) => {
-    if (!eventSlug || !category) return;
+    if (!eventSlug || !category) return null;
+
     try {
       const res = await fetch(buildAdminUrl("/update-participants"), {
         method: "POST",
@@ -1903,13 +1904,30 @@ function AdminView({
           participants: participantsList,
         }),
       });
-      
+
+      const data = await res.json();
+
       if (!res.ok) {
-        const errorData = await res.json();
-        console.error("Server error saving participants:", errorData);
+        console.error("Server error saving participants:", data);
+        return null;
       }
+
+      if (data.state) {
+        const newState: TournamentState = data.state;
+        setParticipants(newState.participants || participantsList);
+        setTournamentSize(newState.tournamentSize || tournamentSize);
+        setCompetitionName(newState.competitionName || competitionName);
+        setCompetitionLogo(newState.competitionLogo || competitionLogo);
+        setMatches(newState.matches || matches);
+        setJuryAccounts(newState.juryAccounts || juryAccounts);
+        onSave(newState);
+        return newState;
+      }
+
+      return null;
     } catch (e) {
       console.error("Error saving participants:", e);
+      return null;
     }
   };
 
