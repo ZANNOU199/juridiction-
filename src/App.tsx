@@ -2080,7 +2080,7 @@ function AdminView({
     }
   };
 
-  const adminCastVote = async (juryId: string, vote: "red" | "blue") => {
+  const adminCastVote = async (juryId: string, vote: "red" | "blue" | "green") => {
     if (!state.currentMatchId) return;
 
     try {
@@ -2842,7 +2842,9 @@ function AdminView({
                                  vote
                                    ? vote === "red"
                                      ? "bg-brand-red border-brand-red"
-                                     : "bg-brand-blue border-brand-blue"
+                                     : vote === "blue"
+                                     ? "bg-brand-blue border-brand-blue"
+                                     : "bg-green-500 border-green-500"
                                    : "bg-white/5 border-white/10 hover:border-white/40"
                                }
                                ${isSelected ? "ring-2 ring-white/60 scale-110" : ""}
@@ -2879,6 +2881,17 @@ function AdminView({
                           >
                             BLUE
                           </button>
+                          {activeMatch?.greenTeamId && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                adminCastVote(jury.id, "green");
+                              }}
+                              className="px-2 py-1 bg-green-500 text-white text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
+                            >
+                              GREEN
+                            </button>
+                          )}
                           {vote && (
                             <button
                               onClick={(e) => {
