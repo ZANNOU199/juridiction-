@@ -2164,13 +2164,17 @@ function AdminView({
   const activeMatch = safeState.matches.find((m) => m.id === safeState.currentMatchId);
 
   const getParticipantName = (participantId?: string) =>
-    safeState.participants.find((p) => p.id === participantId)?.name || "Participant inconnu";
+    participants.find((p) => p.id === participantId)?.name ||
+    safeState.participants.find((p) => p.id === participantId)?.name ||
+    "Participant inconnu";
 
   const activeMatchLabel = activeMatch
     ? [
         getParticipantName(activeMatch.redTeamId),
         getParticipantName(activeMatch.blueTeamId),
-        activeMatch.greenTeamId && safeState.participants.some((p) => p.id === activeMatch.greenTeamId)
+        activeMatch.greenTeamId &&
+        (participants.some((p) => p.id === activeMatch.greenTeamId) ||
+          safeState.participants.some((p) => p.id === activeMatch.greenTeamId))
           ? getParticipantName(activeMatch.greenTeamId)
           : null,
       ]
