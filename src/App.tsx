@@ -457,6 +457,11 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
     }
   }, [currentCategory]);
 
+  const handleSave = (newState: TournamentState) => {
+    setState(newState);
+    onSave(newState);
+  };
+
   useEffect(() => {
     if (!eventSlug || !currentCategory) {
       setLoading(false);
@@ -558,10 +563,7 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
       {/* Admin controls */}
       <AdminView
         state={state}
-        onSave={(newState) => {
-          setState(newState);
-          onSave(newState);
-        }}
+        onSave={handleSave}
         eventSlug={eventSlug}
         category={currentCategory}
         showSharedScreen={showSharedScreen}
@@ -1599,7 +1601,7 @@ function AdminView({
     } else {
       setParticipants(DEFAULT_PARTICIPANTS);
     }
-  }, [state.currentCategory, category]); // Re-sync when tournament category or route category changes
+  }, [state, category]); // Re-sync when tournament state or category changes
 
   const updateMatchTeam = (
     matchId: string,
@@ -2174,7 +2176,9 @@ function AdminView({
     }
   };
 
-  const activeMatch = safeState.matches.find((m) => m.id === safeState.currentMatchId);
+  const activeMatch =
+    matches.find((m) => m.id === safeState.currentMatchId) ||
+    safeState.matches.find((m) => m.id === safeState.currentMatchId);
 
   const getParticipantName = (participantId?: string) =>
     participants.find((p) => p.id === participantId)?.name ||
