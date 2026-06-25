@@ -61,6 +61,9 @@ const DEFAULT_PARTICIPANTS: Participant[] = Array.from(
   }),
 );
 
+const getParticipantCountForSize = (size: 16 | 8 | 4 | 2) =>
+  size === 8 ? 9 : size;
+
 const DEFAULT_SILHOUETTE =
   "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%231f2937'/><circle cx='50' cy='35' r='18' fill='%23000000'/><path d='M20 84 C 20 60, 30 53, 50 53 C 70 53, 80 60, 80 84 Z' fill='%23000000'/></svg>";
 
@@ -1932,7 +1935,10 @@ function AdminView({
   };
 
   const configure = async () => {
-    const finalParticipants = participants.slice(0, tournamentSize);
+    const finalParticipants = participants.slice(
+      0,
+      getParticipantCountForSize(tournamentSize),
+    );
 
     try {
       const res = await fetch(buildAdminUrl("/configure"), {
@@ -2265,7 +2271,7 @@ function AdminView({
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-white/5 p-8 border border-white/10">
               <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                <Users size={14} /> 2. Participants ({tournamentSize})
+                <Users size={14} /> 2. Participants ({getParticipantCountForSize(tournamentSize)})
               </h3>
               {loadingCountries && (
                 <div className="flex gap-2 items-center text-[10px] uppercase font-black tracking-widest text-[#f59e0b] mb-4">
@@ -2274,7 +2280,9 @@ function AdminView({
                 </div>
               )}
               <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                {participants.slice(0, tournamentSize).map((p, i) => (
+                {participants
+                  .slice(0, getParticipantCountForSize(tournamentSize))
+                  .map((p, i) => (
                   <div
                     key={p.id}
                     className="p-4 bg-black/40 border border-white/5 hover:border-white/10 transition-all rounded-sm space-y-3 relative"
@@ -2538,7 +2546,9 @@ function AdminView({
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
                                 <option value="">ROUGE</option>
-                                {participants.slice(0, tournamentSize).map((p) => (
+                                {participants
+                                  .slice(0, getParticipantCountForSize(tournamentSize))
+                                  .map((p) => (
                                     <option key={p.id} value={p.id}>
                                       {p.name}
                                     </option>
@@ -2556,7 +2566,9 @@ function AdminView({
                                 className="bg-black/50 border border-white/5 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
                                 <option value="">BLEU</option>
-                                {participants.slice(0, tournamentSize).map((p) => (
+                                {participants
+                                  .slice(0, getParticipantCountForSize(tournamentSize))
+                                  .map((p) => (
                                     <option key={p.id} value={p.id}>
                                       {p.name}
                                     </option>
@@ -2574,7 +2586,9 @@ function AdminView({
                                 className="bg-black/50 border border-green-500/30 text-[9px] font-black italic uppercase p-1.5 outline-none"
                               >
                                 <option value="">GREEN</option>
-                                {participants.slice(0, tournamentSize).map((p) => (
+                                {participants
+                                  .slice(0, getParticipantCountForSize(tournamentSize))
+                                  .map((p) => (
                                     <option key={p.id} value={p.id}>
                                       {p.name}
                                     </option>
