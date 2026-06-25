@@ -1896,18 +1896,18 @@ function AdminView({
   const saveParticipantsToServer = async (participantsList: Participant[]) => {
     if (!eventSlug || !category) return;
     try {
-      await fetch(buildAdminUrl("/configure"), {
+      const res = await fetch(buildAdminUrl("/update-participants"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          competitionName,
-          competitionLogo,
           participants: participantsList,
-          juryAccounts,
-          matches,
-          tournamentSize,
         }),
       });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        console.error("Server error saving participants:", errorData);
+      }
     } catch (e) {
       console.error("Error saving participants:", e);
     }

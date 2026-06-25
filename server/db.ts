@@ -566,6 +566,45 @@ export async function configureTournament(
   return await getTournamentState(tournamentId);
 }
 
+// ===== UPDATE PARTICIPANTS ONLY (without affecting matches) =====
+
+export async function updateParticipantsOnly(
+  tournamentId: string,
+  participants: Array<{ id: string; name: string; photo: string; countryCode?: string; countryName?: string; countryFlag?: string; countryCode2?: string; countryName2?: string; countryFlag2?: string }>
+) {
+  if (!participants || participants.length === 0) {
+    throw new Error("No participants provided");
+  }
+
+  // Delete old participants and recreate them
+  await prisma.participant.deleteMany({
+    where: { tournamentId },
+  });
+
+  // Create participants with unique IDs
+  const participantIdMap: Record<string, string> = {};
+  await prisma.participant.createMany({
+    data: participants.map((p, idx) => {
+      const newId = `${tournamentId}-p${idx + 1}`;
+      participantIdMap[p.id] = newId;
+      return {
+        tournamentId,
+        id: newId,
+        name: p.name,
+        photo: p.photo,
+        countryCode: p.countryCode || "",
+        countryName: p.countryName || "",
+        countryFlag: p.countryFlag || "",
+        countryCode2: p.countryCode2 || "",
+        countryName2: p.countryName2 || "",
+        countryFlag2: p.countryFlag2 || "",
+      };
+    }),
+  });
+
+  return await getTournamentState(tournamentId);
+}
+
 // ===== JURY LOGIN =====
 
 export async function authenticateJury(

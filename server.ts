@@ -222,6 +222,28 @@ app.post("/api/admin/:eventSlug/:category/configure", async (req, res) => {
   }
 });
 
+// --- Admin Update Participants Only (without affecting matches) ---
+app.post("/api/admin/:eventSlug/:category/update-participants", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { participants } = req.body;
+
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not created" });
+    }
+
+    // Update only participants without touching matches
+    await db.updateParticipantsOnly(tournament.id, participants || []);
+    const state = await db.getTournamentState(tournament.id);
+
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in /api/admin/:eventSlug/:category/update-participants:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // --- Jury Voting ---
 app.post("/api/:eventSlug/:category/vote", async (req, res) => {
   try {
