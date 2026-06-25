@@ -1755,7 +1755,7 @@ function AdminView({
     }
   };
 
-  const generateBracket = (size: 16 | 8 | 4 | 2) => {
+  const generateBracket = async (size: 16 | 8 | 4 | 2) => {
     const newMatches: Match[] = [];
 
     // Top 16 (8 matches)
@@ -1843,6 +1843,7 @@ function AdminView({
     });
 
     setMatches(newMatches);
+    await saveTournamentStateToServer(participants, newMatches);
   };
 
   const updateMatchParticipant = async (
