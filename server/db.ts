@@ -459,16 +459,14 @@ export async function configureTournament(
     await tx.match.deleteMany({ where: { tournamentId } });
     await tx.participant.deleteMany({ where: { tournamentId } });
 
-    // Create participants - generate unique IDs instead of using static ones
-    // Keep a mapping of old IDs to new IDs for the matches
+    // Create participants using frontend-provided IDs so the same participant IDs stay consistent
     const participantIdMap: Record<string, string> = {};
     await tx.participant.createMany({
-      data: data.participants.map((p, idx) => {
-        const newId = `${tournamentId}-p${idx + 1}`;
-        participantIdMap[p.id] = newId;
+      data: data.participants.map((p) => {
+        participantIdMap[p.id] = p.id;
         return {
           tournamentId,
-          id: newId,
+          id: p.id,
           name: p.name,
           photo: p.photo,
           countryCode: p.countryCode || "",

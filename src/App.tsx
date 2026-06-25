@@ -2224,7 +2224,11 @@ function AdminView({
                               );
                               updatedParticipants = [...participants, ...extraParticipants];
                               setParticipants(updatedParticipants);
-                              await saveParticipantsToServer(updatedParticipants);
+
+                              const savedState = await saveParticipantsToServer(updatedParticipants);
+                              if (savedState?.participants) {
+                                setParticipants(savedState.participants);
+                              }
                             }
 
                             setTournamentSize(s as any);
