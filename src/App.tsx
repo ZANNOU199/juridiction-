@@ -2869,11 +2869,9 @@ function AdminView({
                 Battle Actuel
               </p>
               <div className="text-xl md:text-2xl font-black italic truncate uppercase">
-                {activeMatch ? (
-                  `${state.participants.find((p) => p.id === activeMatch.redTeamId)?.name || "-"} VS ${state.participants.find((p) => p.id === activeMatch.blueTeamId)?.name || "-"}${activeMatch.greenTeamId ? ` VS ${state.participants.find((p) => p.id === activeMatch.greenTeamId)?.name || "-"}` : ""}`
-                ) : (
-                  "AUCUN BATTLE ACTIF"
-                )}
+                {activeMatch
+                  ? `${state.participants.find((p) => p.id === activeMatch.redTeamId)?.name} VS ${state.participants.find((p) => p.id === activeMatch.blueTeamId)?.name}${activeMatch.greenTeamId ? ` VS ${state.participants.find((p) => p.id === activeMatch.greenTeamId)?.name}` : ""}`
+                  : "AUCUN BATTLE ACTIF"}
               </div>
             </div>
 
@@ -3894,7 +3892,6 @@ function BracketView({ state }: { state: TournamentState }) {
 interface MatchNodeProps {
   match?: Match;
   participants: Participant[];
-  tournamentSize?: number;
   className?: string;
   side?: "left" | "right";
   key?: string | number;
@@ -3910,16 +3907,11 @@ interface MatchNodeProps {
 function MatchNode({
   match,
   participants,
-  tournamentSize,
   className = "",
   onUpdateMatchTeam,
   onUpdateParticipantCountry,
   countries,
 }: MatchNodeProps) {
-  const visibleParticipants =
-    typeof tournamentSize === "number"
-      ? participants.slice(0, tournamentSize)
-      : participants;
   const getParticipant = (id: string) => participants.find((p) => p.id === id);
   const red = match ? getParticipant(match.redTeamId) : null;
   const blue = match ? getParticipant(match.blueTeamId) : null;
@@ -3973,7 +3965,7 @@ function MatchNode({
                     <option value="" className="bg-[#0a0807]">
                       -
                     </option>
-                    {visibleParticipants.map((part) => (
+                    {participants.map((part) => (
                       <option
                         key={part.id}
                         value={part.id}
@@ -4106,7 +4098,6 @@ function BracketContent({
                 key={`l16-${i}`}
                 match={getMatch("TOP 16", i)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
                 countries={countries}
@@ -4121,7 +4112,6 @@ function BracketContent({
                 key={`l8-${i}`}
                 match={getMatch("TOP 8", i)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
                 countries={countries}
@@ -4138,7 +4128,6 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 0)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
@@ -4208,7 +4197,6 @@ function BracketContent({
                 key={`r16-${i}`}
                 match={getMatch("TOP 16", i)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
                 countries={countries}
@@ -4223,7 +4211,6 @@ function BracketContent({
                 key={`r8-${i}`}
                 match={getMatch("TOP 8", i)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
                 countries={countries}
@@ -4240,7 +4227,6 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 1)}
                 participants={state.participants}
-                tournamentSize={state.tournamentSize}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
