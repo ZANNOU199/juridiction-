@@ -2274,7 +2274,7 @@ function AdminView({
                 </div>
               )}
               <div className="grid grid-cols-1 gap-4 max-h-[600px] overflow-y-auto pr-2 no-scrollbar">
-                {participants.slice(0, Math.max(tournamentSize, participants.length)).map((p, i) => (
+                {participants.slice(0, tournamentSize).map((p, i) => (
                   <div
                     key={p.id}
                     className="p-4 bg-black/40 border border-white/5 hover:border-white/10 transition-all rounded-sm space-y-3 relative"
