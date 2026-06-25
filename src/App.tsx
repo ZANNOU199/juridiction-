@@ -1924,9 +1924,16 @@ function AdminView({
   };
 
   const nextMatch = async () => {
-    const nextIdx = state.matches.findIndex((m) => m.status === "pending");
-    if (nextIdx !== -1) {
-      await selectMatch(state.matches[nextIdx].id);
+    try {
+      const res = await fetch(buildAdminUrl("/next-match"), { method: "POST" });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+        }
+      }
+    } catch (e) {
+      console.error("Server error during next match:", e);
     }
   };
 
@@ -3004,11 +3011,25 @@ function AdminView({
                   (state.currentMatchId !== null &&
                     state.matches.find((m) => m.id === state.currentMatchId)
                       ?.status === "active") ||
-                  !state.matches.some((m) => m.status === "pending")
+                  !(
+                    state.matches.some((m) => m.status === "pending") ||
+                    (state.currentMatchId !== null &&
+                      state.matches.find((m) => m.id === state.currentMatchId)
+                        ?.status === "finished" &&
+                      state.matches.find((m) => m.id === state.currentMatchId)
+                        ?.isTieBrek)
+                  )
                 }
                 onClick={nextMatch}
                 className={`w-full py-4 font-black italic flex items-center justify-center gap-3 transition-all rounded-sm
-                      ${(state.currentMatchId !== null && state.matches.find((m) => m.id === state.currentMatchId)?.status === "active") || !state.matches.some((m) => m.status === "pending") ? "bg-white/5 text-white/10" : "bg-white text-black hover:scale-[1.02] cursor-pointer"}`}
+                      ${(state.currentMatchId !== null && state.matches.find((m) => m.id === state.currentMatchId)?.status === "active") || !(
+                        state.matches.some((m) => m.status === "pending") ||
+                        (state.currentMatchId !== null &&
+                          state.matches.find((m) => m.id === state.currentMatchId)
+                            ?.status === "finished" &&
+                          state.matches.find((m) => m.id === state.currentMatchId)
+                            ?.isTieBrek)
+                      ) ? "bg-white/5 text-white/10" : "bg-white text-black hover:scale-[1.02] cursor-pointer"}`}
               >
                 <SkipForward size={18} /> MATCH SUIVANT
               </button>
@@ -3139,7 +3160,10 @@ function JuryView({
     try {
       const res = await fetch(buildApiUrl("/next-match"), { method: "POST" });
       if (res.ok) {
-        // State will update via polling
+        const data = await res.json();
+        if (data.state) {
+          onSave(data.state);
+        }
       }
     } catch (e) {
       console.warn("Server sync failed during nextMatch");
@@ -4266,18 +4290,25 @@ function PublicView({ state }: { state: TournamentState }) {
       : currentVotesGreen
     : 0;
 
-  const winner = showResults
-    ? [
-        { participant: redP, score: redScore },
-        { participant: blueP, score: blueScore },
-        { participant: greenP, score: greenScore },
-      ]
-        .filter((item) => item.participant)
-        .reduce(
-          (best, current) =>
-            current.score > best.score ? current : best,
-          { participant: redP, score: redScore },
-        ).participant
+  const scoredParticipants = [
+    { participant: redP, score: redScore },
+    { participant: blueP, score: blueScore },
+    { participant: greenP, score: greenScore },
+  ].filter((item) => item.participant);
+
+  const maxScore = showResults
+    ? Math.max(...scoredParticipants.map((item) => item.score))
+    : -Infinity;
+
+  const topScoreParticipants = scoredParticipants.filter(
+    (item) => item.score === maxScore,
+  );
+
+  const isTie =
+    showResults && topScoreParticipants.length > 1 && maxScore >= 0;
+
+  const winner = !isTie && showResults && topScoreParticipants.length === 1
+    ? topScoreParticipants[0].participant
     : null;
 
   // Get current tournament level from active match round
@@ -4347,33 +4378,46 @@ function PublicView({ state }: { state: TournamentState }) {
           className="w-full max-w-6xl flex flex-col items-center shrink-0"
         >
           {/* Final Match Victory Display */}
-         {activeMatch.round === "FINALE" && activeMatch.status === "finished" && winner ? (
-  <div className="w-full flex flex-col items-center justify-center">
-    <div className="relative w-full max-w-sm md:max-w-md mx-auto max-h-[60vh] md:max-h-[70vh]">
-      <img
-        src={winner.photo}
-        alt={winner.name}
-        className="w-full h-full object-contain rounded-lg shadow-2xl"
-      />
-      <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 rounded-b-lg">
-        <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
-          {winner.name}
-        </h2>
-        {(winner.countryFlag || winner.countryFlag2) && (
-          <div className="mt-2 mx-auto">
-            <CountryFlags
-              countryFlag={winner.countryFlag}
-              countryName={winner.countryName}
-              countryFlag2={winner.countryFlag2}
-              countryName2={winner.countryName2}
-              sizeClass="w-6 h-5 md:w-10 md:h-8"
-            />
-          </div>
-        )}
-      </div>
-    </div>
-  </div>
-) : greenP ? (
+         {activeMatch.round === "FINALE" && activeMatch.status === "finished" ? (
+           winner ? (
+             <div className="w-full flex flex-col items-center justify-center">
+               <div className="relative w-full max-w-sm md:max-w-md mx-auto max-h-[60vh] md:max-h-[70vh]">
+                 <img
+                   src={winner.photo}
+                   alt={winner.name}
+                   className="w-full h-full object-contain rounded-lg shadow-2xl"
+                 />
+                 <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 rounded-b-lg">
+                   <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
+                     {winner.name}
+                   </h2>
+                   {(winner.countryFlag || winner.countryFlag2) && (
+                     <div className="mt-2 mx-auto">
+                       <CountryFlags
+                         countryFlag={winner.countryFlag}
+                         countryName={winner.countryName}
+                         countryFlag2={winner.countryFlag2}
+                         countryName2={winner.countryName2}
+                         sizeClass="w-6 h-5 md:w-10 md:h-8"
+                       />
+                     </div>
+                   )}
+                 </div>
+               </div>
+             </div>
+           ) : isTie ? (
+             <div className="w-full flex flex-col items-center justify-center">
+               <div className="w-full max-w-3xl mx-auto p-8 bg-white/10 border border-white/10 rounded-xl text-center">
+                 <h2 className="text-white font-black italic text-2xl md:text-4xl uppercase tracking-tight mb-4">
+                   MATCH NUL - PAS DE GAGNANT
+                 </h2>
+                 <p className="text-white/80 text-sm md:text-base">
+                   Le match s'est terminé sur une égalité. Appuyez sur "MATCH SUIVANT" pour relancer le même match ou passer à un autre.
+                 </p>
+               </div>
+             </div>
+           ) : null
+         ) : greenP ? (
             <div className="w-full grid grid-cols-[1fr_auto_1fr_auto_1fr] items-stretch gap-0 md:gap-1 relative py-1">
             {/* Red Side */}
             <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
@@ -4656,7 +4700,21 @@ function PublicView({ state }: { state: TournamentState }) {
 
           {/* Winner Banner */}
           <AnimatePresence>
-            {winner && !(activeMatch.round === "FINALE" && activeMatch.status === "finished") && (
+            {isTie && (
+            <motion.div
+              initial={{ height: 0, opacity: 0, scale: 0.95 }}
+              animate={{ height: "auto", opacity: 1, scale: 1 }}
+              className="w-full max-w-6xl mt-0.5 overflow-hidden"
+            >
+              <div className="py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase text-white bg-white/10 border border-white/10 rounded-sm shadow-[0_0_60px_rgba(0,0,0,1)]">
+                <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
+                  <Trophy size={24} className="text-white fill-white/20" />
+                  <span className="text-sm md:text-lg truncate">TIE BREAK - AUCUN GAGNANT</span>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          {winner && !(activeMatch.round === "FINALE" && activeMatch.status === "finished") && (
               <motion.div
                 initial={{ height: 0, opacity: 0, scale: 0.95 }}
                 animate={{ height: "auto", opacity: 1, scale: 1 }}

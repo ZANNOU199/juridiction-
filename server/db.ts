@@ -897,6 +897,64 @@ export async function finishMatch(tournamentId: string) {
   return await getTournamentState(tournamentId);
 }
 
+export async function nextMatch(tournamentId: string) {
+  const tournament = await prisma.tournament.findUnique({
+    where: { id: tournamentId },
+  });
+  if (!tournament) return null;
+
+  if (tournament.currentMatchId) {
+    const currentMatch = await prisma.match.findUnique({
+      where: { id: tournament.currentMatchId },
+    });
+
+    if (currentMatch?.status === "finished" && currentMatch.isTieBrek) {
+      // Restart the tied match for a replay instead of advancing to another match.
+      await prisma.juryVote.deleteMany({
+        where: { matchId: currentMatch.id },
+      });
+
+      await prisma.match.update({
+        where: { id: currentMatch.id },
+        data: {
+          status: "active",
+          revealed: false,
+          winnerId: null,
+          isTieBrek: false,
+          redVotes: 0,
+          blueVotes: 0,
+          greenVotes: 0,
+        },
+      });
+
+      return await getTournamentState(tournamentId);
+    }
+  }
+
+  const pendingMatches = await prisma.match.findMany({
+    where: { tournamentId, status: "pending" },
+    orderBy: { createdAt: "asc" },
+  });
+
+  if (pendingMatches.length === 0) {
+    return await getTournamentState(tournamentId);
+  }
+
+  const nextMatch = pendingMatches[0];
+
+  await prisma.tournament.update({
+    where: { id: tournamentId },
+    data: { currentMatchId: nextMatch.id },
+  });
+
+  await prisma.match.update({
+    where: { id: nextMatch.id },
+    data: { status: "active" },
+  });
+
+  return await getTournamentState(tournamentId);
+}
+
 export async function selectMatch(tournamentId: string, matchId: string) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
