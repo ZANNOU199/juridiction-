@@ -1843,25 +1843,26 @@ function AdminView({
     setMatches(newMatches);
   };
 
-  const updateMatchParticipant = (
+  const updateMatchParticipant = async (
     matchId: string,
     side: "red" | "blue" | "green",
     participantId: string,
   ) => {
-    setMatches(
-      matches.map((m) => {
-        if (m.id === matchId) {
-          if (side === "green") {
-            return { ...m, greenTeamId: participantId };
-          }
-          return {
-            ...m,
-            [side === "red" ? "redTeamId" : "blueTeamId"]: participantId,
-          };
+    const updatedMatches = matches.map((m) => {
+      if (m.id === matchId) {
+        if (side === "green") {
+          return { ...m, greenTeamId: participantId };
         }
-        return m;
-      }),
-    );
+        return {
+          ...m,
+          [side === "red" ? "redTeamId" : "blueTeamId"]: participantId,
+        };
+      }
+      return m;
+    });
+
+    setMatches(updatedMatches);
+    await saveTournamentStateToServer(participants, updatedMatches);
   };
 
   const addMatch = () => {
@@ -1893,22 +1894,30 @@ function AdminView({
     setMatches(matches.filter((m) => m.id !== id));
   };
 
-  const saveParticipantsToServer = async (participantsList: Participant[]) => {
+  const saveTournamentStateToServer = async (
+    participantsList: Participant[],
+    matchesList: Match[],
+  ) => {
     if (!eventSlug || !category) return null;
 
     try {
-      const res = await fetch(buildAdminUrl("/update-participants"), {
+      const res = await fetch(buildAdminUrl("/update-state"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          competitionName,
+          competitionLogo,
+          tournamentSize,
+          juryAccounts,
           participants: participantsList,
+          matches: matchesList,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("Server error saving participants:", data);
+        console.error("Server error saving tournament state:", data);
         return null;
       }
 
@@ -1918,7 +1927,7 @@ function AdminView({
         setTournamentSize(newState.tournamentSize || tournamentSize);
         setCompetitionName(newState.competitionName || competitionName);
         setCompetitionLogo(newState.competitionLogo || competitionLogo);
-        setMatches(newState.matches || matches);
+        setMatches(newState.matches || matchesList);
         setJuryAccounts(newState.juryAccounts || juryAccounts);
         onSave(newState);
         return newState;
@@ -1926,9 +1935,13 @@ function AdminView({
 
       return null;
     } catch (e) {
-      console.error("Error saving participants:", e);
+      console.error("Error saving tournament state:", e);
       return null;
     }
+  };
+
+  const saveParticipantsToServer = async (participantsList: Participant[]) => {
+    return saveTournamentStateToServer(participantsList, matches);
   };
 
   const configure = async () => {

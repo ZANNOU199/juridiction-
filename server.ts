@@ -244,6 +244,33 @@ app.post("/api/admin/:eventSlug/:category/update-participants", async (req, res)
   }
 });
 
+// --- Admin Update Tournament State (participants and match assignments)
+app.post("/api/admin/:eventSlug/:category/update-state", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { participants, matches, competitionName, competitionLogo, tournamentSize, juryAccounts } = req.body;
+
+    const tournament = await db.createOrGetTournament(eventSlug, category);
+    if (!tournament) {
+      return res.status(404).json({ error: "Tournament not created" });
+    }
+
+    const state = await db.updateTournamentState(tournament.id, {
+      participants,
+      matches,
+      competitionName,
+      competitionLogo,
+      tournamentSize,
+      juryAccounts,
+    });
+
+    res.json({ success: true, state });
+  } catch (error) {
+    console.error("Error in /api/admin/:eventSlug/:category/update-state:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // --- Jury Voting ---
 app.post("/api/:eventSlug/:category/vote", async (req, res) => {
   try {
