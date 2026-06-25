@@ -305,12 +305,12 @@ export async function getTournamentState(tournamentId: string) {
 
   // Transform DB data to expected frontend format
   // IMPORTANT: Only include votes for the CURRENT match, not all matches!
-  const juryVotes: Record<string, "red" | "blue" | null> = {};
+  const juryVotes: Record<string, "red" | "blue" | "green" | null> = {};
   if (tournament.currentMatchId) {
     const currentMatch = tournament.matches.find((m) => m.id === tournament.currentMatchId);
     if (currentMatch) {
       currentMatch.votes.forEach((v) => {
-        juryVotes[v.juryId] = v.vote as "red" | "blue";
+        juryVotes[v.juryId] = v.vote as "red" | "blue" | "green";
       });
     }
   }
