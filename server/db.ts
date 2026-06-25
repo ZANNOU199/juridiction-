@@ -576,196 +576,25 @@ export async function updateParticipantsOnly(
     throw new Error("No participants provided");
   }
 
-  await prisma.$transaction(async (tx) => {
-    const existingParticipants = await tx.participant.findMany({
-      where: { tournamentId },
-      select: { id: true },
-    });
-
-    const incomingIds = new Set(participants.map((p) => p.id));
-    const idsToDelete = existingParticipants
-      .filter((p) => !incomingIds.has(p.id))
-      .map((p) => p.id);
-
-    if (idsToDelete.length > 0) {
-      await tx.participant.deleteMany({
-        where: {
-          tournamentId,
-          id: { in: idsToDelete },
-        },
-      });
-    }
-
-    for (const p of participants) {
-      await tx.participant.upsert({
-        where: { id: p.id },
-        create: {
-          tournamentId,
-          id: p.id,
-          name: p.name,
-          photo: p.photo,
-          countryCode: p.countryCode || "",
-          countryName: p.countryName || "",
-          countryFlag: p.countryFlag || "",
-          countryCode2: p.countryCode2 || "",
-          countryName2: p.countryName2 || "",
-          countryFlag2: p.countryFlag2 || "",
-        },
-        update: {
-          name: p.name,
-          photo: p.photo,
-          countryCode: p.countryCode || "",
-          countryName: p.countryName || "",
-          countryFlag: p.countryFlag || "",
-          countryCode2: p.countryCode2 || "",
-          countryName2: p.countryName2 || "",
-          countryFlag2: p.countryFlag2 || "",
-        },
-      });
-    }
+  // Delete old participants and recreate them
+  await prisma.participant.deleteMany({
+    where: { tournamentId },
   });
 
-  return await getTournamentState(tournamentId);
-}
-
-export async function updateTournamentState(
-  tournamentId: string,
-  data: {
-    participants?: Array<{ id: string; name: string; photo: string; countryCode?: string; countryName?: string; countryFlag?: string; countryCode2?: string; countryName2?: string; countryFlag2?: string }>;
-    matches?: Array<{
-      id: string;
-      redTeamId: string;
-      blueTeamId: string;
-      greenTeamId?: string;
-      round?: string;
-      status?: string;
-      votingMode?: string;
-      roundCount?: number;
-      currentRound?: number;
-      winnerId?: string | null;
-      roundResults?: { red: number; blue: number; green?: number }[];
-      revealed?: boolean;
-      isTieBrek?: boolean;
-    }>;
-    competitionName?: string;
-    competitionLogo?: string;
-    tournamentSize?: number;
-    juryAccounts?: Array<{ id: string; username: string; password: string }>;
-  }
-) {
-  await prisma.$transaction(async (tx) => {
-    if (data.participants) {
-      const existingParticipants = await tx.participant.findMany({
-        where: { tournamentId },
-        select: { id: true },
-      });
-      const incomingParticipantIds = new Set(data.participants.map((p) => p.id));
-      const participantsToDelete = existingParticipants
-        .filter((p) => !incomingParticipantIds.has(p.id))
-        .map((p) => p.id);
-
-      if (participantsToDelete.length > 0) {
-        await tx.participant.deleteMany({
-          where: {
-            tournamentId,
-            id: { in: participantsToDelete },
-          },
-        });
-      }
-
-      for (const participant of data.participants) {
-        await tx.participant.upsert({
-          where: { id: participant.id },
-          create: {
-            tournamentId,
-            id: participant.id,
-            name: participant.name,
-            photo: participant.photo,
-            countryCode: participant.countryCode || "",
-            countryName: participant.countryName || "",
-            countryFlag: participant.countryFlag || "",
-            countryCode2: participant.countryCode2 || "",
-            countryName2: participant.countryName2 || "",
-            countryFlag2: participant.countryFlag2 || "",
-          },
-          update: {
-            name: participant.name,
-            photo: participant.photo,
-            countryCode: participant.countryCode || "",
-            countryName: participant.countryName || "",
-            countryFlag: participant.countryFlag || "",
-            countryCode2: participant.countryCode2 || "",
-            countryName2: participant.countryName2 || "",
-            countryFlag2: participant.countryFlag2 || "",
-          },
-        });
-      }
-    }
-
-    if (data.matches) {
-      for (const match of data.matches) {
-        const matchRoundResults =
-          match.roundResults && match.roundResults.length > 0
-            ? JSON.stringify(match.roundResults)
-            : "[]";
-
-        const matchData: any = {
-          tournamentId,
-          id: match.id,
-          redTeamId: match.redTeamId,
-          blueTeamId: match.blueTeamId,
-          greenTeamId: match.greenTeamId || null,
-          round: match.round || "",
-          status: match.status || "pending",
-          votingMode: match.votingMode || "match",
-          roundCount: match.roundCount ?? 1,
-          currentRound: match.currentRound ?? 1,
-          winnerId: match.winnerId || null,
-          roundResults: matchRoundResults,
-          revealed: match.revealed ?? false,
-          isTieBrek: match.isTieBrek ?? false,
-        };
-
-        const existingMatch = await tx.match.findUnique({
-          where: { id: match.id },
-        });
-
-        if (existingMatch) {
-          await tx.match.update({
-            where: { id: match.id },
-            data: {
-              redTeamId: match.redTeamId,
-              blueTeamId: match.blueTeamId,
-              greenTeamId: match.greenTeamId || null,
-              round: match.round || existingMatch.round,
-              status: match.status || existingMatch.status,
-              votingMode: match.votingMode || existingMatch.votingMode,
-              roundCount: match.roundCount ?? existingMatch.roundCount,
-              currentRound: match.currentRound ?? existingMatch.currentRound,
-              winnerId: match.winnerId ?? existingMatch.winnerId,
-              roundResults: matchRoundResults,
-              revealed: match.revealed ?? existingMatch.revealed,
-              isTieBrek: match.isTieBrek ?? existingMatch.isTieBrek,
-            },
-          });
-        } else {
-          await tx.match.create({
-            data: matchData,
-          });
-        }
-      }
-    }
-
-    if (data.competitionName || data.competitionLogo || data.tournamentSize) {
-      await tx.tournament.update({
-        where: { id: tournamentId },
-        data: {
-          competitionName: data.competitionName,
-          competitionLogo: data.competitionLogo,
-          tournamentSize: data.tournamentSize,
-        },
-      });
-    }
+  // Recreate participants while preserving their frontend IDs.
+  await prisma.participant.createMany({
+    data: participants.map((p) => ({
+      tournamentId,
+      id: p.id,
+      name: p.name,
+      photo: p.photo,
+      countryCode: p.countryCode || "",
+      countryName: p.countryName || "",
+      countryFlag: p.countryFlag || "",
+      countryCode2: p.countryCode2 || "",
+      countryName2: p.countryName2 || "",
+      countryFlag2: p.countryFlag2 || "",
+    })),
   });
 
   return await getTournamentState(tournamentId);

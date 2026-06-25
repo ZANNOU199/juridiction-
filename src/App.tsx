@@ -457,11 +457,6 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
     }
   }, [currentCategory]);
 
-  const handleSave = (newState: TournamentState) => {
-    setState(newState);
-    onSave(newState);
-  };
-
   useEffect(() => {
     if (!eventSlug || !currentCategory) {
       setLoading(false);
@@ -563,7 +558,10 @@ function AdminViewMultiEvent({ onSave }: { onSave: (s: any) => void }) {
       {/* Admin controls */}
       <AdminView
         state={state}
-        onSave={handleSave}
+        onSave={(newState) => {
+          setState(newState);
+          onSave(newState);
+        }}
         eventSlug={eventSlug}
         category={currentCategory}
         showSharedScreen={showSharedScreen}
@@ -1601,7 +1599,7 @@ function AdminView({
     } else {
       setParticipants(DEFAULT_PARTICIPANTS);
     }
-  }, [state, category]); // Re-sync when tournament state or category changes
+  }, [state.currentCategory, category]); // Re-sync when tournament category or route category changes
 
   const updateMatchTeam = (
     matchId: string,
@@ -1616,7 +1614,7 @@ function AdminView({
           return { ...m, greenTeamId: pId };
         }
         return m;
-      }), 
+      }),
     );
   };
 
@@ -1755,7 +1753,7 @@ function AdminView({
     }
   };
 
-  const generateBracket = async (size: 16 | 8 | 4 | 2) => {
+  const generateBracket = (size: 16 | 8 | 4 | 2) => {
     const newMatches: Match[] = [];
 
     // Top 16 (8 matches)
@@ -1843,29 +1841,27 @@ function AdminView({
     });
 
     setMatches(newMatches);
-    await saveTournamentStateToServer(participants, newMatches);
   };
 
-  const updateMatchParticipant = async (
+  const updateMatchParticipant = (
     matchId: string,
     side: "red" | "blue" | "green",
     participantId: string,
   ) => {
-    const updatedMatches = matches.map((m) => {
-      if (m.id === matchId) {
-        if (side === "green") {
-          return { ...m, greenTeamId: participantId };
+    setMatches(
+      matches.map((m) => {
+        if (m.id === matchId) {
+          if (side === "green") {
+            return { ...m, greenTeamId: participantId };
+          }
+          return {
+            ...m,
+            [side === "red" ? "redTeamId" : "blueTeamId"]: participantId,
+          };
         }
-        return {
-          ...m,
-          [side === "red" ? "redTeamId" : "blueTeamId"]: participantId,
-        };
-      }
-      return m;
-    });
-
-    setMatches(updatedMatches);
-    await saveTournamentStateToServer(participants, updatedMatches);
+        return m;
+      }),
+    );
   };
 
   const addMatch = () => {
@@ -1897,30 +1893,22 @@ function AdminView({
     setMatches(matches.filter((m) => m.id !== id));
   };
 
-  const saveTournamentStateToServer = async (
-    participantsList: Participant[],
-    matchesList: Match[],
-  ) => {
+  const saveParticipantsToServer = async (participantsList: Participant[]) => {
     if (!eventSlug || !category) return null;
 
     try {
-      const res = await fetch(buildAdminUrl("/update-state"), {
+      const res = await fetch(buildAdminUrl("/update-participants"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          competitionName,
-          competitionLogo,
-          tournamentSize,
-          juryAccounts,
           participants: participantsList,
-          matches: matchesList,
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        console.error("Server error saving tournament state:", data);
+        console.error("Server error saving participants:", data);
         return null;
       }
 
@@ -1930,7 +1918,7 @@ function AdminView({
         setTournamentSize(newState.tournamentSize || tournamentSize);
         setCompetitionName(newState.competitionName || competitionName);
         setCompetitionLogo(newState.competitionLogo || competitionLogo);
-        setMatches(newState.matches || matchesList);
+        setMatches(newState.matches || matches);
         setJuryAccounts(newState.juryAccounts || juryAccounts);
         onSave(newState);
         return newState;
@@ -1938,13 +1926,9 @@ function AdminView({
 
       return null;
     } catch (e) {
-      console.error("Error saving tournament state:", e);
+      console.error("Error saving participants:", e);
       return null;
     }
-  };
-
-  const saveParticipantsToServer = async (participantsList: Participant[]) => {
-    return saveTournamentStateToServer(participantsList, matches);
   };
 
   const configure = async () => {
@@ -2177,28 +2161,7 @@ function AdminView({
     }
   };
 
-  const activeMatch =
-    matches.find((m) => m.id === safeState.currentMatchId) ||
-    safeState.matches.find((m) => m.id === safeState.currentMatchId);
-
-  const getParticipantName = (participantId?: string) =>
-    participants.find((p) => p.id === participantId)?.name ||
-    safeState.participants.find((p) => p.id === participantId)?.name ||
-    "Participant inconnu";
-
-  const activeMatchLabel = activeMatch
-    ? [
-        getParticipantName(activeMatch.redTeamId),
-        getParticipantName(activeMatch.blueTeamId),
-        activeMatch.greenTeamId &&
-        (participants.some((p) => p.id === activeMatch.greenTeamId) ||
-          safeState.participants.some((p) => p.id === activeMatch.greenTeamId))
-          ? getParticipantName(activeMatch.greenTeamId)
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" VS ")
-    : "AUCUN BATTLE ACTIF";
+  const activeMatch = safeState.matches.find((m) => m.id === safeState.currentMatchId);
 
   if (!safeState.configured) {
     return (
@@ -2906,7 +2869,9 @@ function AdminView({
                 Battle Actuel
               </p>
               <div className="text-xl md:text-2xl font-black italic truncate uppercase">
-                {activeMatchLabel}
+                {activeMatch
+                  ? `${state.participants.find((p) => p.id === activeMatch.redTeamId)?.name} VS ${state.participants.find((p) => p.id === activeMatch.blueTeamId)?.name}${activeMatch.greenTeamId ? ` VS ${state.participants.find((p) => p.id === activeMatch.greenTeamId)?.name}` : ""}`
+                  : "AUCUN BATTLE ACTIF"}
               </div>
             </div>
 
