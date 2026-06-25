@@ -1753,16 +1753,20 @@ function AdminView({
     }
   };
 
-  const generateBracket = (size: 16 | 8 | 4 | 2) => {
+  const generateBracket = (
+    size: 16 | 8 | 4 | 2,
+    sourceParticipants: Participant[] = participants,
+  ) => {
     const newMatches: Match[] = [];
+    const bracketParticipants = sourceParticipants.slice(0, size);
 
     // Top 16 (8 matches)
     if (size >= 16) {
       for (let i = 0; i < 8; i++) {
         newMatches.push({
           id: `t16-${i + 1}`,
-          redTeamId: participants[i * 2]?.id || "",
-          blueTeamId: participants[i * 2 + 1]?.id || "",
+          redTeamId: bracketParticipants[i * 2]?.id || "",
+          blueTeamId: bracketParticipants[i * 2 + 1]?.id || "",
           greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
@@ -1783,8 +1787,8 @@ function AdminView({
       for (let i = 0; i < 4; i++) {
         newMatches.push({
           id: `t8-${i + 1}`,
-          redTeamId: size === 8 ? participants[i * 2]?.id || "" : "",
-          blueTeamId: size === 8 ? participants[i * 2 + 1]?.id || "" : "",
+          redTeamId: size === 8 ? bracketParticipants[i * 2]?.id || "" : "",
+          blueTeamId: size === 8 ? bracketParticipants[i * 2 + 1]?.id || "" : "",
           greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
@@ -2197,7 +2201,39 @@ function AdminView({
                       <button
                         key={s}
                         type="button"
-                        onClick={() => setTournamentSize(s as any)}
+                        onClick={async () => {
+                          if (s === 8) {
+                            const requiredCount = 9;
+                            const currentCount = participants.length;
+                            let updatedParticipants = participants;
+
+                            if (currentCount < requiredCount) {
+                              const extraParticipants = Array.from(
+                                { length: requiredCount - currentCount },
+                                (_, i) => ({
+                                  id: `p-${Date.now()}-${i}`,
+                                  name: `B-BOY ${currentCount + i + 1}`,
+                                  photo: "",
+                                  countryCode: "",
+                                  countryName: "",
+                                  countryFlag: "",
+                                  countryCode2: "",
+                                  countryName2: "",
+                                  countryFlag2: "",
+                                }),
+                              );
+                              updatedParticipants = [...participants, ...extraParticipants];
+                              setParticipants(updatedParticipants);
+                              await saveParticipantsToServer(updatedParticipants);
+                            }
+
+                            setTournamentSize(s as any);
+                            generateBracket(8, updatedParticipants);
+                            return;
+                          }
+
+                          setTournamentSize(s as any);
+                        }}
                         className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? "bg-white border-white text-black" : "border-white/10 text-white/40"}`}
                       >
                         TOP {s}
