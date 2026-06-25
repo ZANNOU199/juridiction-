@@ -1753,20 +1753,16 @@ function AdminView({
     }
   };
 
-  const generateBracket = (
-    size: 16 | 8 | 4 | 2,
-    sourceParticipants: Participant[] = participants,
-  ) => {
+  const generateBracket = (size: 16 | 8 | 4 | 2) => {
     const newMatches: Match[] = [];
-    const bracketParticipants = sourceParticipants.slice(0, size);
 
     // Top 16 (8 matches)
     if (size >= 16) {
       for (let i = 0; i < 8; i++) {
         newMatches.push({
           id: `t16-${i + 1}`,
-          redTeamId: bracketParticipants[i * 2]?.id || "",
-          blueTeamId: bracketParticipants[i * 2 + 1]?.id || "",
+          redTeamId: participants[i * 2]?.id || "",
+          blueTeamId: participants[i * 2 + 1]?.id || "",
           greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
@@ -1787,8 +1783,8 @@ function AdminView({
       for (let i = 0; i < 4; i++) {
         newMatches.push({
           id: `t8-${i + 1}`,
-          redTeamId: size === 8 ? bracketParticipants[i * 2]?.id || "" : "",
-          blueTeamId: size === 8 ? bracketParticipants[i * 2 + 1]?.id || "" : "",
+          redTeamId: size === 8 ? participants[i * 2]?.id || "" : "",
+          blueTeamId: size === 8 ? participants[i * 2 + 1]?.id || "" : "",
           greenTeamId: "",
           redVotes: 0,
           blueVotes: 0,
@@ -2201,43 +2197,7 @@ function AdminView({
                       <button
                         key={s}
                         type="button"
-                        onClick={async () => {
-                          if (s === 8) {
-                            const requiredCount = 9;
-                            const currentCount = participants.length;
-                            let updatedParticipants = participants;
-
-                            if (currentCount < requiredCount) {
-                              const extraParticipants = Array.from(
-                                { length: requiredCount - currentCount },
-                                (_, i) => ({
-                                  id: `p-${Date.now()}-${i}`,
-                                  name: `B-BOY ${currentCount + i + 1}`,
-                                  photo: "",
-                                  countryCode: "",
-                                  countryName: "",
-                                  countryFlag: "",
-                                  countryCode2: "",
-                                  countryName2: "",
-                                  countryFlag2: "",
-                                }),
-                              );
-                              updatedParticipants = [...participants, ...extraParticipants];
-                              setParticipants(updatedParticipants);
-
-                              const savedState = await saveParticipantsToServer(updatedParticipants);
-                              if (savedState?.participants) {
-                                setParticipants(savedState.participants);
-                              }
-                            }
-
-                            setTournamentSize(s as any);
-                            generateBracket(8, updatedParticipants);
-                            return;
-                          }
-
-                          setTournamentSize(s as any);
-                        }}
+                        onClick={() => setTournamentSize(s as any)}
                         className={`py-3 font-black italic border-2 transition-all text-[10px] tracking-widest ${tournamentSize === s ? "bg-white border-white text-black" : "border-white/10 text-white/40"}`}
                       >
                         TOP {s}
@@ -2305,7 +2265,7 @@ function AdminView({
           <div className="lg:col-span-4 space-y-8">
             <div className="bg-white/5 p-8 border border-white/10">
               <h3 className="text-[10px] font-black tracking-[0.2em] uppercase text-white/40 mb-6 flex items-center gap-2">
-                <Users size={14} /> 2. Participants ({tournamentSize === 8 ? Math.max(9, participants.length) : Math.max(tournamentSize, participants.length)})
+                <Users size={14} /> 2. Participants ({tournamentSize})
               </h3>
               {loadingCountries && (
                 <div className="flex gap-2 items-center text-[10px] uppercase font-black tracking-widest text-[#f59e0b] mb-4">
