@@ -2163,6 +2163,21 @@ function AdminView({
 
   const activeMatch = safeState.matches.find((m) => m.id === safeState.currentMatchId);
 
+  const getParticipantName = (participantId?: string) =>
+    safeState.participants.find((p) => p.id === participantId)?.name || "Participant inconnu";
+
+  const activeMatchLabel = activeMatch
+    ? [
+        getParticipantName(activeMatch.redTeamId),
+        getParticipantName(activeMatch.blueTeamId),
+        activeMatch.greenTeamId && safeState.participants.some((p) => p.id === activeMatch.greenTeamId)
+          ? getParticipantName(activeMatch.greenTeamId)
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" VS ")
+    : "AUCUN BATTLE ACTIF";
+
   if (!safeState.configured) {
     return (
       <div className="min-h-screen p-6 md:p-12 flex flex-col items-center max-w-7xl mx-auto font-sans text-white bg-surface-dark">
@@ -2869,9 +2884,7 @@ function AdminView({
                 Battle Actuel
               </p>
               <div className="text-xl md:text-2xl font-black italic truncate uppercase">
-                {activeMatch
-                  ? `${state.participants.find((p) => p.id === activeMatch.redTeamId)?.name} VS ${state.participants.find((p) => p.id === activeMatch.blueTeamId)?.name}${activeMatch.greenTeamId ? ` VS ${state.participants.find((p) => p.id === activeMatch.greenTeamId)?.name}` : ""}`
-                  : "AUCUN BATTLE ACTIF"}
+                {activeMatchLabel}
               </div>
             </div>
 
