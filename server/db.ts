@@ -816,7 +816,32 @@ export async function finishMatch(tournamentId: string) {
 
   if (!currentMatch) return null;
 
-  // Mark match as finished
+  // If this match ended as a tie-break, reset it as a replay instead of finalizing
+  if (currentMatch.isTieBrek) {
+    // Clear previous jury votes for this match
+    await prisma.juryVote.deleteMany({
+      where: { matchId: currentMatch.id },
+    });
+
+    // Reset the match to an active replay with cleared counters
+    await prisma.match.update({
+      where: { id: currentMatch.id },
+      data: {
+        status: "active",
+        revealed: false,
+        winnerId: null,
+        isTieBrek: false,
+        redVotes: 0,
+        blueVotes: 0,
+        greenVotes: 0,
+        roundResults: JSON.stringify([]),
+      },
+    });
+
+    return await getTournamentState(tournamentId);
+  }
+
+  // Otherwise mark match as finished
   await prisma.match.update({
     where: { id: tournament.currentMatchId },
     data: { status: "finished" },

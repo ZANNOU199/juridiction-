@@ -3121,6 +3121,20 @@ function JuryView({
       prevMatchIdRef.current = state.currentMatchId;
     }
   }, [state.currentMatchId, state.matches, view]);
+  
+  // Auto-enter vote view when a match becomes active and this jury hasn't voted yet
+  useEffect(() => {
+    try {
+      const liveMatch = state.matches.find((m) => m.id === state.currentMatchId);
+      if (view === "list" && liveMatch && liveMatch.status === "active") {
+        if (juryId && !state.juryVotes[juryId]) {
+          setView("vote");
+        }
+      }
+    } catch (err) {
+      // swallow - don't break UI if any unexpected state
+    }
+  }, [state.currentMatchId, state.matches, state.juryVotes, view, juryId]);
   const [isChanging, setIsChanging] = useState(false);
   const myVote = state.juryVotes[juryId];
   const navigate = useNavigate();
