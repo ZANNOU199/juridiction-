@@ -4520,17 +4520,17 @@ function PublicView({ state }: { state: TournamentState }) {
                   {redScore}
                 </div>
               </div>
-              <div className="bg-brand-red font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-start gap-0.5 md:gap-1 border-l border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                <div className="bg-brand-red font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-start gap-0.5 md:gap-1 border-l border-white/30 shadow-[inset_-20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
                 {(redP?.countryFlag || redP?.countryFlag2) && (
                   <CountryFlags
                     countryFlag={redP?.countryFlag}
                     countryName={redP?.countryName}
                     countryFlag2={redP?.countryFlag2}
                     countryName2={redP?.countryName2}
-                    sizeClass="w-3 h-2 md:w-4 md:h-3"
+                    sizeClass="w-8 h-5 md:w-10 md:h-7"
                   />
                 )}
-                <span className="font-black uppercase italic tracking-tighter truncate text-[36px] md:text-[54px] leading-[1.05]">
+                <span className="font-black uppercase italic tracking-tighter truncate text-[24px] md:text-[34px] leading-[1.05]">
                   {redP?.name || "-"}
                 </span>
               </div>
@@ -4556,17 +4556,17 @@ function PublicView({ state }: { state: TournamentState }) {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
               </div>
-              <div className="bg-brand-blue font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-center gap-0.5 md:gap-1 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
+                <div className="bg-brand-blue font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-center gap-0.5 md:gap-1 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
                 {(blueP?.countryFlag || blueP?.countryFlag2) && (
                   <CountryFlags
                     countryFlag={blueP?.countryFlag}
                     countryName={blueP?.countryName}
                     countryFlag2={blueP?.countryFlag2}
                     countryName2={blueP?.countryName2}
-                    sizeClass="w-3 h-2 md:w-4 md:h-3"
+                    sizeClass="w-8 h-5 md:w-10 md:h-7"
                   />
                 )}
-                <span className="font-black uppercase italic tracking-tighter truncate text-[36px] md:text-[54px] leading-[1.05]">
+                <span className="font-black uppercase italic tracking-tighter truncate text-[24px] md:text-[34px] leading-[1.05]">
                   {blueP?.name || "-"}
                 </span>
               </div>
@@ -4593,7 +4593,7 @@ function PublicView({ state }: { state: TournamentState }) {
                 </div>
               </div>
               <div className="bg-green-500 font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-end gap-0.5 md:gap-1 border-r border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-                <span className="font-black uppercase italic tracking-tighter truncate text-right text-[36px] md:text-[54px] leading-[1.05]">
+                <span className="font-black uppercase italic tracking-tighter truncate text-right text-[24px] md:text-[34px] leading-[1.05]">
                   {greenP?.name || "-"}
                 </span>
                 {(greenP?.countryFlag || greenP?.countryFlag2) && (
@@ -4602,7 +4602,7 @@ function PublicView({ state }: { state: TournamentState }) {
                     countryName={greenP?.countryName}
                     countryFlag2={greenP?.countryFlag2}
                     countryName2={greenP?.countryName2}
-                    sizeClass="w-3 h-2 md:w-4 md:h-3"
+                    sizeClass="w-8 h-5 md:w-10 md:h-7"
                   />
                 )}
               </div>
@@ -4632,10 +4632,10 @@ function PublicView({ state }: { state: TournamentState }) {
                     countryName={redP?.countryName}
                     countryFlag2={redP?.countryFlag2}
                     countryName2={redP?.countryName2}
-                    sizeClass="w-3 h-2 md:w-4 md:h-3"
+                    sizeClass="w-8 h-5 md:w-10 md:h-7"
                   />
                 )}
-                <span className="font-black uppercase italic tracking-tighter truncate text-[36px] md:text-[54px] leading-[1.05]">
+                <span className="font-black uppercase italic tracking-tighter truncate text-[24px] md:text-[34px] leading-[1.05]">
                   {redP?.name || "-"}
                 </span>
               </div>
@@ -4662,7 +4662,7 @@ function PublicView({ state }: { state: TournamentState }) {
                 </div>
               </div>
               <div className="bg-brand-blue font-black italic text-[6px] sm:text-[8px] md:text-xs px-1 md:px-2 py-0.5 md:py-1 flex items-center justify-end gap-0.5 md:gap-1 border-r border-white/30 shadow-[inset_20px_0_60px_rgba(0,0,0,0.3)] overflow-hidden">
-                <span className="font-black uppercase italic tracking-tighter truncate text-right text-[36px] md:text-[54px] leading-[1.05]">
+                <span className="font-black uppercase italic tracking-tighter truncate text-right text-[24px] md:text-[34px] leading-[1.05]">
                   {blueP?.name || "-"}
                 </span>
                 {(blueP?.countryFlag || blueP?.countryFlag2) && (
@@ -4671,7 +4671,7 @@ function PublicView({ state }: { state: TournamentState }) {
                     countryName={blueP?.countryName}
                     countryFlag2={blueP?.countryFlag2}
                     countryName2={blueP?.countryName2}
-                    sizeClass="w-3 h-2 md:w-4 md:h-3"
+                    sizeClass="w-8 h-5 md:w-10 md:h-7"
                   />
                 )}
               </div>
@@ -4696,7 +4696,7 @@ function PublicView({ state }: { state: TournamentState }) {
                       key={jury.id}
                       className="py-1 md:py-1.5 text-center border-r border-white/5 last:border-r-0 overflow-hidden"
                     >
-                      <span className="text-[18px] md:text-[28px] font-black uppercase tracking-widest italic text-white block truncate px-0.5">
+                      <span className="text-[14px] md:text-[20px] font-black uppercase tracking-widest italic text-white block truncate px-0.5">
                         {jury.username}
                       </span>
                     </div>
