@@ -77,15 +77,65 @@ function DancerPhoto({
   alt?: string;
 }) {
   const [failed, setFailed] = useState(false);
+  const [cachedSrc, setCachedSrc] = useState<string | null>(null);
+
+  const storageKey = photoUrl
+    ? `JUGE_IMAGE_CACHE:${encodeURIComponent(photoUrl)}`
+    : null;
 
   useEffect(() => {
     setFailed(false);
-  }, [photoUrl]);
+    if (!storageKey) {
+      setCachedSrc(null);
+      return;
+    }
 
-  // Ensure the image is aligned to the top so the upper part remains visible in framed containers
+    try {
+      const stored = window.localStorage.getItem(storageKey);
+      setCachedSrc(stored);
+    } catch {
+      setCachedSrc(null);
+    }
+  }, [photoUrl, storageKey]);
+
+  useEffect(() => {
+    if (!photoUrl || !storageKey) return;
+    if (cachedSrc) return;
+
+    let active = true;
+    const fetchAndCache = async () => {
+      try {
+        const response = await fetch(photoUrl, { mode: "cors" });
+        if (!response.ok) return;
+        const blob = await response.blob();
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (!active) return;
+          const result = reader.result;
+          if (typeof result !== "string") return;
+          try {
+            window.localStorage.setItem(storageKey, result);
+          } catch {
+            // Ignore storage write failures.
+          }
+          setCachedSrc(result);
+        };
+        reader.readAsDataURL(blob);
+      } catch {
+        // Keep using the original URL if fetch or cache fails.
+      }
+    };
+
+    fetchAndCache();
+    return () => {
+      active = false;
+    };
+  }, [photoUrl, storageKey, cachedSrc]);
+
   const finalClass = className.includes("object-top") ? className : `${className} object-top`;
+  const imageSrc = cachedSrc || photoUrl;
 
-  if (!photoUrl || failed) {
+  if (!imageSrc || failed) {
     return (
       <svg
         className={`${finalClass} bg-[#1f2937]`}
@@ -104,7 +154,7 @@ function DancerPhoto({
 
   return (
     <img
-      src={photoUrl}
+      src={imageSrc}
       alt={alt}
       className={finalClass}
       referrerPolicy="no-referrer"
