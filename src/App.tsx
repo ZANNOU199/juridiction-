@@ -4103,7 +4103,7 @@ function BracketContent({
   const showTop16 = state.tournamentSize >= 16;
   const showTop8 = state.tournamentSize >= 8;
   const showSemi = state.tournamentSize >= 4;
-  const isTop8 = state.tournamentSize <= 8;
+  const isTop8 = state.tournamentSize === 8;
 
   return (
     <div className="flex justify-center items-center w-full px-10 md:px-20 py-2 md:py-6 relative gap-8 md:gap-12">
@@ -4148,7 +4148,6 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 0)}
                 participants={state.participants}
-                isTop8={isTop8}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
@@ -4250,7 +4249,6 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 1)}
                 participants={state.participants}
-                isTop8={isTop8}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
@@ -4510,7 +4508,7 @@ function PublicView({ state }: { state: TournamentState }) {
             {/* Red Side */}
             <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
               <div className="flex justify-end gap-0.5 md:gap-1 items-end flex-1">
-                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
+                <div className="w-[15rem] h-[10.5rem] sm:w-[33rem] sm:h-[21rem] md:w-[42rem] md:h-[33rem] bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={redP?.photo}
                     alt={redP?.name}
@@ -4549,7 +4547,7 @@ function PublicView({ state }: { state: TournamentState }) {
                 <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-brand-blue flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(37,99,235,0.3)] border-b border-black/20 uppercase shrink-0">
                   {blueScore}
                 </div>
-                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
+                <div className="w-[15rem] h-[10.5rem] sm:w-[33rem] sm:h-[21rem] md:w-[42rem] md:h-[33rem] bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={blueP?.photo}
                     alt={blueP?.name}
@@ -4585,7 +4583,7 @@ function PublicView({ state }: { state: TournamentState }) {
                 <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-green-500 flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(34,197,94,0.3)] border-b border-black/20 uppercase shrink-0">
                   {greenScore}
                 </div>
-                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
+                <div className="w-[15rem] h-[10.5rem] sm:w-[33rem] sm:h-[21rem] md:w-[42rem] md:h-[33rem] bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={greenP?.photo}
                     alt={greenP?.name}
@@ -4615,7 +4613,7 @@ function PublicView({ state }: { state: TournamentState }) {
             {/* Red Side */}
             <div className="space-y-0 md:space-y-1 flex flex-col min-w-0">
               <div className="flex justify-end gap-0.5 md:gap-1 items-end flex-1">
-                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
+                <div className="w-[15rem] h-[10.5rem] sm:w-[33rem] sm:h-[21rem] md:w-[42rem] md:h-[33rem] bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={redP?.photo}
                     alt={redP?.name}
@@ -4654,7 +4652,7 @@ function PublicView({ state }: { state: TournamentState }) {
                 <div className="w-6 h-6 sm:w-12 sm:h-12 md:w-16 md:h-16 bg-brand-blue flex items-center justify-center text-xs sm:text-2xl md:text-3xl font-black italic shadow-[0_0_40px_rgba(37,99,235,0.3)] border-b border-black/20 uppercase shrink-0">
                   {blueScore}
                 </div>
-                <div className="w-20 h-14 sm:w-44 sm:h-28 md:w-56 md:h-44 bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
+                <div className="w-[15rem] h-[10.5rem] sm:w-[33rem] sm:h-[21rem] md:w-[42rem] md:h-[33rem] bg-white/5 border border-white/10 flex items-center justify-center p-0.5 relative group overflow-hidden shrink-0">
                   <DancerPhoto
                     photoUrl={blueP?.photo}
                     alt={blueP?.name}
