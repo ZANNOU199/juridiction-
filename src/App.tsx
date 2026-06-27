@@ -4058,7 +4058,7 @@ function MatchNode({
                       countryName={p?.countryName}
                       countryFlag2={p?.countryFlag2}
                       countryName2={p?.countryName2}
-                      sizeClass="w-4.5 h-3 md:w-5 md:h-3.5"
+                      sizeClass={isTop8 ? "w-12 h-8 md:w-12 md:h-8" : "w-4.5 h-3 md:w-5 md:h-3.5"}
                     />
                   )}
                 </span>
