@@ -4003,11 +4003,11 @@ function MatchNode({
                           countryName={p.countryName}
                           countryFlag2={p.countryFlag2}
                           countryName2={p.countryName2}
-                          sizeClass="w-4.5 h-3 md:w-5 md:h-3.5"
+                          sizeClass={isTop8 ? "w-10 h-6 md:w-12 md:h-8" : "w-4.5 h-3 md:w-5 md:h-3.5"}
                         />
                       ) : (
                         <svg
-                          className="w-4.5 h-3 md:w-5 md:h-3.5 text-white/30 border border-white/10 border-dashed rounded-xs bg-white/5 flex shrink-0"
+                          className={isTop8 ? "w-10 h-6 md:w-12 md:h-8 text-white/30 border border-white/10 border-dashed rounded-xs bg-white/5 flex shrink-0" : "w-4.5 h-3 md:w-5 md:h-3.5 text-white/30 border border-white/10 border-dashed rounded-xs bg-white/5 flex shrink-0"}
                           viewBox="0 0 20 14"
                           fill="none"
                           stroke="currentColor"
