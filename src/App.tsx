@@ -69,7 +69,7 @@ const DEFAULT_SILHOUETTE =
 
 function DancerPhoto({
   photoUrl,
-  className = "w-full h-full object-contain",
+  className = "w-full h-auto object-contain",
   alt = "Dancer",
 }: {
   photoUrl?: string;
@@ -2257,7 +2257,7 @@ function AdminView({
                       <img
                         src={competitionLogo}
                         alt="Logo"
-                        className="w-full h-full object-contain p-1"
+                        className="w-full h-auto object-contain p-1"
                         onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                       />
                     </div>
@@ -2296,7 +2296,7 @@ function AdminView({
                           <DancerPhoto
                             photoUrl={p.photo}
                             alt={p.name}
-                            className="w-full h-full object-contain"
+                            className="w-full h-auto object-contain"
                           />
                         </div>
                       </div>
@@ -3449,7 +3449,7 @@ function JuryView({
                     <DancerPhoto
                       photoUrl={redP.photo}
                       alt={redP.name}
-                      className="w-full h-full object-contain"
+                      className="w-full h-auto object-contain"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-red/40 to-transparent" />
                   </div>
@@ -3502,7 +3502,7 @@ function JuryView({
                     <DancerPhoto
                       photoUrl={blueP.photo}
                       alt={blueP.name}
-                      className="w-full h-full object-contain"
+                      className="w-full h-auto object-contain"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-brand-blue/40 to-transparent" />
                   </div>
@@ -3554,7 +3554,7 @@ function JuryView({
                     <DancerPhoto
                       photoUrl={greenP.photo}
                       alt={greenP.name}
-                      className="w-full h-full object-contain"
+                      className="w-full h-auto object-contain"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-green-500/40 to-transparent" />
                   </div>
@@ -4187,7 +4187,7 @@ function BracketContent({
                 <DancerPhoto
                   photoUrl={getWinner(getMatch("FINALE", 0))?.photo}
                   alt={getWinner(getMatch("FINALE", 0))?.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-auto object-contain"
                 />
               ) : (
                 <div className="text-white/5">
@@ -4471,7 +4471,7 @@ function PublicView({ state }: { state: TournamentState }) {
                  <img
                    src={winner.photo}
                    alt={winner.name}
-                   className="w-full h-full object-contain rounded-lg shadow-2xl"
+                   className="w-full h-auto object-contain rounded-lg shadow-2xl"
                  />
                  <div className="absolute inset-x-0 bottom-0 text-center bg-black/50 backdrop-blur-sm p-3 rounded-b-lg">
                    <h2 className="text-white font-black italic text-lg md:text-3xl uppercase tracking-tight line-clamp-2">
@@ -4512,7 +4512,7 @@ function PublicView({ state }: { state: TournamentState }) {
                     <DancerPhoto
                     photoUrl={redP?.photo}
                     alt={redP?.name}
-                    className="w-full h-full object-contain transition-all duration-700"
+                    className="w-full h-auto object-contain transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
@@ -4551,7 +4551,7 @@ function PublicView({ state }: { state: TournamentState }) {
                   <DancerPhoto
                     photoUrl={blueP?.photo}
                     alt={blueP?.name}
-                    className="w-full h-full object-contain transition-all duration-700"
+                    className="w-full h-auto object-contain transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
@@ -4587,7 +4587,7 @@ function PublicView({ state }: { state: TournamentState }) {
                   <DancerPhoto
                     photoUrl={greenP?.photo}
                     alt={greenP?.name}
-                    className="w-full h-full object-contain transition-all duration-700"
+                    className="w-full h-auto object-contain transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
@@ -4617,7 +4617,7 @@ function PublicView({ state }: { state: TournamentState }) {
                   <DancerPhoto
                     photoUrl={redP?.photo}
                     alt={redP?.name}
-                    className="w-full h-full object-contain transition-all duration-700"
+                    className="w-full h-auto object-contain transition-all duration-700"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 </div>
