@@ -4804,7 +4804,7 @@ function PublicView({ state }: { state: TournamentState }) {
               <motion.div
                 initial={{ height: 0, opacity: 0, scale: 0.95 }}
                 animate={{ height: "auto", opacity: 1, scale: 1 }}
-                className="w-full max-w-6xl mt-0.5 overflow-hidden"
+                className="w-full max-w-6xl mt-0.5 overflow-hidden mb-16 md:mb-20 relative z-40"
               >
                 <div
                   className={`py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase shadow-[0_0_60px_rgba(0,0,0,1)] relative overflow-hidden border border-white/10
