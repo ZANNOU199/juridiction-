@@ -4103,7 +4103,7 @@ function BracketContent({
   const showTop16 = state.tournamentSize >= 16;
   const showTop8 = state.tournamentSize >= 8;
   const showSemi = state.tournamentSize >= 4;
-  const isTop8 = state.tournamentSize === 8;
+  const isTop8 = state.tournamentSize <= 8;
 
   return (
     <div className="flex justify-center items-center w-full px-10 md:px-20 py-2 md:py-6 relative gap-8 md:gap-12">
@@ -4148,6 +4148,7 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 0)}
                 participants={state.participants}
+                isTop8={isTop8}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
@@ -4249,6 +4250,7 @@ function BracketContent({
               <MatchNode
                 match={getMatch("SEMI FINALE", 1)}
                 participants={state.participants}
+                isTop8={isTop8}
                 className="border-none bg-transparent p-0 min-w-0"
                 onUpdateMatchTeam={onUpdateMatchTeam}
                 onUpdateParticipantCountry={onUpdateParticipantCountry}
