@@ -3977,7 +3977,7 @@ function MatchNode({
                     onChange={(e) =>
                       onUpdateMatchTeam(match.id, side, e.target.value)
                     }
-                    className={`bg-transparent text-${isTop8 ? "[17px] md:[24px]" : "[13px] md:[18px]"} font-black uppercase italic tracking-tight outline-none border-b border-white/10 focus:border-primary flex-1 text-white cursor-pointer hover:text-primary transition-colors appearance-none min-w-0`}
+                    className={`bg-transparent ${isTop8 ? "text-[34px] md:text-[50px]" : "text-[13px] md:text-[18px]"} font-black uppercase italic tracking-tighter outline-none border-b border-white/10 focus:border-primary flex-1 text-white cursor-pointer hover:text-primary transition-colors appearance-none min-w-0`}
                   >
                     <option value="" className="bg-[#0a0807]">
                       -
@@ -4049,7 +4049,7 @@ function MatchNode({
                 </div>
               ) : (
                 <span
-                  className={`font-black uppercase italic tracking-tight truncate flex items-center gap-1.5 ${isTop8 ? "text-[18px] md:text-[26px]" : "text-[13px] md:text-[18px]"} ${p ? "text-white" : "text-white/10"} ${p && isWinner(p.id) ? "text-primary" : ""}`}
+                  className={`font-black uppercase italic tracking-tighter truncate flex items-center gap-1.5 ${isTop8 ? "text-[36px] md:text-[54px] leading-[1.05]" : "text-[13px] md:text-[18px]"} ${p ? "text-white" : "text-white/10"} ${p && isWinner(p.id) ? "text-primary" : ""}`}
                 >
                   <span>{p?.name || "-"}</span>
                   {(p?.countryFlag || p?.countryFlag2) && (
