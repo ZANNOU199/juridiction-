@@ -305,12 +305,12 @@ export async function getTournamentState(tournamentId: string) {
 
   // Transform DB data to expected frontend format
   // IMPORTANT: Only include votes for the CURRENT match, not all matches!
-  const juryVotes: Record<string, "red" | "blue" | "green" | null> = {};
+  const juryVotes: Record<string, "red" | "blue" | "green" | "tie" | null> = {};
   if (tournament.currentMatchId) {
     const currentMatch = tournament.matches.find((m) => m.id === tournament.currentMatchId);
     if (currentMatch) {
       currentMatch.votes.forEach((v) => {
-        juryVotes[v.juryId] = v.vote as "red" | "blue" | "green";
+        juryVotes[v.juryId] = v.vote as "red" | "blue" | "green" | "tie";
       });
     }
   }
@@ -631,7 +631,7 @@ export async function authenticateJury(
 export async function castVote(
   matchId: string,
   juryId: string,
-  vote: "red" | "blue" | "green"
+  vote: "red" | "blue" | "green" | "tie"
 ) {
   // Upsert vote
   const juryVote = await prisma.juryVote.upsert({
@@ -726,18 +726,34 @@ export async function confirmRound(tournamentId: string) {
   const redCount = votes.filter((v) => v.vote === "red").length;
   const blueCount = votes.filter((v) => v.vote === "blue").length;
   const greenCount = votes.filter((v) => v.vote === "green").length;
+  const tieCount = votes.filter((v) => v.vote === "tie").length;
 
   if (match.votingMode === "round") {
     const roundResults = JSON.parse(match.roundResults);
-    roundResults[match.currentRound - 1] = { red: redCount, blue: blueCount, green: greenCount };
+    roundResults[match.currentRound - 1] = {
+      red: redCount,
+      blue: blueCount,
+      green: greenCount,
+      tie: tieCount,
+    };
 
     let redVotesTotal = match.redVotes;
     let blueVotesTotal = match.blueVotes;
     let greenVotesTotal = match.greenVotes;
 
-    if (redCount > blueCount && redCount > greenCount) redVotesTotal += 1;
-    else if (blueCount > redCount && blueCount > greenCount) blueVotesTotal += 1;
-    else if (greenCount > redCount && greenCount > blueCount) greenVotesTotal += 1;
+    const teamCounts = [
+      { count: redCount, side: "red" as const },
+      { count: blueCount, side: "blue" as const },
+      { count: greenCount, side: "green" as const },
+    ];
+    const maxTeamCount = Math.max(...teamCounts.map((c) => c.count));
+    const leaders = teamCounts.filter((c) => c.count === maxTeamCount);
+
+    if (leaders.length === 1 && maxTeamCount > tieCount) {
+      if (leaders[0].side === "red") redVotesTotal += 1;
+      else if (leaders[0].side === "blue") blueVotesTotal += 1;
+      else greenVotesTotal += 1;
+    }
 
     if (match.currentRound < match.roundCount) {
       // Move to next round
@@ -797,6 +813,7 @@ export async function revealMatch(tournamentId: string, matchId: string) {
   const redCount = votes.filter((v) => v.vote === "red").length;
   const blueCount = votes.filter((v) => v.vote === "blue").length;
   const greenCount = votes.filter((v) => v.vote === "green").length;
+  const tieCount = votes.filter((v) => v.vote === "tie").length;
 
   // Determine winner and if it's a tie
   let winnerId: string | null = null;
@@ -812,10 +829,10 @@ export async function revealMatch(tournamentId: string, matchId: string) {
   const maxCount = Math.max(...counts.map((c) => c.count));
   const winnersCount = counts.filter((c) => c.count === maxCount).length;
 
-  if (winnersCount === 1) {
+  if (winnersCount === 1 && maxCount > tieCount) {
     // Clear winner
     winnerId = counts.find((c) => c.count === maxCount)!.id;
-  } else if (winnersCount > 1) {
+  } else {
     // Tie break situation
     isTieBrek = true;
     winnerId = null;

@@ -239,7 +239,7 @@ interface TournamentState {
   juryCount: number;
   currentMatchId: string | null;
   matches: Match[];
-  juryVotes: Record<string, "red" | "blue" | "green" | null>;
+  juryVotes: Record<string, "red" | "blue" | "green" | "tie" | null>;
   warnedJuries: string[];
   configured: boolean;
   tournamentSize: 16 | 8 | 4 | 2;
@@ -2197,7 +2197,7 @@ function AdminView({
     }
   };
 
-  const adminCastVote = async (juryId: string, vote: "red" | "blue" | "green") => {
+  const adminCastVote = async (juryId: string, vote: "red" | "blue" | "green" | "tie") => {
     if (!state.currentMatchId) return;
 
     try {
@@ -2968,6 +2968,8 @@ function AdminView({
                                      ? "bg-brand-red border-brand-red"
                                      : vote === "blue"
                                      ? "bg-brand-blue border-brand-blue"
+                                     : vote === "tie"
+                                     ? "bg-neutral-600 border-neutral-500"
                                      : "bg-green-500 border-green-500"
                                    : "bg-white/5 border-white/10 hover:border-white/40"
                                }
@@ -2975,7 +2977,11 @@ function AdminView({
                         `}
                       >
                         {vote && (
-                          <CheckCircle2 size={12} className="text-white" />
+                          vote === "tie" ? (
+                            <XCircle size={12} className="text-white" />
+                          ) : (
+                            <CheckCircle2 size={12} className="text-white" />
+                          )
                         )}
                       </button>
 
@@ -3004,6 +3010,15 @@ function AdminView({
                             className="px-2 py-1 bg-brand-blue text-white text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
                           >
                             BLUE
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              adminCastVote(jury.id, "tie");
+                            }}
+                            className="px-2 py-1 bg-neutral-600 text-white text-[8px] font-black uppercase tracking-widest hover:scale-110 transition-all active:scale-95"
+                          >
+                            TIE
                           </button>
                           {activeMatch?.greenTeamId && (
                             <button
@@ -3273,7 +3288,10 @@ function JuryView({
   const currentVotesGreen = Object.values(state.juryVotes).filter(
     (v) => v === "green",
   ).length;
-  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen;
+  const currentVotesTie = Object.values(state.juryVotes).filter(
+    (v) => v === "tie",
+  ).length;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen + currentVotesTie;
 
   const confirmRound = async () => {
     try {
@@ -3344,7 +3362,7 @@ function JuryView({
     setView("list");
   };
 
-  const castVote = async (vote: "red" | "blue" | "green") => {
+  const castVote = async (vote: "red" | "blue" | "green" | "tie") => {
     if (!state.currentMatchId) return;
 
     try {
@@ -3640,6 +3658,15 @@ function JuryView({
               </button>
             )}
 
+            <button
+              onClick={() => castVote("tie")}
+              disabled={!!myVote && !isChanging}
+              className={`absolute bottom-6 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2 px-5 py-3 rounded-full border border-white/20 backdrop-blur-md transition-all duration-700 ${myVote === "tie" ? "bg-neutral-600 text-white shadow-[0_0_30px_rgba(115,115,115,0.35)]" : "bg-black/40 text-white/70 hover:bg-neutral-700/80"}`}
+            >
+              <XCircle size={16} />
+              <span className="text-[10px] font-black uppercase tracking-widest">TIE</span>
+            </button>
+
             {/* Confirmation Overlay (Active when vote cast and not changing) */}
             {myVote && !isChanging && (
               <motion.div
@@ -3649,27 +3676,37 @@ function JuryView({
               >
                 <div className="bg-black/90 backdrop-blur-2xl border border-white/20 p-6 md:p-12 rounded-3xl md:rounded-[3.5rem] flex flex-col items-center text-center shadow-[0_0_100px_rgba(0,0,0,1)] pointer-events-auto max-w-lg w-full short-screen-p-sm">
                   <div
-                    className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 md:mb-8 border-4 short-screen-hide ${myVote === "red" ? "border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]" : myVote === "blue" ? "border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]" : "border-green-500 bg-green-500/20 shadow-[0_0_40px_rgba(34,197,94,0.4)]"}`}
+                    className={`w-16 h-16 md:w-24 md:h-24 rounded-full flex items-center justify-center mb-4 md:mb-8 border-4 short-screen-hide ${myVote === "red" ? "border-brand-red bg-brand-red/20 shadow-[0_0_40px_rgba(225,29,72,0.4)]" : myVote === "blue" ? "border-brand-blue bg-brand-blue/20 shadow-[0_0_40px_rgba(37,99,235,0.4)]" : myVote === "tie" ? "border-neutral-500 bg-neutral-500/20 shadow-[0_0_40px_rgba(115,115,115,0.4)]" : "border-green-500 bg-green-500/20 shadow-[0_0_40px_rgba(34,197,94,0.4)]"}`}
                   >
-                    <CheckCircle2
-                      size={32}
-                      className="text-white md:w-12 md:h-12"
-                    />
+                    {myVote === "tie" ? (
+                      <XCircle size={32} className="text-white md:w-12 md:h-12" />
+                    ) : (
+                      <CheckCircle2
+                        size={32}
+                        className="text-white md:w-12 md:h-12"
+                      />
+                    )}
                   </div>
                   <p className="text-[10px] font-black tracking-[0.5em] text-white/40 uppercase mb-2 md:mb-3 short-screen-text-sm">
                     VOTE ENREGISTRÉ
                   </p>
                   <h3 className="text-2xl md:text-5xl font-black italic tracking-tighter uppercase mb-1 md:mb-2 short-screen-text-sm flex items-center gap-2.5 justify-center">
-                    {(((myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag) || ((myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2)) && (
-                      <CountryFlags
-                        countryFlag={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag}
-                        countryName={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName}
-                        countryFlag2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2}
-                        countryName2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName2}
-                        sizeClass="w-6 h-4 md:w-9 md:h-6"
-                      />
+                    {myVote === "tie" ? (
+                      <span>ÉGALITÉ</span>
+                    ) : (
+                      <>
+                        {(((myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag) || ((myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2)) && (
+                          <CountryFlags
+                            countryFlag={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag}
+                            countryName={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName}
+                            countryFlag2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryFlag2}
+                            countryName2={(myVote === "red" ? redP : myVote === "blue" ? blueP : greenP)?.countryName2}
+                            sizeClass="w-6 h-4 md:w-9 md:h-6"
+                          />
+                        )}
+                        <span>{myVote === "red" ? redP?.name : myVote === "blue" ? blueP?.name : greenP?.name}</span>
+                      </>
                     )}
-                    <span>{myVote === "red" ? redP?.name : myVote === "blue" ? blueP?.name : greenP?.name}</span>
                   </h3>
                   <p className="text-[10px] md:text-[11px] text-white/30 font-bold uppercase tracking-widest mb-6 md:mb-10 italic short-screen-hide">
                     SÉLECTION BIEN TRANSMISE AU SYSTÈME
@@ -4402,7 +4439,10 @@ function PublicView({ state }: { state: TournamentState }) {
   const currentVotesGreen = Object.values(state.juryVotes).filter(
     (v) => v === "green",
   ).length;
-  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen;
+  const currentVotesTie = Object.values(state.juryVotes).filter(
+    (v) => v === "tie",
+  ).length;
+  const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen + currentVotesTie;
 
   const gracePeriodPassed = activeMatch.allVotesCastAt
     ? now - activeMatch.allVotesCastAt > 5000
@@ -4815,7 +4855,9 @@ function PublicView({ state }: { state: TournamentState }) {
                       ? "bg-brand-red shadow-[inset_0_0_20px_rgba(225,29,72,0.5)]"
                       : vote === "blue"
                         ? "bg-brand-blue shadow-[inset_0_0_20px_rgba(37,99,235,0.5)]"
-                        : "bg-green-500 shadow-[inset_0_0_20px_rgba(34,197,94,0.5)]";
+                        : vote === "tie"
+                          ? "bg-neutral-600 shadow-[inset_0_0_20px_rgba(115,115,115,0.35)]"
+                          : "bg-green-500 shadow-[inset_0_0_20px_rgba(34,197,94,0.5)]";
                   } else if (hasVoted && !showActualVote) {
                     bgColor = "bg-white shadow-[inset_0_0_20px_rgba(255,255,255,0.3)]";
                   }
