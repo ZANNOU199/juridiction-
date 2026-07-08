@@ -4419,7 +4419,7 @@ function PublicView({ state }: { state: TournamentState }) {
         <div className="w-16 h-16 border-2 border-white/5 border-t-white/40 rounded-full animate-spin mb-6" />
         <p className="text-white/10 font-bold uppercase tracking-[0.4em] text-[10px]">
           System Interlink Pending • Waiting for Active Battle
-        </p>
+        </p> 
         <button
           onClick={() => navigate("/select")}
           className="mt-12 text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-white transition-all underline underline-offset-8"
