@@ -46,14 +46,14 @@ function createCriterion(): PreselectionCriterion {
 function buildScoreRows(
   tournaments: EventTournament[],
   juries: Array<{ id: string; username: string }>,
-  savedScores: any[]
+  savedScores: ScoreEntry[]
 ): ScoreRow[] {
   const scoreMap = new Map<string, string>();
 
-  savedScores.forEach((entry: any) => {
+  savedScores.forEach((entry) => {
     // Support multiple shapes: { category, participantId, juryId, total }
     // or wrapper { entry: { ... } } or legacy arrays
-    const e = entry && entry.entry ? entry.entry : entry;
+    const e = entry?.entry ? entry.entry : entry;
     const category = e?.category || entry?.category || "";
     const participantId = e?.participantId || entry?.participantId || "";
     const juryId = e?.juryId || entry?.juryId || "";
@@ -148,7 +148,7 @@ export function PreselectionAdmin() {
         setEventData({ tournaments, juryAccounts: juries });
         const normalized = Array.isArray(loadedScores) ? loadedScores : [];
         setSavedScoresRaw(normalized);
-        setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], normalized));
+        setScoreRows(buildScoreRows(tournaments, juries, normalized));
 
         // fetch preselection mode + index
         try {
@@ -178,14 +178,14 @@ export function PreselectionAdmin() {
         const json = await res.json();
         const loadedScores = json.scores || [];
         setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
-        setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], Array.isArray(loadedScores) ? loadedScores : []));
+        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
       } catch (e) {
         // ignore polling errors
       }
     }, 2500);
     // Listen for cross-tab updates (BroadcastChannel or storage fallback)
     try {
-      const bc = (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(`preselection-${eventSlug}`) : null;
+      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
       const onMessage = (msg: any) => {
         if (!eventSlug) return;
         if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {
@@ -423,18 +423,6 @@ export function PreselectionAdmin() {
       if (res.ok) {
         const json = await res.json();
         setPreselectionIndex(Number(json.currentIndex || nextIndex));
-
-        try {
-          const bc = (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(`preselection-${eventSlug}`) : null;
-          if (bc) bc.postMessage({ type: "currentUpdated", timestamp: Date.now() });
-          else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
-        } catch (broadcastError) {
-          try {
-            localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
-          } catch (err) {
-            // ignore
-          }
-        }
       }
     } catch (e) {
       console.error(e);
@@ -620,7 +608,7 @@ export function PreselectionAdmin() {
 
     // BroadcastChannel + storage fallback listener
     try {
-      const bc = (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(`preselection-${eventSlug}`) : null;
+      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
       const onMessage = (msg: any) => {
         if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {
           fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
@@ -654,90 +642,77 @@ export function PreselectionAdmin() {
       return () => clearInterval(poll);
     }
   }, [eventSlug, eventData]);
-  const overallTotal = Object.values(juryTotals).reduce((s: number, v: any) => s + (Number(v) || 0), 0);
-
-  return (
-    <div className="min-h-screen bg-black p-6 text-white">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between gap-3 mb-6">
-          <div>
-            <button
-              type="button"
-              onClick={() => togglePreselection(!preselectionActive)}
-              className={`px-3 py-2 font-bold uppercase ${preselectionActive ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}
-            >
-              {preselectionActive ? "Actif" : "Inactif"}
-            </button>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-white/60">Index</label>
-            <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
-          </div>
-          <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
-            Match suivant
-          </button>
-        </div>
-
-        <div className="bg-white/5 border border-white/10 p-6 rounded-lg">
-          {scoreSaved && (
-            <div className="mb-6 border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">Les points ont bien été enregistrés.</div>
-          )}
-
-          {eventData.juryAccounts.length === 0 ? (
-            <div className="text-white/50">Aucun jury n’a encore été associé à cet événement.</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-left text-white/80">
-                <thead>
-                  <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/50">
-                    <th className="px-3 py-3">Participant</th>
-                    <th className="px-3 py-3">Catégorie</th>
-                    {eventData.juryAccounts.map((jury) => (
-                      <th key={jury.id} className="px-3 py-3 whitespace-nowrap">{jury.username}</th>
-                    ))}
-                    <th className="px-3 py-3">Total</th>
-                    <th className="px-3 py-3">Classement</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rankedRows.map((row, index) => (
-                    <tr key={`${row.participantId}-${row.category}`} className="border-b border-white/10">
-                      <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
-                      <td className="px-3 py-3 text-white/60">{row.category}</td>
-                      {eventData.juryAccounts.map((jury) => {
-                        const saved = hasSavedFor(row.participantId, jury.id);
-                        const savedVal = getSavedValue(row.participantId, jury.id);
-                        return (
-                          <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
-                            <input
-                              type="number"
-                              min={0}
-                              max={maxPossibleScore}
-                              value={savedVal != null ? String(savedVal) : row.juryScores[jury.id] || ""}
-                              onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)}
-                              className={`w-24 border border-white/10 px-2 py-1 focus:outline-none focus:border-white/30 ${saved ? "bg-green-600/30 text-black" : "bg-white/5 text-white"}`}
-                              disabled={saved}
-                            />
-                          </td>
-                        );
-                      })}
-                      <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
-                      <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
-                    </tr>
-                  ))}
-                  <tr className="border-t border-white/20 bg-white/5">
-                    <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
-                    <td className="px-3 py-3" />
-                    {eventData.juryAccounts.map((jury) => (
-                      <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
-                    ))}
-                    <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
-                    <td className="px-3 py-3" />
-                  </tr>
-                </tbody>
-              </table>
+                      {preselectionActive ? "Actif" : "Inactif"}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-white/60">Index</label>
+                    <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
+                  </div>
+                  <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
+                    Match suivant
+                  </button>
+                </div>
             </div>
-          )}
+
+            {scoreSaved && <div className="mb-6 border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">Les points ont bien été enregistrés.</div>}
+
+            {eventData.juryAccounts.length === 0 ? (
+              <div className="text-white/50">Aucun jury n’a encore été associé à cet événement.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm text-left text-white/80">
+                  <thead>
+                    <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/50">
+                      <th className="px-3 py-3">Participant</th>
+                      <th className="px-3 py-3">Catégorie</th>
+                      {eventData.juryAccounts.map((jury) => (
+                        <th key={jury.id} className="px-3 py-3 whitespace-nowrap">{jury.username}</th>
+                      ))}
+                      <th className="px-3 py-3">Total</th>
+                      <th className="px-3 py-3">Classement</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rankedRows.map((row, index) => (
+                      <tr key={`${row.participantId}-${row.category}`} className="border-b border-white/10">
+                        <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
+                        <td className="px-3 py-3 text-white/60">{row.category}</td>
+                        {eventData.juryAccounts.map((jury) => {
+                          const saved = hasSavedFor(row.participantId, jury.id);
+                          const savedVal = getSavedValue(row.participantId, jury.id);
+                          return (
+                            <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={maxPossibleScore}
+                                value={savedVal != null ? String(savedVal) : row.juryScores[jury.id] || ""}
+                                onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)}
+                                className={`w-24 border border-white/10 px-2 py-1 focus:outline-none focus:border-white/30 ${saved ? "bg-green-600/30 text-black" : "bg-white/5 text-white"}`}
+                                disabled={saved}
+                              />
+                            </td>
+                          );
+                        })}
+                        <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
+                        <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
+                      </tr>
+                    ))}
+                    <tr className="border-t border-white/20 bg-white/5">
+                      <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
+                      <td className="px-3 py-3" />
+                      {eventData.juryAccounts.map((jury) => (
+                        <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
+                      ))}
+                      <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
+                      <td className="px-3 py-3" />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
