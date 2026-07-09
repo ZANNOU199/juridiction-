@@ -681,6 +681,13 @@ export function PreselectionAdmin() {
                   <button onClick={resetPreselection} className="px-3 py-2 font-bold uppercase bg-red-600/30 hover:bg-red-600/40 border border-red-500/30 text-red-200">
                     Réinitialiser les présélections
                   </button>
+                  <button
+                    onClick={() => navigate(`/publicclassement/${eventSlug}`)}
+                    disabled={!allParticipantsRated}
+                    className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-amber-500/30 hover:bg-amber-500/40 border border-amber-400/30 text-amber-200" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
+                  >
+                    Afficher classement
+                  </button>
                   <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>

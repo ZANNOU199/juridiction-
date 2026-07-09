@@ -32,6 +32,7 @@ import { JuryManager } from "./components/JuryManager";
 import { WaitingPage } from "./components/WaitingPage";
 import { PreselectionAdmin } from "./components/PreselectionAdmin";
 import { PreselectionJury } from "./components/PreselectionJury";
+import { PublicPreselectionRanking } from "./components/PublicPreselectionRanking";
 import { useGlobalCategory } from "./useGlobalCategory";
 
 // --- Types ---
@@ -455,6 +456,8 @@ export default function App() {
         <Route path="/jury/:eventSlug/:category" element={<JuryGatewayMultiEvent />} />
         <Route path="/bracket/:eventSlug/:category" element={<BracketViewMultiEvent />} />
         <Route path="/attente/:eventSlug/:category" element={<WaitingPage />} />
+        <Route path="/publicclassement/:eventSlug/:category" element={<PublicPreselectionRanking />} />
+        <Route path="/publicclassement/:eventSlug" element={<PublicPreselectionRanking />} />
         <Route path="/:eventSlug/:category" element={<PublicViewMultiEvent />} />
 
         {/* Role selection */}

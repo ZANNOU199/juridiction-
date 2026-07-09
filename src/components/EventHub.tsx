@@ -191,7 +191,7 @@ export function AdminHub() {
     }
   };
 
-  const handleShareLink = (eventSlug: string, category: string, type: "jury" | "public" | "bracket" | "wait") => {
+  const handleShareLink = (eventSlug: string, category: string, type: "jury" | "public" | "bracket" | "wait" | "ranking") => {
     let path = "";
     switch (type) {
       case "jury":
@@ -205,6 +205,9 @@ export function AdminHub() {
         break;
       case "wait":
         path = `/attente/${eventSlug}/${category}`;
+        break;
+      case "ranking":
+        path = `/publicclassement/${eventSlug}/${category}`;
         break;
     }
 
@@ -385,10 +388,23 @@ export function AdminHub() {
                                 "wait"
                               )
                             }
-                            className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 flex items-center gap-2 text-white"
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 flex items-center gap-2 text-white border-b border-white/10"
                           >
                             <Copy className="w-3 h-3" />
                             Écran d'Attente
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleShareLink(
+                                event.eventSlug,
+                                event.tournaments[0].category,
+                                "ranking"
+                              )
+                            }
+                            className="w-full px-4 py-2 text-left text-sm hover:bg-white/10 flex items-center gap-2 text-white"
+                          >
+                            <Copy className="w-3 h-3" />
+                            Classement Public
                           </button>
                         </div>
                       )}
