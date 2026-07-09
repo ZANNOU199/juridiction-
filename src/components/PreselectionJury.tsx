@@ -4,10 +4,12 @@ export function PreselectionJury({
   eventSlug,
   participants,
   juryId,
+  category,
 }: {
   eventSlug?: string;
   participants: any[];
   juryId: string | null;
+  category?: string;
 }) {
   const [criteria, setCriteria] = useState<Array<{ name: string; maxScore: string }>>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(0);
@@ -90,7 +92,9 @@ export function PreselectionJury({
     setLocked(true);
     const payload = {
       entry: {
+        category: category || "",
         participantId: participant.id,
+        participantName: participant.name,
         juryId,
         scores: criteria.map((c, i) => ({ name: c.name, maxScore: c.maxScore, score: Number(scores[String(i)] || 0) })),
         timestamp: Date.now(),

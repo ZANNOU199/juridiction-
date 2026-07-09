@@ -3452,7 +3452,7 @@ function JuryView({
 
   if (preselectionActive && eventSlug) {
     return (
-      <PreselectionJury eventSlug={eventSlug} participants={state.participants} juryId={juryId} />
+      <PreselectionJury eventSlug={eventSlug} participants={state.participants} juryId={juryId} category={category} />
     );
   }
 
