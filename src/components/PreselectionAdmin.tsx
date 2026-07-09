@@ -148,7 +148,12 @@ export function PreselectionAdmin() {
         setEventData({ tournaments, juryAccounts: juries });
         const normalized = Array.isArray(loadedScores) ? loadedScores : [];
         setSavedScoresRaw(normalized);
-        setScoreRows(buildScoreRows(tournaments, juries, normalized));
+        try {
+          setScoreRows(buildScoreRows(tournaments, juries, normalized));
+        } catch (err) {
+          console.error("buildScoreRows failed on initial load", { err, tournaments, juries, normalized });
+          setScoreRows([]);
+        }
 
         // fetch preselection mode + index
         try {
@@ -182,7 +187,12 @@ export function PreselectionAdmin() {
         // use current eventData (which is in state) for tournaments/juries
         const currentTournaments = eventData.tournaments || [];
         const currentJuries = eventData.juryAccounts || [];
-        setScoreRows(buildScoreRows(currentTournaments, currentJuries, normalized));
+        try {
+          setScoreRows(buildScoreRows(currentTournaments, currentJuries, normalized));
+        } catch (err) {
+          console.error("buildScoreRows failed during polling", { err, currentTournaments, currentJuries, normalized });
+          setScoreRows([]);
+        }
       } catch (e) {
         // ignore polling errors
       }
@@ -317,16 +327,26 @@ export function PreselectionAdmin() {
       setScoreSaved(true);
       // refresh saved raw scores and ranking
       // After saving, refresh saved scores from server (to include jury submissions too)
-      try {
+        try {
         const refreshed = await fetch(`/api/preselection/${eventSlug}/scores`);
         const refreshedJson = refreshed.ok ? (await refreshed.json())?.scores || [] : [];
         const normalized = Array.isArray(refreshedJson) ? refreshedJson : [];
         setSavedScoresRaw(normalized);
-        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, normalized));
+        try {
+          setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, normalized));
+        } catch (err) {
+          console.error("buildScoreRows failed after saving scores (refresh)", { err, normalized, eventData });
+          setScoreRows([]);
+        }
       } catch (e) {
         // fallback to what we have
         setSavedScoresRaw(scores);
-        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
+        try {
+          setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
+        } catch (err) {
+          console.error("buildScoreRows failed after saving scores (fallback)", { err, scores, eventData });
+          setScoreRows([]);
+        }
       }
     } catch (error) {
       console.error("Failed to save preselection scores", error);
