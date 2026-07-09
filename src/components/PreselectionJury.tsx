@@ -56,15 +56,15 @@ export function PreselectionJury({
   }, [eventSlug]);
 
   useEffect(() => {
-    // Reset scores when criteria or index change only if user hasn't edited yet
-    if (hasEdited) return;
+    // Reset scores when criteria or index change only if user hasn't edited yet and the form is not locked
+    if (hasEdited || locked) return;
     const initial: Record<string, number> = {};
     criteria.forEach((c, i) => {
       initial[String(i)] = 0;
     });
     setScores(initial);
     setLocked(false);
-  }, [criteria, currentIndex, hasEdited]);
+  }, [criteria, currentIndex, hasEdited, locked]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
