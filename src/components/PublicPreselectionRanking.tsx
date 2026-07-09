@@ -107,34 +107,35 @@ export function PublicPreselectionRanking() {
 
   return (
     <div
-      className="min-h-screen bg-surface-dark bg-cover bg-center bg-fixed p-6 flex flex-col"
+      className="fixed inset-0 bg-surface-dark bg-cover bg-no-repeat flex items-center justify-center overflow-hidden"
       style={{
         backgroundImage: eventData.eventLogo ? `url('${eventData.eventLogo}')` : undefined,
         backgroundSize: "cover",
-        backgroundPosition: "center",
+        backgroundPosition: "center center",
+        backgroundAttachment: "fixed",
       }}
     >
       {/* Semi-transparent overlay */}
       <div className="absolute inset-0 bg-black/70" />
       
-      <div className="max-w-6xl mx-auto relative z-10 flex flex-col h-full">
-        <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-5xl font-black italic text-white uppercase tracking-wide">{title}</h1>
+      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-3" style={{ height: "100vh", paddingTop: "1rem", paddingBottom: "1rem" }}>
+        <div className="text-center mb-3">
+          <h1 className="text-2xl md:text-3xl font-black italic text-white uppercase tracking-wide">{title}</h1>
         </div>
 
-        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-8 md:p-12 shadow-2xl flex-1 flex flex-col">
+        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-4 shadow-2xl w-full flex-1 flex flex-col overflow-hidden">
           {loading ? (
-            <div className="text-white/60 text-center py-12 text-lg">Chargement du classement…</div>
+            <div className="text-white/60 text-center py-6 text-base">Chargement du classement…</div>
           ) : rankingRows.length === 0 ? (
-            <div className="text-white/60 text-center py-12 text-lg">Aucun classement disponible pour l'instant.</div>
+            <div className="text-white/60 text-center py-6 text-base">Aucun classement disponible pour l'instant.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-base text-left text-white">
-                <thead>
+            <div className="overflow-y-auto flex-1 w-full">
+              <table className="w-full text-xs text-left text-white">
+                <thead className="sticky top-0">
                   <tr className="bg-gradient-to-r from-amber-600/40 to-amber-500/30 border-b-2 border-amber-400/50">
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider w-24">Rang</th>
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider">Participant</th>
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider text-right w-32">Points</th>
+                    <th className="px-3 py-2 font-black uppercase text-amber-200 text-xs tracking-wider w-16">Rang</th>
+                    <th className="px-3 py-2 font-black uppercase text-amber-200 text-xs tracking-wider">Participant</th>
+                    <th className="px-3 py-2 font-black uppercase text-amber-200 text-xs tracking-wider text-right w-20">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -151,16 +152,16 @@ export function PublicPreselectionRanking() {
                           : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
                       } border-b border-white/10 transition-colors`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-3 py-2">
                         <div className="flex items-center justify-center">
-                          {index === 0 && <span className="text-2xl">🥇</span>}
-                          {index === 1 && <span className="text-2xl">🥈</span>}
-                          {index === 2 && <span className="text-2xl">🥉</span>}
-                          {index > 2 && <span className="font-black text-lg text-white/70">#{index + 1}</span>}
+                          {index === 0 && <span className="text-base">🥇</span>}
+                          {index === 1 && <span className="text-base">🥈</span>}
+                          {index === 2 && <span className="text-base">🥉</span>}
+                          {index > 2 && <span className="font-black text-xs text-white/70">#{index + 1}</span>}
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-white text-lg">{row.participantName}</td>
-                      <td className="px-6 py-4 font-black text-right text-amber-300 text-lg">{row.totalScore}</td>
+                      <td className="px-3 py-2 font-semibold text-white text-xs">{row.participantName}</td>
+                      <td className="px-3 py-2 font-black text-right text-amber-300 text-xs">{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
