@@ -109,7 +109,6 @@ export function PreselectionAdmin() {
   const [preselectionActive, setPreselectionActive] = useState(false);
   const [preselectionIndex, setPreselectionIndex] = useState(0);
   const [scoreRows, setScoreRows] = useState<ScoreRow[]>([]);
-  const [showRanking, setShowRanking] = useState(false);
   const eventDataRef = useRef<EventSummary>({ tournaments: [], juryAccounts: [] });
 
   useEffect(() => {
@@ -683,11 +682,11 @@ export function PreselectionAdmin() {
                     Réinitialiser les présélections
                   </button>
                   <button
-                    onClick={() => setShowRanking(!showRanking)}
+                    onClick={() => navigate(`/publicclassement/${eventSlug}`)}
                     disabled={!allParticipantsRated}
                     className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-amber-500/30 hover:bg-amber-500/40 border border-amber-400/30 text-amber-200" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
                   >
-                    {showRanking ? "Masquer classement" : "Afficher classement"}
+                    Afficher classement
                   </button>
                   <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
@@ -744,32 +743,6 @@ export function PreselectionAdmin() {
               </div>
             )}
           </div>
-
-          {showRanking && allParticipantsRated && (
-            <div className="bg-white/5 border border-white/10 p-6 md:p-8">
-              <h2 className="text-xl font-black italic text-white uppercase mb-6">Classement Final</h2>
-              <div className="overflow-x-auto">
-                <table className="min-w-full text-sm text-left text-white/80">
-                  <thead>
-                    <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/50">
-                      <th className="px-3 py-3">Classement</th>
-                      <th className="px-3 py-3">Participant</th>
-                      <th className="px-3 py-3">Points totaux</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rankedRows.map((row, index) => (
-                      <tr key={`${row.category}-${row.participantId}`} className="border-b border-white/10">
-                        <td className="px-3 py-3 font-bold text-amber-300">{index + 1}</td>
-                        <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
-                        <td className="px-3 py-3 font-bold text-white">{row.totalScore}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
