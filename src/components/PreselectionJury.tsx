@@ -27,17 +27,53 @@ export function PreselectionJury({
     const fetchData = async () => {
       if (!eventSlug) return;
       try {
-        const [cRes, mRes] = await Promise.all([
+        const [cRes, mRes, sRes] = await Promise.all([
           fetch(`/api/preselection/${eventSlug}`),
           fetch(`/api/preselection/${eventSlug}/current`),
+          fetch(`/api/preselection/${eventSlug}/scores`),
         ]);
         if (!cRes.ok) throw new Error("Failed to load criteria");
         if (!mRes.ok) throw new Error("Failed to load current index");
         const cJson = await cRes.json();
         const mJson = await mRes.json();
+        const sJson = sRes.ok ? await sRes.json() : { scores: [] };
         if (!mounted) return;
         setCriteria(Array.isArray(cJson.criteria) ? cJson.criteria : []);
         setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
+
+        const participantId = participants[currentIndex]?.id || `p-${currentIndex + 1}`;
+        const entries = Array.isArray(sJson.scores) ? sJson.scores : [];
+        const matchingEntry = entries.find((item: any) => {
+          const entry = item?.entry ?? item;
+          return entry?.participantId === participantId && entry?.juryId === juryId;
+        });
+        const entry = matchingEntry?.entry ?? matchingEntry;
+        const existingScores = Array.isArray(entry?.scores) ? entry.scores : [];
+
+        if (existingScores.length > 0) {
+          const restoredScores: Record<string, number> = {};
+          existingScores.forEach((scoreItem: any, index: number) => {
+            const parsed = Number(scoreItem?.score);
+            if (Number.isFinite(parsed)) {
+              restoredScores[String(index)] = parsed;
+            }
+          });
+          setScores(restoredScores);
+          setLocked(true);
+          setSubmitted(true);
+          setHasEdited(false);
+          setFieldErrors({});
+        } else {
+          const initial: Record<string, number> = {};
+          criteria.forEach((c, i) => {
+            initial[String(i)] = 0;
+          });
+          setScores(initial);
+          setLocked(false);
+          setSubmitted(false);
+          setHasEdited(false);
+          setFieldErrors({});
+        }
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -54,7 +90,7 @@ export function PreselectionJury({
       mounted = false;
       clearInterval(interval);
     };
-  }, [eventSlug]);
+  }, [eventSlug, juryId, participants, currentIndex]);
 
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet and hasn't submitted
@@ -66,13 +102,6 @@ export function PreselectionJury({
     setScores(initial);
     setLocked(false);
   }, [criteria, currentIndex, hasEdited, submitted]);
-
-  useEffect(() => {
-    setLocked(false);
-    setSubmitted(false);
-    setHasEdited(false);
-    setFieldErrors({});
-  }, [currentIndex, eventSlug]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
