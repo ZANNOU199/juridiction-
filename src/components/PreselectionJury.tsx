@@ -20,7 +20,7 @@ export function PreselectionJury({
   const [hasEdited, setHasEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
-  const [submittedForCurrent, setSubmittedForCurrent] = useState(false);
+  const [savedScoresRaw, setSavedScoresRaw] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -38,6 +38,16 @@ export function PreselectionJury({
         if (!mounted) return;
         setCriteria(Array.isArray(cJson.criteria) ? cJson.criteria : []);
         setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
+        // load saved scores so we can know if this jury already submitted
+        try {
+          const sRes = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
+          if (sRes.ok) {
+            const sJson = await sRes.json();
+            setSavedScoresRaw(Array.isArray(sJson.scores) ? sJson.scores : []);
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -56,51 +66,42 @@ export function PreselectionJury({
     };
   }, [eventSlug]);
 
-  // Check whether this jury already submitted for the current participant
-  useEffect(() => {
-    if (!eventSlug || !juryId) return;
-    const checkSubmitted = async () => {
-      try {
-        const res = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
-        if (!res.ok) return;
-        const json = await res.json();
-        const list = Array.isArray(json.scores) ? json.scores : [];
-        const participant = participants[currentIndex] || null;
-        if (!participant) {
-          setSubmittedForCurrent(false);
-          setLocked(false);
-          return;
-        }
-        const found = list.find((item: any) => {
-          const e = item?.entry ? item.entry : item;
-          if (!e) return false;
-          const matchesParticipant = e.participantId === participant.id;
-          const matchesJury = e.juryId === juryId;
-          const matchesCategory = (e.category || "") === (category || "");
-          return matchesParticipant && matchesJury && matchesCategory;
-        });
-        if (found) {
-          setSubmittedForCurrent(true);
-          setLocked(true);
-          // If we have per-criterion scores, populate the fields so UI displays them
-          const e = found.entry ? found.entry : found;
-          if (Array.isArray(e?.scores)) {
-            const initial: Record<string, number> = {};
-            e.scores.forEach((s: any, idx: number) => {
-              initial[String(idx)] = Number(s?.score || 0);
-            });
-            setScores(initial);
-          }
-        } else {
-          setSubmittedForCurrent(false);
-          setLocked(false);
-        }
-      } catch (err) {
-        // ignore
+  // helper to find saved entry for current participant + this jury
+  const findSavedEntry = (participantId: string) => {
+    for (const item of savedScoresRaw) {
+      if (!item) continue;
+      const e = item.entry ? item.entry : item;
+      if (!e) continue;
+      if ((e.participantId === participantId || item.participantId === participantId) && (e.juryId === juryId || item.juryId === juryId)) {
+        return e;
       }
-    };
-    checkSubmitted();
-  }, [eventSlug, juryId, currentIndex, category, participants]);
+    }
+    return null;
+  };
+
+  // when index or saved scores change, lock inputs if this jury already submitted for this participant
+  useEffect(() => {
+    const saved = findSavedEntry(participant.id);
+    if (saved) {
+      // populate per-criterion scores if available
+      if (Array.isArray(saved.scores) && saved.scores.length > 0) {
+        const mapped: Record<string, number> = {};
+        saved.scores.forEach((s: any, i: number) => {
+          mapped[String(i)] = Number(s?.score || 0);
+        });
+        setScores(mapped);
+      }
+      setLocked(true);
+    } else {
+      // if user hasn't edited, reset to defaults
+      if (!hasEdited) {
+        const initial: Record<string, number> = {};
+        criteria.forEach((c, i) => (initial[String(i)] = 0));
+        setScores(initial);
+        setLocked(false);
+      }
+    }
+  }, [currentIndex, savedScoresRaw, criteria, hasEdited, juryId]);
 
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet
@@ -117,6 +118,7 @@ export function PreselectionJury({
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
+  const currentSavedEntry = findSavedEntry(participant.id);
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
@@ -242,9 +244,9 @@ export function PreselectionJury({
                   type="number"
                   min={0}
                   max={Number(c.maxScore || 10)}
-                  value={scores[String(i)] ?? 0}
+                  value={currentSavedEntry ? String(Number(currentSavedEntry.scores?.[i]?.score || 0)) : String(scores[String(i)] ?? 0)}
                   onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
-                  disabled={locked}
+                  disabled={locked || Boolean(currentSavedEntry)}
                   className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
                 />
                 {fieldErrors[String(i)] && (
@@ -260,8 +262,8 @@ export function PreselectionJury({
           <div className="flex items-center gap-3">
             <button
               onClick={handleSubmit}
-              disabled={locked}
-              className="px-4 py-2 bg-white text-black font-black uppercase"
+              disabled={locked || Boolean(currentSavedEntry)}
+              className="px-4 py-2 bg-white text-black font-black uppercase disabled:opacity-60"
             >
               Envoyer
             </button>
