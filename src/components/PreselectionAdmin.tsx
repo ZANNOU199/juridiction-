@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
-import { BracketPreview, type Match as BracketMatch } from "./BracketRenderer";
 
 interface PreselectionCriterion {
   id: string;
@@ -110,10 +109,6 @@ export function PreselectionAdmin() {
   const [preselectionActive, setPreselectionActive] = useState(false);
   const [preselectionIndex, setPreselectionIndex] = useState(0);
   const [scoreRows, setScoreRows] = useState<ScoreRow[]>([]);
-  const [bracketMatches, setBracketMatches] = useState<BracketMatch[]>([]);
-  const [bracketSize, setBracketSize] = useState<16 | 8 | 4 | 2>(16);
-  const [showBracketPreview, setShowBracketPreview] = useState(false);
-  const [bracketSaved, setBracketSaved] = useState(false);
   const eventDataRef = useRef<EventSummary>({ tournaments: [], juryAccounts: [] });
 
   useEffect(() => {
@@ -170,21 +165,6 @@ export function PreselectionAdmin() {
           }
         } catch (e) {
           // ignore
-        }
-
-        try {
-          const savedBracket = window.localStorage.getItem(`preselection-bracket-${eventSlug}`);
-          if (savedBracket) {
-            const parsed = JSON.parse(savedBracket);
-            if (Array.isArray(parsed.matches) && parsed.matches.length > 0) {
-              setBracketMatches(parsed.matches);
-              setBracketSize((parsed.tournamentSize as 16 | 8 | 4 | 2) || 16);
-              setShowBracketPreview(true);
-              setBracketSaved(true);
-            }
-          }
-        } catch (e) {
-          // ignore invalid stored bracket
         }
       } catch (error) {
         console.error("Failed to load preselection data", error);
@@ -483,159 +463,6 @@ export function PreselectionAdmin() {
     }
   };
 
-  const bracketParticipants = useMemo(() => {
-    const seen = new Set<string>();
-    return (eventData.tournaments || []).flatMap((tournament) => tournament.participants || []).filter((participant) => {
-      if (!participant?.id || seen.has(participant.id)) return false;
-      seen.add(participant.id);
-      return true;
-    });
-  }, [eventData.tournaments]);
-
-  const generateBracketPreview = () => {
-    if (bracketParticipants.length < 2) return;
-
-    const size: 16 | 8 | 4 | 2 = bracketParticipants.length >= 16 ? 16 : bracketParticipants.length >= 8 ? 8 : bracketParticipants.length >= 4 ? 4 : 2;
-    const matches: BracketMatch[] = [];
-
-    if (size >= 16) {
-      for (let i = 0; i < 8; i += 1) {
-        matches.push({
-          id: `t16-${i + 1}`,
-          redTeamId: bracketParticipants[i * 2]?.id || "",
-          blueTeamId: bracketParticipants[i * 2 + 1]?.id || "",
-          greenTeamId: "",
-          redVotes: 0,
-          blueVotes: 0,
-          winnerId: null,
-          status: "pending",
-          round: "TOP 16",
-          votingMode: "match",
-          roundCount: 1,
-          currentRound: 1,
-          roundResults: [],
-          finishedJuries: [],
-        });
-      }
-    }
-
-    if (size >= 8) {
-      for (let i = 0; i < 4; i += 1) {
-        matches.push({
-          id: `t8-${i + 1}`,
-          redTeamId: size === 8 ? bracketParticipants[i * 2]?.id || "" : "",
-          blueTeamId: size === 8 ? bracketParticipants[i * 2 + 1]?.id || "" : "",
-          greenTeamId: "",
-          redVotes: 0,
-          blueVotes: 0,
-          winnerId: null,
-          status: "pending",
-          round: "TOP 8",
-          votingMode: "match",
-          roundCount: 1,
-          currentRound: 1,
-          roundResults: [],
-          finishedJuries: [],
-        });
-      }
-    }
-
-    if (size >= 4) {
-      for (let i = 0; i < 2; i += 1) {
-        matches.push({
-          id: `semi-${i + 1}`,
-          redTeamId: size === 4 ? bracketParticipants[i * 2]?.id || "" : "",
-          blueTeamId: size === 4 ? bracketParticipants[i * 2 + 1]?.id || "" : "",
-          greenTeamId: "",
-          redVotes: 0,
-          blueVotes: 0,
-          winnerId: null,
-          status: "pending",
-          round: "SEMI FINALE",
-          votingMode: "match",
-          roundCount: 1,
-          currentRound: 1,
-          roundResults: [],
-          finishedJuries: [],
-        });
-      }
-    }
-
-    matches.push({
-      id: "final-1",
-      redTeamId: size === 2 ? bracketParticipants[0]?.id || "" : "",
-      blueTeamId: size === 2 ? bracketParticipants[1]?.id || "" : "",
-      greenTeamId: "",
-      redVotes: 0,
-      blueVotes: 0,
-      winnerId: null,
-      status: "pending",
-      round: "FINALE",
-      votingMode: "match",
-      roundCount: 1,
-      currentRound: 1,
-      roundResults: [],
-      finishedJuries: [],
-    });
-
-    setBracketMatches(matches);
-    setBracketSize(size);
-    setShowBracketPreview(true);
-    setBracketSaved(false);
-  };
-
-  const updateBracketMatch = (
-    matchId: string,
-    side: "red" | "blue" | "green",
-    value: string,
-  ) => {
-    setBracketMatches((prev) =>
-      prev.map((match) => {
-        if (match.id !== matchId) return match;
-
-        const updated = {
-          ...match,
-          [side === "red" ? "redTeamId" : side === "blue" ? "blueTeamId" : "greenTeamId"]: value,
-        };
-
-        if (side === "red" && value && value === updated.blueTeamId) {
-          updated.blueTeamId = "";
-        }
-        if (side === "blue" && value && value === updated.redTeamId) {
-          updated.redTeamId = "";
-        }
-        if (side === "green" && value && value === updated.redTeamId) {
-          updated.redTeamId = "";
-        }
-        if (side === "green" && value && value === updated.blueTeamId) {
-          updated.blueTeamId = "";
-        }
-
-        return updated;
-      })
-    );
-    setBracketSaved(false);
-  };
-
-  const saveBracketPreview = () => {
-    if (!eventSlug) return;
-
-    try {
-      window.localStorage.setItem(
-        `preselection-bracket-${eventSlug}`,
-        JSON.stringify({
-          tournamentSize: bracketSize,
-          matches: bracketMatches,
-          savedAt: Date.now(),
-        }),
-      );
-      setBracketSaved(true);
-    } catch (error) {
-      console.error("Failed to save bracket preview", error);
-      alert("L’enregistrement du bracket a échoué.");
-    }
-  };
-
   const allJuriesSubmittedForCurrent = () => {
     const tournaments = eventData.tournaments || [];
     const juries = eventData.juryAccounts || [];
@@ -857,9 +684,6 @@ export function PreselectionAdmin() {
                   <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>
-                  <button onClick={generateBracketPreview} disabled={!allParticipantsRated || bracketParticipants.length < 2} className={`px-3 py-2 font-bold uppercase ${allParticipantsRated && bracketParticipants.length >= 2 ? "bg-purple-600/40 hover:bg-purple-600/50 text-purple-200" : "bg-white/5 text-white/60"}`}>
-                    Générer le bracket
-                  </button>
                 </div>
             </div>
 
@@ -909,38 +733,6 @@ export function PreselectionAdmin() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            )}
-
-            {showBracketPreview && bracketMatches.length > 0 && (
-              <div className="mt-8 border border-white/10 bg-black/20 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h3 className="text-lg font-black italic text-white uppercase">Bracket généré</h3>
-                    <p className="text-sm text-white/50 mt-1">Le rendu suit maintenant la même expérience que le tableau de configuration, et les modifications peuvent être enregistrées.</p>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <button onClick={saveBracketPreview} className="px-3 py-2 font-bold uppercase bg-blue-600/30 hover:bg-blue-600/40 border border-blue-500/30 text-blue-200">
-                      Enregistrer le bracket
-                    </button>
-                    <button onClick={generateBracketPreview} className="px-3 py-2 font-bold uppercase bg-white/10 hover:bg-white/20 text-white/80">
-                      Régénérer
-                    </button>
-                  </div>
-                </div>
-
-                {bracketSaved && (
-                  <div className="mb-4 border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">
-                    Les modifications du bracket sont maintenant enregistrées pour cet événement.
-                  </div>
-                )}
-
-                <BracketPreview
-                  participants={bracketParticipants}
-                  matches={bracketMatches}
-                  tournamentSize={bracketSize}
-                  onUpdateMatchTeam={updateBracketMatch}
-                />
               </div>
             )}
           </div>
