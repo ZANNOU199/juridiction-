@@ -51,8 +51,28 @@ function buildScoreRows(
   const scoreMap = new Map<string, string>();
 
   savedScores.forEach((entry) => {
-    const key = `${entry.category}::${entry.participantId}::${entry.juryId}`;
-    scoreMap.set(key, entry.total.toString());
+    // Support multiple shapes: { category, participantId, juryId, total }
+    // or wrapper { entry: { ... } } or legacy arrays
+    const e = entry?.entry ? entry.entry : entry;
+    const category = e?.category || entry?.category || "";
+    const participantId = e?.participantId || entry?.participantId || "";
+    const juryId = e?.juryId || entry?.juryId || "";
+
+    const key = `${category}::${participantId}::${juryId}`;
+
+    // Determine a numeric total: prefer explicit total, otherwise sum scores array if present
+    let totalVal: number | null = null;
+    if (typeof e?.total === "number") {
+      totalVal = e.total;
+    } else if (Array.isArray(e?.scores)) {
+      totalVal = e.scores.reduce((s: number, it: any) => s + (Number(it?.score) || 0), 0);
+    } else if (typeof entry?.total === "number") {
+      totalVal = entry.total;
+    }
+
+    if (totalVal !== null && totalVal !== undefined) {
+      scoreMap.set(key, String(totalVal));
+    }
   });
 
   return tournaments.flatMap((tournament) => {
