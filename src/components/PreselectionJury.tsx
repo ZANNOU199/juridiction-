@@ -15,6 +15,9 @@ export function PreselectionJury({
   const [locked, setLocked] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [hasEdited, setHasEdited] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -51,14 +54,15 @@ export function PreselectionJury({
   }, [eventSlug]);
 
   useEffect(() => {
-    // Reset scores when criteria or index change
+    // Reset scores when criteria or index change only if user hasn't edited yet
+    if (hasEdited) return;
     const initial: Record<string, number> = {};
     criteria.forEach((c, i) => {
       initial[String(i)] = 0;
     });
     setScores(initial);
     setLocked(false);
-  }, [criteria, currentIndex]);
+  }, [criteria, currentIndex, hasEdited]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
@@ -67,6 +71,18 @@ export function PreselectionJury({
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
+    setHasEdited(true);
+    // clear field error for this index when user edits
+    setFieldErrors((fe) => {
+      const copy = { ...fe };
+      delete copy[String(idx)];
+      return copy;
+    });
+    // immediate validation: cap value to max
+    const max = Number(criteria[idx]?.maxScore || 0);
+    if (max > 0 && value > max) {
+      setFieldErrors((fe) => ({ ...fe, [String(idx)]: `Ne peut pas dépasser ${max}` }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -81,6 +97,28 @@ export function PreselectionJury({
       },
     };
 
+    // Validate scores against maxScore and collect field errors
+    const newFieldErrors: Record<string, string> = {};
+    for (let i = 0; i < criteria.length; i++) {
+      const c = criteria[i];
+      const val = Number(scores[String(i)] || 0);
+      const max = Number(c.maxScore || 0);
+      if (Number.isNaN(val) || val < 0) {
+        newFieldErrors[String(i)] = `Valeur invalide`;
+      } else if (max > 0 && val > max) {
+        newFieldErrors[String(i)] = `Ne peut pas dépasser ${max}`;
+      }
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setToast({ message: "Corrigez les erreurs avant d'envoyer", type: "error" });
+      setLocked(false);
+      // auto-hide toast
+      setTimeout(() => setToast(null), 3500);
+      return;
+    }
+
     try {
       const res = await fetch(`/api/preselection/${eventSlug}/scores`, {
         method: "POST",
@@ -90,15 +128,26 @@ export function PreselectionJury({
       if (!res.ok) {
         throw new Error(`Server error ${res.status}`);
       }
+      // success
+      setHasEdited(false);
+      setToast({ message: "Notes envoyées", type: "success" });
+      setTimeout(() => setToast(null), 2500);
     } catch (e) {
       console.error(e);
-      setError("Échec de l'envoi");
+      setToast({ message: "Échec de l'envoi", type: "error" });
       setLocked(false);
+      setTimeout(() => setToast(null), 3500);
     }
   };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark text-white">
+      {/* Toast */}
+      {toast && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded shadow-lg ${toast.type === "error" ? "bg-red-600 text-white" : "bg-green-400 text-black"}`}>
+          {toast.message}
+        </div>
+      )}
       <div className="max-w-2xl w-full bg-white/5 border border-white/10 p-6">
         <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
         <p className="text-sm text-white/40 mb-4">Notation par critères</p>
@@ -116,11 +165,14 @@ export function PreselectionJury({
                   type="number"
                   min={0}
                   max={Number(c.maxScore || 10)}
-                  value={scores[String(i)]}
+                  value={scores[String(i)] ?? 0}
                   onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
                   disabled={locked}
-                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-black font-bold"
+                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
                 />
+                {fieldErrors[String(i)] && (
+                  <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
+                )}
               </div>
             </div>
           ))}
