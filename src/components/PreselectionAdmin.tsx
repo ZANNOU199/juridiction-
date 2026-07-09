@@ -684,7 +684,7 @@ export function PreselectionAdmin() {
                   <button
                     onClick={() => navigate(`/publicclassement/${eventSlug}`)}
                     disabled={!allParticipantsRated}
-                    className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-amber-500/30 hover:bg-amber-500/40 border border-amber-400/30 text-amber-200" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
+                    className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-amber-500/30 hover:bg-amber-500/40 border border-amber-400/30 text-amber-200 hidden" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
                   >
                     Afficher classement
                   </button>
