@@ -27,22 +27,12 @@ interface ScoreRow {
 }
 
 interface ScoreEntry {
-  category?: string;
-  participantId?: string;
-  participantName?: string;
-  juryId?: string;
-  juryName?: string;
-  total?: number;
-  entry?: {
-    category?: string;
-    participantId?: string;
-    participantName?: string;
-    juryId?: string;
-    juryName?: string;
-    total?: number;
-    scores?: Array<{ score?: number }>;
-  };
-  scores?: Array<{ score?: number }>;
+  category: string;
+  participantId: string;
+  participantName: string;
+  juryId: string;
+  juryName: string;
+  total: number;
 }
 
 function createCriterion(): PreselectionCriterion {
@@ -203,8 +193,7 @@ export function PreselectionAdmin() {
     }, 2500);
     // Listen for cross-tab updates (BroadcastChannel or storage fallback)
     try {
-      const BroadcastChannelCtor = (window as any).BroadcastChannel;
-      const bc = typeof BroadcastChannelCtor === "function" ? new BroadcastChannelCtor(`preselection-${eventSlug}`) : null;
+      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
       const onMessage = (msg: any) => {
         if (!eventSlug) return;
         if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {
