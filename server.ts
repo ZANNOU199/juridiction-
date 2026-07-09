@@ -135,6 +135,17 @@ app.get("/api/preselection/:eventSlug", async (req, res) => {
   }
 });
 
+app.get("/api/preselection/:eventSlug/scores", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const scores = await db.getPreselectionScoresForEvent(eventSlug);
+    res.json({ scores });
+  } catch (error) {
+    console.error("Error in /api/preselection/:eventSlug/scores:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.post("/api/preselection/:eventSlug", async (req, res) => {
   try {
     const { eventSlug } = req.params;
@@ -147,6 +158,19 @@ app.post("/api/preselection/:eventSlug", async (req, res) => {
     res.json({ success: true, criteria: savedCriteria });
   } catch (error) {
     console.error("Error in /api/preselection/:eventSlug:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/api/preselection/:eventSlug/scores", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { scores } = req.body;
+
+    const savedScores = await db.savePreselectionScoresForEvent(eventSlug, scores);
+    res.json({ success: true, scores: savedScores });
+  } catch (error) {
+    console.error("Error in /api/preselection/:eventSlug/scores:", error);
     res.status(500).json({ error: "Internal Server Error" });
   }
 });

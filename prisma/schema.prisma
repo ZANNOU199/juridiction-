@@ -15,6 +15,7 @@ model Event {
   selectedCategory  String   @default("B-BOY") // Category sync across browsers
   sharedScreenMode  Boolean  @default(false) // Split screen mode across all visitors
   preselectionCriteria String @default("[]")
+  preselectionScores String @default("[]")
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 

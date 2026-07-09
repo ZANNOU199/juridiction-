@@ -193,6 +193,17 @@ app.get("/preselection/:eventSlug", async (req, res) => {
   }
 });
 
+app.get("/preselection/:eventSlug/scores", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const scores = await db.getPreselectionScoresForEvent(eventSlug);
+    res.json({ scores });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.post("/preselection/:eventSlug", async (req, res) => {
   try {
     const { eventSlug } = req.params;
@@ -203,6 +214,19 @@ app.post("/preselection/:eventSlug", async (req, res) => {
 
     const savedCriteria = await db.savePreselectionCriteriaForEvent(eventSlug, criteria);
     res.json({ success: true, criteria: savedCriteria });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/preselection/:eventSlug/scores", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { scores } = req.body;
+
+    const savedScores = await db.savePreselectionScoresForEvent(eventSlug, scores);
+    res.json({ success: true, scores: savedScores });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal Server Error" });

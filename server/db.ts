@@ -278,6 +278,39 @@ export async function savePreselectionCriteriaForEvent(
   return safeCriteria;
 }
 
+export async function getPreselectionScoresForEvent(eventSlug: string) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+    select: { preselectionScores: true },
+  });
+
+  if (!event) return [];
+
+  try {
+    const parsed = JSON.parse(event.preselectionScores || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function savePreselectionScoresForEvent(eventSlug: string, scores: unknown) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  await prisma.event.update({
+    where: { eventSlug },
+    data: { preselectionScores: JSON.stringify(scores) },
+  });
+
+  return scores;
+}
+
 export async function getSharedScreenMode(eventSlug: string) {
   const event = await prisma.event.findUnique({
     where: { eventSlug },
