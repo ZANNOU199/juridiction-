@@ -101,7 +101,7 @@ export function PublicPreselectionRanking() {
     return rows.sort((a, b) => b.totalScore - a.totalScore);
   }, [scores, visibleTournaments]);
 
-  const title = categoryFromRoute ? `Classement ${categoryFromRoute}` : "Classement public";
+  const title = categoryFromRoute ? `Classement ${categoryFromRoute}` : "Classement";
 
   return (
     <div className="min-h-screen bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)] p-6">
