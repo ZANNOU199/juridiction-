@@ -527,121 +527,81 @@ export function PreselectionAdmin() {
     }, {});
   }, [eventData.juryAccounts, scoreRows]);
 
-  // Load initial page data once when eventSlug changes
-  useEffect(() => {
-    const loadPageData = async () => {
-      if (!eventSlug) {
-        setLoading(false);
-        return;
-      }
+  const overallTotal = useMemo(() => {
+    return Object.values(juryTotals).reduce<number>((sum, value) => sum + Number(value || 0), 0);
+  }, [juryTotals]);
 
-      try {
-        const [criteriaRes, eventRes, scoresRes] = await Promise.all([
-          fetch(`/api/preselection/${eventSlug}`),
-          fetch(`/api/events/${eventSlug}`),
-          fetch(`/api/preselection/${eventSlug}/scores`),
-        ]);
+  return (
+    <div className="min-h-screen bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)] p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 mb-8">
+          <button onClick={() => navigate(`/admin`)} className="flex items-center gap-2 text-white/40 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+            <span className="text-sm font-bold uppercase">Retour</span>
+          </button>
+          <div>
+            <h1 className="text-3xl font-black italic text-white uppercase">Préselection</h1>
+            <p className="text-sm text-white/45 mt-1">Définissez les critères, puis visualisez les points par jury et le classement.</p>
+          </div>
+        </div>
 
-        const loadedCriteria = criteriaRes.ok
-          ? ((await criteriaRes.json())?.criteria as Array<Partial<PreselectionCriterion>> | undefined)
-          : [];
-        const loadedEvent = eventRes.ok ? await eventRes.json() : null;
-        const loadedScores = scoresRes.ok
-          ? (((await scoresRes.json())?.scores) || [])
-          : [];
+        <div className="space-y-8">
+          <div className="bg-white/5 border border-white/10 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-black italic text-white uppercase">Critères de notation</h2>
+                <p className="text-sm text-white/50 mt-1">{eventSlug ? `Événement : ${eventSlug}` : "Configuration locale"}</p>
+              </div>
+              <button onClick={handleSaveCriteria} disabled={saving} className="bg-green-600/30 hover:bg-green-600/50 border border-green-500/30 text-green-300 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all disabled:opacity-60">
+                <Save className="w-4 h-4" />
+                {saving ? "Enregistrement..." : "Enregistrer"}
+              </button>
+            </div>
 
-        const tournaments = (loadedEvent?.tournaments || []) as EventTournament[];
-        const juries = (loadedEvent?.juryAccounts || []) as Array<{ id: string; username: string }>;
+            {saved && <div className="mb-6 border border-green-500/30 bg-green-500/10 px-4 py-3 text-sm text-green-300">Critères enregistrés avec succès.</div>}
 
-        setCriteria(
-          loadedCriteria && loadedCriteria.length > 0
-            ? loadedCriteria.map((item, index) => ({
-                id: `${Date.now()}-${index}`,
-                name: item.name || "",
-                maxScore: item.maxScore?.toString() || "10",
-              }))
-            : [createCriterion()]
-        );
+            {loading ? (
+              <div className="text-white/50">Chargement…</div>
+            ) : (
+              <div className="space-y-4">
+                {criteria.map((criterion, index) => (
+                  <div key={criterion.id} className="grid gap-3 md:grid-cols-[2fr_1fr_auto] items-end p-4 bg-white/5 border border-white/10">
+                    <div>
+                      <label className="block text-[10px] font-bold text-white/60 uppercase mb-2">Critère {index + 1}</label>
+                      <input type="text" value={criterion.name} onChange={(e) => updateCriterion(criterion.id, "name", e.target.value)} placeholder="Ex. Technique" className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 placeholder-white/20 focus:outline-none focus:border-white/30" />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-white/60 uppercase mb-2">Note max.</label>
+                      <input type="number" min="1" value={criterion.maxScore} onChange={(e) => updateCriterion(criterion.id, "maxScore", e.target.value)} className="w-full bg-white/5 border border-white/10 text-white px-3 py-2 focus:outline-none focus:border-white/30" />
+                    </div>
+                    <button type="button" onClick={() => removeCriterion(criterion.id)} className="p-2 border border-white/10 hover:bg-red-500/20 text-white/60 hover:text-red-300 transition-all" title="Supprimer ce critère">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+                <button type="button" onClick={addCriterion} className="w-full border border-dashed border-white/20 hover:border-white/40 text-white/70 hover:text-white py-3 font-bold uppercase flex items-center justify-center gap-2 transition-all">
+                  <Plus className="w-4 h-4" />
+                  Ajouter un critère
+                </button>
+              </div>
+            )}
+          </div>
 
-        setEventData({ tournaments, juryAccounts: juries });
-        const normalized = Array.isArray(loadedScores) ? loadedScores : [];
-        setSavedScoresRaw(normalized);
-        setScoreRows(buildScoreRows(tournaments, juries, normalized));
+          <div className="bg-white/5 border border-white/10 p-6 md:p-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-xl font-black italic text-white uppercase">Tableau de présélection</h2>
+                <p className="text-sm text-white/50 mt-1">Note maximale possible : {maxPossibleScore} points</p>
+              </div>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleSaveScores} disabled={savingScores} className="bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 text-blue-200 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all disabled:opacity-60">
+                    <Save className="w-4 h-4" />
+                    {savingScores ? "Sauvegarde..." : "Sauvegarder les points"}
+                  </button>
 
-        // fetch preselection mode + index
-        try {
-          const modeRes = await fetch(`/api/preselection/${eventSlug}/mode`);
-          if (modeRes.ok) {
-            const modeJson = await modeRes.json();
-            setPreselectionActive(Boolean(modeJson.active));
-            setPreselectionIndex(Number(modeJson.currentIndex || 0));
-          }
-        } catch (e) {
-          // ignore
-        }
-      } catch (error) {
-        console.error("Failed to load preselection data", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadPageData();
-  }, [eventSlug]);
-
-  // Polling + cross-tab listeners: refresh saved scores and recompute rows when updates arrive
-  useEffect(() => {
-    if (!eventSlug) return;
-
-    const poll = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
-        if (!res.ok) return;
-        const json = await res.json();
-        const loadedScores = json.scores || [];
-        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
-        setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], Array.isArray(loadedScores) ? loadedScores : []));
-      } catch (e) {
-        // ignore polling errors
-      }
-    }, 2500);
-
-    // BroadcastChannel + storage fallback listener
-    try {
-      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
-      const onMessage = (msg: any) => {
-        if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {
-          fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
-            const loaded = (j?.scores) || [];
-            setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
-            setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], Array.isArray(loaded) ? loaded : []));
-          }).catch(() => {});
-        }
-      };
-      if (bc) bc.addEventListener?.("message", onMessage);
-
-      const onStorage = (e: StorageEvent) => {
-        if (!e.key) return;
-        if (e.key === `preselection-refresh-${eventSlug}`) {
-          fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
-            const loaded = (j?.scores) || [];
-            setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
-            setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], Array.isArray(loaded) ? loaded : []));
-          }).catch(() => {});
-        }
-      };
-      window.addEventListener("storage", onStorage);
-
-      return () => {
-        clearInterval(poll);
-        try { if (bc) bc.removeEventListener?.("message", onMessage); } catch (e) {}
-        window.removeEventListener("storage", onStorage);
-      };
-    } catch (e) {
-      clearInterval(poll);
-      return () => clearInterval(poll);
-    }
-  }, [eventSlug, eventData]);
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-white/60">Mode préselection</label>
+                    <button onClick={() => togglePreselection(!preselectionActive)} className={`px-3 py-2 font-bold uppercase rounded ${preselectionActive ? "bg-amber-400 text-black" : "bg-white/5 text-white/60"}`}>
                       {preselectionActive ? "Actif" : "Inactif"}
                     </button>
                   </div>
