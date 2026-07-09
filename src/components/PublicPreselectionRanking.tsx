@@ -10,6 +10,7 @@ interface EventTournament {
 interface EventSummary {
   eventName?: string;
   eventSlug?: string;
+  eventLogo?: string;
   tournaments: EventTournament[];
 }
 
@@ -44,6 +45,7 @@ export function PublicPreselectionRanking() {
           setEventData({
             eventName: eventJson?.eventName || eventSlug,
             eventSlug,
+            eventLogo: eventJson?.eventLogo || "",
             tournaments: Array.isArray(eventJson?.tournaments) ? eventJson.tournaments : [],
           });
         }
@@ -104,34 +106,61 @@ export function PublicPreselectionRanking() {
   const title = categoryFromRoute ? `Classement ${categoryFromRoute}` : "Classement";
 
   return (
-    <div className="min-h-screen bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)] p-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-black italic text-white uppercase">{title}</h1>
-          <p className="text-sm text-white/45 mt-1">{eventData.eventName || eventSlug}</p>
+    <div
+      className="min-h-screen bg-surface-dark bg-cover bg-center bg-fixed p-6 flex flex-col"
+      style={{
+        backgroundImage: eventData.eventLogo ? `url('${eventData.eventLogo}')` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+      }}
+    >
+      {/* Semi-transparent overlay */}
+      <div className="absolute inset-0 bg-black/70" />
+      
+      <div className="max-w-6xl mx-auto relative z-10 flex flex-col h-full">
+        <div className="text-center mb-12">
+          <h1 className="text-4xl md:text-5xl font-black italic text-white uppercase tracking-wide">{title}</h1>
         </div>
 
-        <div className="bg-white/5 border border-white/10 p-6 md:p-8">
+        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-8 md:p-12 shadow-2xl flex-1 flex flex-col">
           {loading ? (
-            <div className="text-white/50">Chargement du classement…</div>
+            <div className="text-white/60 text-center py-12 text-lg">Chargement du classement…</div>
           ) : rankingRows.length === 0 ? (
-            <div className="text-white/50">Aucun classement disponible pour l’instant.</div>
+            <div className="text-white/60 text-center py-12 text-lg">Aucun classement disponible pour l'instant.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm text-left text-white/80">
+              <table className="min-w-full text-base text-left text-white">
                 <thead>
-                  <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/50">
-                    <th className="px-3 py-3">Classement</th>
-                    <th className="px-3 py-3">Participant</th>
-                    <th className="px-3 py-3">Points totaux</th>
+                  <tr className="bg-gradient-to-r from-amber-600/40 to-amber-500/30 border-b-2 border-amber-400/50">
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider w-24">Rang</th>
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider">Participant</th>
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-sm tracking-wider text-right w-32">Points</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rankingRows.map((row, index) => (
-                    <tr key={`${row.category}-${row.participantId}`} className="border-b border-white/10">
-                      <td className="px-3 py-3 font-bold text-amber-300">{index + 1}</td>
-                      <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
-                      <td className="px-3 py-3 font-bold text-white">{row.totalScore}</td>
+                    <tr
+                      key={`${row.category}-${row.participantId}`}
+                      className={`${
+                        index === 0
+                          ? "bg-amber-500/20 border-l-4 border-amber-400"
+                          : index === 1
+                          ? "bg-gray-400/10 border-l-4 border-gray-300"
+                          : index === 2
+                          ? "bg-orange-700/15 border-l-4 border-orange-600"
+                          : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
+                      } border-b border-white/10 transition-colors`}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center">
+                          {index === 0 && <span className="text-2xl">🥇</span>}
+                          {index === 1 && <span className="text-2xl">🥈</span>}
+                          {index === 2 && <span className="text-2xl">🥉</span>}
+                          {index > 2 && <span className="font-black text-lg text-white/70">#{index + 1}</span>}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 font-semibold text-white text-lg">{row.participantName}</td>
+                      <td className="px-6 py-4 font-black text-right text-amber-300 text-lg">{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
