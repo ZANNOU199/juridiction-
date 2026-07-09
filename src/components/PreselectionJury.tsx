@@ -67,6 +67,13 @@ export function PreselectionJury({
     setLocked(false);
   }, [criteria, currentIndex, hasEdited, submitted]);
 
+  useEffect(() => {
+    setLocked(false);
+    setSubmitted(false);
+    setHasEdited(false);
+    setFieldErrors({});
+  }, [currentIndex, eventSlug]);
+
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
@@ -152,7 +159,8 @@ export function PreselectionJury({
       setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
       // notify other tabs (admin) to refresh immediately
       try {
-        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        const BroadcastChannelCtor = (window as any).BroadcastChannel;
+        const bc = typeof BroadcastChannelCtor === "function" ? new BroadcastChannelCtor(`preselection-${eventSlug}`) : null;
         if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
         else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
       } catch (e) {
@@ -240,7 +248,8 @@ export function PreselectionJury({
       setToast({ message: "Notes modifiées et envoyées avec succès.", type: "success" });
       // notify other tabs (admin) to refresh immediately
       try {
-        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        const BroadcastChannelCtor = (window as any).BroadcastChannel;
+        const bc = typeof BroadcastChannelCtor === "function" ? new BroadcastChannelCtor(`preselection-${eventSlug}`) : null;
         if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
         else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
       } catch (e) {
