@@ -20,6 +20,7 @@ export function PreselectionJury({
   const [hasEdited, setHasEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
+  const [allGroupsRated, setAllGroupsRated] = useState(false);
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
 
@@ -28,17 +29,29 @@ export function PreselectionJury({
     const fetchData = async () => {
       if (!eventSlug) return;
       try {
-        const [cRes, mRes] = await Promise.all([
+        const [cRes, mRes, scoresRes] = await Promise.all([
           fetch(`/api/preselection/${eventSlug}`),
           fetch(`/api/preselection/${eventSlug}/current`),
+          fetch(`/api/preselection/${eventSlug}/scores-flat`),
         ]);
         if (!cRes.ok) throw new Error("Failed to load criteria");
         if (!mRes.ok) throw new Error("Failed to load current index");
         const cJson = await cRes.json();
         const mJson = await mRes.json();
+        const scoresJson = scoresRes.ok ? await scoresRes.json() : { scores: [] };
         if (!mounted) return;
         setCriteria(Array.isArray(cJson.criteria) ? cJson.criteria : []);
         setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
+
+        const entries = Array.isArray(scoresJson?.scores) ? scoresJson.scores : [];
+        const submittedParticipantIds = new Set<string>();
+        entries.forEach((item: any) => {
+          const entry = item?.entry ? item.entry : item;
+          if (entry?.juryId === juryId && entry?.participantId) {
+            submittedParticipantIds.add(entry.participantId);
+          }
+        });
+        setAllGroupsRated(participants.length > 0 && participants.every((p: any) => submittedParticipantIds.has(p.id)));
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -63,11 +76,11 @@ export function PreselectionJury({
       initial[String(i)] = 0;
     });
     setScores(initial);
-    setLocked(false);
+    setLocked(allGroupsRated);
     setHasEdited(false);
     setFieldErrors({});
     setToast(null);
-  }, [participant.id, currentIndex, criteria.length]);
+  }, [participant.id, currentIndex, criteria.length, allGroupsRated]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
@@ -204,6 +217,12 @@ export function PreselectionJury({
           )}
         </div>
 
+        {allGroupsRated && (
+          <div className="mb-4 rounded border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
+            Tous les groupes ont déjà été notés.
+          </div>
+        )}
+
         <div className="space-y-3">
           {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
           {criteria.map((c, i) => (
@@ -219,7 +238,7 @@ export function PreselectionJury({
                   max={Number(c.maxScore || 10)}
                   value={scores[String(i)] ?? 0}
                   onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
-                  disabled={locked}
+                  disabled={locked || allGroupsRated}
                   className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
                 />
                 {fieldErrors[String(i)] && (
@@ -231,11 +250,11 @@ export function PreselectionJury({
         </div>
 
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
+          <div className="text-sm text-white/40 hidden">Index: {currentIndex + 1}</div>
           <div className="flex items-center gap-3">
             <button
               onClick={handleSubmit}
-              disabled={locked}
+              disabled={locked || allGroupsRated}
               className="px-4 py-2 bg-white text-black font-black uppercase"
             >
               Envoyer

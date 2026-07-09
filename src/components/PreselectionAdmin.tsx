@@ -465,6 +465,41 @@ export function PreselectionAdmin() {
     return submittedJuries.size >= juries.length && juries.length > 0;
   };
 
+  const allParticipantsRated = useMemo(() => {
+    const tournaments = eventData.tournaments || [];
+    const juries = eventData.juryAccounts || [];
+    const participants = tournaments.flatMap((tournament) => tournament.participants || []);
+
+    if (participants.length === 0 || juries.length === 0) return false;
+
+    const entries: Array<{ participantId?: string; juryId?: string }> = [];
+    for (const item of savedScoresRaw) {
+      if (!item) continue;
+      if (item.participantId && item.juryId) {
+        entries.push({ participantId: item.participantId, juryId: item.juryId });
+      } else if (item.entry) {
+        const en = item.entry;
+        if (en.participantId && en.juryId) entries.push({ participantId: en.participantId, juryId: en.juryId });
+      } else if (Array.isArray(item)) {
+        for (const sub of item) {
+          if (sub.participantId && sub.juryId) entries.push({ participantId: sub.participantId, juryId: sub.juryId });
+        }
+      }
+    }
+
+    const byParticipant = new Map<string, Set<string>>();
+    entries.forEach((entry) => {
+      if (!entry.participantId || !entry.juryId) return;
+      const set = byParticipant.get(entry.participantId) || new Set<string>();
+      set.add(entry.juryId);
+      byParticipant.set(entry.participantId, set);
+    });
+
+    return participants.every((participant) => (byParticipant.get(participant.id)?.size || 0) >= juries.length);
+  }, [eventData, savedScoresRaw]);
+
+  const canAdvance = !allParticipantsRated && allJuriesSubmittedForCurrent();
+
   const maxPossibleScore = useMemo(() => {
     return criteria.reduce((sum, criterion) => {
       const parsed = Number(criterion.maxScore);
@@ -618,7 +653,7 @@ export function PreselectionAdmin() {
                     <label className="text-sm text-white/60">Index</label>
                     <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
                   </div>
-                  <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
+                  <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>
                 </div>
