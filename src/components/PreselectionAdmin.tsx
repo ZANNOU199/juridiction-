@@ -438,6 +438,31 @@ export function PreselectionAdmin() {
     }
   };
 
+  const resetPreselection = async () => {
+    if (!eventSlug) return;
+    const ok = window.confirm("Réinitialiser les présélections ? Cela remettra à zéro les notes et l’avancement.");
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/preselection/${eventSlug}/reset`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to reset preselection");
+
+      setSavedScoresRaw([]);
+      setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, []));
+      setPreselectionIndex(0);
+      setPreselectionActive(false);
+      setScoreSaved(false);
+      setSaved(false);
+      alert("Les présélections ont été réinitialisées.");
+    } catch (e) {
+      console.error(e);
+      alert("La réinitialisation a échoué.");
+    }
+  };
+
   const allJuriesSubmittedForCurrent = () => {
     const tournaments = eventData.tournaments || [];
     const juries = eventData.juryAccounts || [];
@@ -653,6 +678,9 @@ export function PreselectionAdmin() {
                     <label className="text-sm text-white/60">Index</label>
                     <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
                   </div>
+                  <button onClick={resetPreselection} className="px-3 py-2 font-bold uppercase bg-red-600/30 hover:bg-red-600/40 border border-red-500/30 text-red-200">
+                    Réinitialiser les présélections
+                  </button>
                   <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>

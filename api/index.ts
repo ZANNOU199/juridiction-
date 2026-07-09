@@ -231,6 +231,17 @@ app.post("/preselection/:eventSlug/mode", async (req, res) => {
   }
 });
 
+app.post("/preselection/:eventSlug/reset", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const result = await db.resetPreselectionForEvent(eventSlug);
+    res.json({ success: true, ...result });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.get("/preselection/:eventSlug/current", async (req, res) => {
   try {
     const { eventSlug } = req.params;

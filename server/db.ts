@@ -376,6 +376,18 @@ export async function setPreselectionCurrentIndexForEvent(eventSlug: string, ind
   return getPreselectionModeForEvent(eventSlug);
 }
 
+export async function resetPreselectionForEvent(eventSlug: string) {
+  await prisma.event.update({
+    where: { eventSlug },
+    data: {
+      preselectionScores: "[]",
+      preselectionActive: false,
+      preselectionCurrentIndex: 0,
+    },
+  });
+  return getPreselectionModeForEvent(eventSlug);
+}
+
 export async function getSharedScreenMode(eventSlug: string) {
   const event = await prisma.event.findUnique({
     where: { eventSlug },
