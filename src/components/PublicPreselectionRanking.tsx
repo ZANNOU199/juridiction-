@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { useParams } from "react-router-dom";
 
 interface EventTournament {
   id: string;
@@ -23,7 +22,6 @@ interface RankingRow {
 
 export function PublicPreselectionRanking() {
   const { eventSlug, category: categoryFromRoute } = useParams<{ eventSlug: string; category?: string }>();
-  const navigate = useNavigate();
   const [eventData, setEventData] = useState<EventSummary>({ tournaments: [] });
   const [scores, setScores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,19 +106,9 @@ export function PublicPreselectionRanking() {
   return (
     <div className="min-h-screen bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)] p-6">
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center gap-2 text-white/40 hover:text-white transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="text-sm font-bold uppercase">Retour</span>
-          </button>
-          <div className="text-center">
-            <h1 className="text-3xl font-black italic text-white uppercase">{title}</h1>
-            <p className="text-sm text-white/45 mt-1">{eventData.eventName || eventSlug}</p>
-          </div>
-          <div className="w-24" />
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-black italic text-white uppercase">{title}</h1>
+          <p className="text-sm text-white/45 mt-1">{eventData.eventName || eventSlug}</p>
         </div>
 
         <div className="bg-white/5 border border-white/10 p-6 md:p-8">
@@ -135,16 +123,14 @@ export function PublicPreselectionRanking() {
                   <tr className="border-b border-white/10 text-[10px] uppercase tracking-wider text-white/50">
                     <th className="px-3 py-3">Classement</th>
                     <th className="px-3 py-3">Participant</th>
-                    <th className="px-3 py-3">Catégorie</th>
                     <th className="px-3 py-3">Points totaux</th>
                   </tr>
                 </thead>
                 <tbody>
                   {rankingRows.map((row, index) => (
                     <tr key={`${row.category}-${row.participantId}`} className="border-b border-white/10">
-                      <td className="px-3 py-3 font-bold text-amber-300">#{index + 1}</td>
+                      <td className="px-3 py-3 font-bold text-amber-300">{index + 1}</td>
                       <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
-                      <td className="px-3 py-3 text-white/60">{row.category}</td>
                       <td className="px-3 py-3 font-bold text-white">{row.totalScore}</td>
                     </tr>
                   ))}
