@@ -59,8 +59,8 @@ export function PreselectionJury({
               restoredScores[String(index)] = parsed;
             }
           });
-          if (!isEditing && !hasEdited) {
-            setScores(restoredScores);
+          setScores(restoredScores);
+          if (!isEditing) {
             setLocked(true);
             setSubmitted(true);
             setHasEdited(false);
@@ -71,12 +71,10 @@ export function PreselectionJury({
           criteria.forEach((c, i) => {
             initial[String(i)] = 0;
           });
-          if (!isEditing && !hasEdited) {
-            setScores(initial);
-            setLocked(false);
-            setSubmitted(false);
-            setHasEdited(false);
-          }
+          setScores(initial);
+          setLocked(false);
+          setSubmitted(false);
+          setHasEdited(false);
           setFieldErrors({});
         }
       } catch (e: any) {
@@ -111,10 +109,7 @@ export function PreselectionJury({
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
-  const isOutOfRange = currentIndex >= participants.length;
-  const participant = isOutOfRange
-    ? { id: "", name: "Fin de la présélection" }
-    : participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
+  const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
@@ -319,7 +314,7 @@ export function PreselectionJury({
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
-            <p className="text-sm text-white/40">{isOutOfRange ? "Aucun participant à noter pour le moment." : "Notation par critères"}</p>
+            <p className="text-sm text-white/40">Notation par critères</p>
           </div>
           {locked && (
             <button
@@ -331,14 +326,9 @@ export function PreselectionJury({
           )}
         </div>
 
-        {isOutOfRange ? (
-          <div className="rounded border border-white/10 bg-white/5 p-4 text-sm text-white/70">
-            La présélection est terminée pour ce tour. Les prochains participants ne sont pas disponibles pour le moment.
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
-            {criteria.map((c, i) => (
+        <div className="space-y-3">
+          {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
+          {criteria.map((c, i) => (
             <div key={i} className="flex items-center gap-4">
               <div className="flex-1">
                 <div className="text-sm font-bold">{c.name}</div>
@@ -359,17 +349,16 @@ export function PreselectionJury({
                 )}
               </div>
             </div>
-            ))}
-          </div>
-        )}
+          ))}
+        </div>
 
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-white/40 hidden">Index: {currentIndex + 1}</div>
+          <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
           <div className="flex items-center gap-3">
             <button
               onClick={hasEdited && submitted ? handleResubmit : handleSubmit}
-              disabled={locked || isOutOfRange}
-              className={`px-4 py-2 font-black uppercase ${locked || isOutOfRange ? "bg-white/20 text-white/40 cursor-not-allowed" : "bg-white text-black hover:bg-white/90"}`}
+              disabled={locked}
+              className={`px-4 py-2 font-black uppercase ${locked ? "bg-white/20 text-white/40 cursor-not-allowed" : "bg-white text-black hover:bg-white/90"}`}
             >
               {hasEdited && submitted ? "Renvoyer" : "Envoyer"}
             </button>

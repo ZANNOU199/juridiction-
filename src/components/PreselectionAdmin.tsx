@@ -432,15 +432,8 @@ export function PreselectionAdmin() {
 
   const advanceToNext = async () => {
     if (!eventSlug) return;
-    const tournaments = eventData.tournaments || [];
-    const participants = (tournaments[0]?.participants) || [];
-    const nextIndex = preselectionIndex + 1;
-
-    if (nextIndex >= participants.length) {
-      return;
-    }
-
     try {
+      const nextIndex = preselectionIndex + 1;
       const res = await fetch(`/api/preselection/${eventSlug}/current`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -481,13 +474,6 @@ export function PreselectionAdmin() {
     const submittedJuries = new Set(entries.filter(e => e.participantId === participant.id).map(e => e.juryId));
     return submittedJuries.size >= juries.length && juries.length > 0;
   };
-
-  const hasNextParticipant = useMemo(() => {
-    const participants = (eventData.tournaments[0]?.participants) || [];
-    return preselectionIndex + 1 < participants.length;
-  }, [eventData.tournaments, preselectionIndex]);
-
-  const canAdvanceToNext = hasNextParticipant && allJuriesSubmittedForCurrent();
 
   const maxPossibleScore = useMemo(() => {
     return criteria.reduce((sum, criterion) => {
@@ -642,7 +628,7 @@ export function PreselectionAdmin() {
                     <label className="text-sm text-white/60">Index</label>
                     <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
                   </div>
-                  <button onClick={advanceToNext} disabled={!canAdvanceToNext} className={`px-3 py-2 font-bold uppercase ${canAdvanceToNext ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
+                  <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>
                 </div>
