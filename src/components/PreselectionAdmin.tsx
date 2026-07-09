@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
 
@@ -109,6 +109,11 @@ export function PreselectionAdmin() {
   const [preselectionActive, setPreselectionActive] = useState(false);
   const [preselectionIndex, setPreselectionIndex] = useState(0);
   const [scoreRows, setScoreRows] = useState<ScoreRow[]>([]);
+  const eventDataRef = useRef<EventSummary>({ tournaments: [], juryAccounts: [] });
+
+  useEffect(() => {
+    eventDataRef.current = eventData;
+  }, [eventData]);
 
   useEffect(() => {
     const loadPageData = async () => {
@@ -178,6 +183,9 @@ export function PreselectionAdmin() {
         const json = await res.json();
         const loadedScores = json.scores || [];
         setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
+        // Use eventDataRef to always get the latest data
+        const tournaments = eventDataRef.current.tournaments || [];
+        const juries = eventDataRef.current.juryAccounts || [];
         setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
       } catch (e) {
         // ignore polling errors
@@ -192,7 +200,7 @@ export function PreselectionAdmin() {
           fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
             const loaded = (j?.scores) || [];
             setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
-            setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, Array.isArray(loaded) ? loaded : []));
+            setScoreRows(buildScoreRows(eventDataRef.current.tournaments, eventDataRef.current.juryAccounts, Array.isArray(loaded) ? loaded : []));
           }).catch(() => {});
         }
       };
@@ -205,7 +213,7 @@ export function PreselectionAdmin() {
           fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
             const loaded = (j?.scores) || [];
             setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
-            setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, Array.isArray(loaded) ? loaded : []));
+            setScoreRows(buildScoreRows(eventDataRef.current.tournaments, eventDataRef.current.juryAccounts, Array.isArray(loaded) ? loaded : []));
           }).catch(() => {});
         }
       };
@@ -659,15 +667,6 @@ export function PreselectionAdmin() {
                         <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                       </tr>
                     ))}
-                    <tr className="border-t border-white/20 bg-white/5">
-                      <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
-                      <td className="px-3 py-3" />
-                      {eventData.juryAccounts.map((jury) => (
-                        <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
-                      ))}
-                      <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
-                      <td className="px-3 py-3" />
-                    </tr>
                   </tbody>
                 </table>
               </div>
