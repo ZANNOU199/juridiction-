@@ -120,7 +120,7 @@ export function PublicPreselectionRanking() {
       
       <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-3" style={{ height: "100vh", paddingTop: "0.5rem", paddingBottom: "0.5rem" }}>
         <div className="text-center mb-6">
-          <h1 className="text-5xl md:text-6xl font-black italic text-white uppercase tracking-wide hidden">{title}</h1>
+          <h1 className="text-5xl md:text-6xl font-black italic text-white uppercase tracking-wide">{title}</h1>
         </div>
 
         <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-2 shadow-2xl w-full flex-1 flex flex-col overflow-hidden">
