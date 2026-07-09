@@ -170,6 +170,13 @@ export function PreselectionJury({
     }
   };
 
+  const handleModify = () => {
+    setLocked(false);
+    setHasEdited(true);
+    setToast({ message: "Vous pouvez à présent modifier vos notes", type: "success" });
+    setTimeout(() => setToast(null), 2500);
+  };
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark text-white">
       {/* Toast */}
@@ -179,8 +186,20 @@ export function PreselectionJury({
         </div>
       )}
       <div className="max-w-2xl w-full bg-white/5 border border-white/10 p-6">
-        <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
-        <p className="text-sm text-white/40 mb-4">Notation par critères</p>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
+            <p className="text-sm text-white/40">Notation par critères</p>
+          </div>
+          {locked && (
+            <button
+              onClick={handleModify}
+              className="px-4 py-2 bg-amber-500 text-black font-black uppercase hover:bg-amber-400 transition-colors"
+            >
+              Modifier
+            </button>
+          )}
+        </div>
 
         <div className="space-y-3">
           {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
@@ -198,7 +217,7 @@ export function PreselectionJury({
                   value={scores[String(i)] ?? 0}
                   onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
                   disabled={locked}
-                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
+                  className={`w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold ${locked ? "opacity-50 cursor-not-allowed" : ""}`}
                 />
                 {fieldErrors[String(i)] && (
                   <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
@@ -214,11 +233,11 @@ export function PreselectionJury({
             <button
               onClick={handleSubmit}
               disabled={locked}
-              className="px-4 py-2 bg-white text-black font-black uppercase"
+              className={`px-4 py-2 font-black uppercase ${locked ? "bg-white/20 text-white/40 cursor-not-allowed" : "bg-white text-black hover:bg-white/90"}`}
             >
               Envoyer
             </button>
-            {locked && <div className="text-sm text-white/40">Envoyé</div>}
+            {locked && <div className="text-sm text-green-400">✓ Envoyé</div>}
           </div>
         </div>
       </div>
