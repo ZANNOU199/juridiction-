@@ -217,51 +217,53 @@ export function PreselectionJury({
           )}
         </div>
 
-        {allGroupsRated && (
-          <div className="mb-4 rounded border border-amber-400/30 bg-amber-400/10 px-3 py-2 text-sm text-amber-200">
+        {allGroupsRated ? (
+          <div className="rounded border border-amber-400/30 bg-amber-400/10 px-4 py-6 text-center text-sm text-amber-200">
             Tous les groupes ont déjà été notés.
           </div>
-        )}
+        ) : (
+          <>
+            <div className="space-y-3">
+              {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
+              {criteria.map((c, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="text-sm font-bold">{c.name}</div>
+                    <div className="text-[11px] text-white/40">Max: {c.maxScore}</div>
+                  </div>
+                  <div className="w-32">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Number(c.maxScore || 10)}
+                      value={scores[String(i)] ?? 0}
+                      onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
+                      disabled={locked}
+                      className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
+                    />
+                    {fieldErrors[String(i)] && (
+                      <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
 
-        <div className="space-y-3">
-          {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
-          {criteria.map((c, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="flex-1">
-                <div className="text-sm font-bold">{c.name}</div>
-                <div className="text-[11px] text-white/40">Max: {c.maxScore}</div>
-              </div>
-              <div className="w-32">
-                <input
-                  type="number"
-                  min={0}
-                  max={Number(c.maxScore || 10)}
-                  value={scores[String(i)] ?? 0}
-                  onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
-                  disabled={locked || allGroupsRated}
-                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
-                />
-                {fieldErrors[String(i)] && (
-                  <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
-                )}
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-white/40 hidden">Index: {currentIndex + 1}</div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={locked}
+                  className="px-4 py-2 bg-white text-black font-black uppercase"
+                >
+                  Envoyer
+                </button>
+                {locked && <div className="text-sm text-white/40">Envoyé</div>}
               </div>
             </div>
-          ))}
-        </div>
-
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-white/40 hidden">Index: {currentIndex + 1}</div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSubmit}
-              disabled={locked || allGroupsRated}
-              className="px-4 py-2 bg-white text-black font-black uppercase"
-            >
-              Envoyer
-            </button>
-            {locked && <div className="text-sm text-white/40">Envoyé</div>}
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </div>
   );
