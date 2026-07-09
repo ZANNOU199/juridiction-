@@ -59,8 +59,8 @@ export function PreselectionJury({
               restoredScores[String(index)] = parsed;
             }
           });
-          setScores(restoredScores);
-          if (!isEditing) {
+          if (!isEditing && !hasEdited) {
+            setScores(restoredScores);
             setLocked(true);
             setSubmitted(true);
             setHasEdited(false);
@@ -97,14 +97,14 @@ export function PreselectionJury({
 
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet and hasn't submitted
-    if (hasEdited || submitted) return;
+    if (hasEdited || submitted || isEditing) return;
     const initial: Record<string, number> = {};
     criteria.forEach((c, i) => {
       initial[String(i)] = 0;
     });
     setScores(initial);
     setLocked(false);
-  }, [criteria, currentIndex, hasEdited, submitted]);
+  }, [criteria, currentIndex, hasEdited, submitted, isEditing]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
@@ -115,6 +115,7 @@ export function PreselectionJury({
     : participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
 
   const updateScore = (idx: number, value: number) => {
+    setIsEditing(true);
     setScores((s) => ({ ...s, [String(idx)]: value }));
     setHasEdited(true);
     // clear field error for this index when user edits
@@ -131,6 +132,7 @@ export function PreselectionJury({
   };
 
   const handleSubmit = async () => {
+    setIsEditing(false);
     if (!eventSlug || !juryId) return;
     // Validate: all criteria must be filled and at least 1
     const newFieldErrors: Record<string, string> = {};
