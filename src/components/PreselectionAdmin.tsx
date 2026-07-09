@@ -423,6 +423,18 @@ export function PreselectionAdmin() {
       if (res.ok) {
         const json = await res.json();
         setPreselectionIndex(Number(json.currentIndex || nextIndex));
+
+        try {
+          const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+          if (bc) bc.postMessage({ type: "currentUpdated", timestamp: Date.now() });
+          else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+        } catch (broadcastError) {
+          try {
+            localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+          } catch (err) {
+            // ignore
+          }
+        }
       }
     } catch (e) {
       console.error(e);

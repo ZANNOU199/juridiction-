@@ -15,7 +15,6 @@ export function PreselectionJury({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [locked, setLocked] = useState(false);
-  const [showList, setShowList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasEdited, setHasEdited] = useState(false);
@@ -25,7 +24,8 @@ export function PreselectionJury({
 
   useEffect(() => {
     let mounted = true;
-    const fetchData = async () => {
+
+    const fetchSharedData = async () => {
       if (!eventSlug) return;
       try {
         const [cRes, mRes, scoresRes] = await Promise.all([
@@ -33,6 +33,7 @@ export function PreselectionJury({
           fetch(`/api/preselection/${eventSlug}/current`),
           fetch(`/api/preselection/${eventSlug}/scores-flat`),
         ]);
+
         if (!cRes.ok) throw new Error("Failed to load criteria");
         if (!mRes.ok) throw new Error("Failed to load current index");
         if (!scoresRes.ok) throw new Error("Failed to load saved scores");
@@ -49,7 +50,6 @@ export function PreselectionJury({
         setCriteria(loadedCriteria);
         setCurrentIndex(currentIndexValue);
         setSavedScoresRaw(loadedScores);
-        setShowList(Boolean(loadedScores.length));
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -59,18 +59,9 @@ export function PreselectionJury({
         setLoading(false);
       }
     };
-    fetchData();
 
-    const interval = setInterval(fetchData, 2000);
-    return () => {
-      mounted = false;
-      clearInterval(interval);
-    };
-  }, [eventSlug]);
-
-  useEffect(() => {
-    if (!eventSlug) return;
-    const fetchUpdates = async () => {
+    const refreshFromEvent = async () => {
+      if (!eventSlug) return;
       try {
         const [mRes, scoresRes] = await Promise.all([
           fetch(`/api/preselection/${eventSlug}/current`),
@@ -79,6 +70,7 @@ export function PreselectionJury({
         if (!mRes.ok || !scoresRes.ok) return;
         const mJson = await mRes.json();
         const sJson = await scoresRes.json();
+        if (!mounted) return;
         setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
         setSavedScoresRaw(Array.isArray(sJson.scores) ? sJson.scores : []);
       } catch (e) {
@@ -86,8 +78,31 @@ export function PreselectionJury({
       }
     };
 
-    const interval = setInterval(fetchUpdates, 2000);
-    return () => clearInterval(interval);
+    fetchSharedData();
+    const interval = setInterval(refreshFromEvent, 2000);
+
+    const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+    const handleMessage = (event: any) => {
+      if (event?.data?.type === "scoresUpdated" || event?.data?.type === "currentUpdated") {
+        refreshFromEvent();
+      }
+    };
+    bc?.addEventListener?.("message", handleMessage);
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === `preselection-refresh-${eventSlug}`) {
+        refreshFromEvent();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+      bc?.removeEventListener?.("message", handleMessage);
+      bc?.close?.();
+      window.removeEventListener("storage", handleStorage);
+    };
   }, [eventSlug]);
 
   useEffect(() => {
@@ -105,16 +120,17 @@ export function PreselectionJury({
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
-  const currentSubmitted = hasSavedFor(participant.id);
+  const participantId = participant.id;
+  const currentSubmitted = participantId ? hasSavedFor(participantId) : false;
   const canSubmitCurrent = !locked && !currentSubmitted;
   const listRows = participants.map((p, idx) => ({
     id: p.id,
     name: p.name,
-    status: hasSavedFor(p.id) ? "Noté" : "En attente",
+    status: p.id ? (hasSavedFor(p.id) ? "Noté" : "En attente") : "En attente",
     isCurrent: idx === currentIndex,
   }));
 
-  const currentParticipantTotal = getSavedValue(participant.id);
+  const currentParticipantTotal = participantId ? getSavedValue(participantId) : null;
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
@@ -219,11 +235,17 @@ export function PreselectionJury({
         throw new Error(`Server error ${res.status}`);
       }
       const result = await res.json();
-      // success: disable further edits
+      // success: disable further edits and refresh saved scores from server
       setHasEdited(false);
-      setSavedScoresRaw(Array.isArray(result.scores) ? result.scores : savedScoresRaw);
+      setFieldErrors({});
+      setLocked(false);
+
+      const scoresResponse = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
+      const scoresJson = scoresResponse.ok ? await scoresResponse.json() : { scores: result.scores };
+      setSavedScoresRaw(Array.isArray(scoresJson.scores) ? scoresJson.scores : Array.isArray(result.scores) ? result.scores : savedScoresRaw);
+
       setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
-      setShowList(true);
+      window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       // notify other tabs (admin) to refresh immediately
       try {
         const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
