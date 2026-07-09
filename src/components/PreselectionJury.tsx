@@ -59,8 +59,8 @@ export function PreselectionJury({
               restoredScores[String(index)] = parsed;
             }
           });
-          setScores(restoredScores);
-          if (!isEditing) {
+          if (!isEditing && !hasEdited) {
+            setScores(restoredScores);
             setLocked(true);
             setSubmitted(true);
             setHasEdited(false);
@@ -71,10 +71,12 @@ export function PreselectionJury({
           criteria.forEach((c, i) => {
             initial[String(i)] = 0;
           });
-          setScores(initial);
-          setLocked(false);
-          setSubmitted(false);
-          setHasEdited(false);
+          if (!isEditing && !hasEdited) {
+            setScores(initial);
+            setLocked(false);
+            setSubmitted(false);
+            setHasEdited(false);
+          }
           setFieldErrors({});
         }
       } catch (e: any) {
