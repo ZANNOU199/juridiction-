@@ -19,6 +19,7 @@ export function PreselectionJury({
   const [error, setError] = useState<string | null>(null);
   const [hasEdited, setHasEdited] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
 
@@ -59,9 +60,11 @@ export function PreselectionJury({
             }
           });
           setScores(restoredScores);
-          setLocked(true);
-          setSubmitted(true);
-          setHasEdited(false);
+          if (!isEditing) {
+            setLocked(true);
+            setSubmitted(true);
+            setHasEdited(false);
+          }
           setFieldErrors({});
         } else {
           const initial: Record<string, number> = {};
@@ -209,6 +212,7 @@ export function PreselectionJury({
   };
 
   const handleModify = () => {
+    setIsEditing(true);
     setLocked(false);
     setHasEdited(true);
     setToast({ message: "Vous pouvez à présent modifier vos notes", type: "success" });
@@ -273,6 +277,7 @@ export function PreselectionJury({
       if (!res.ok) {
         throw new Error(`Server error ${res.status}`);
       }
+      setIsEditing(false);
       setHasEdited(false);
       setToast({ message: "Notes modifiées et envoyées avec succès.", type: "success" });
       // notify other tabs (admin) to refresh immediately
