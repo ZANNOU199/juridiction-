@@ -53,7 +53,7 @@ function buildScoreRows(
   savedScores.forEach((entry) => {
     // Support multiple shapes: { category, participantId, juryId, total }
     // or wrapper { entry: { ... } } or legacy arrays
-    const e = entry?.entry ? entry.entry : entry;
+    const e = (entry as any)?.entry ? (entry as any).entry : entry;
     const category = e?.category || entry?.category || "";
     const participantId = e?.participantId || entry?.participantId || "";
     const juryId = e?.juryId || entry?.juryId || "";
@@ -193,7 +193,8 @@ export function PreselectionAdmin() {
     }, 2500);
     // Listen for cross-tab updates (BroadcastChannel or storage fallback)
     try {
-      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+      const BroadcastChannelCtor = (window as any).BroadcastChannel;
+      const bc = typeof BroadcastChannelCtor === "function" ? new BroadcastChannelCtor(`preselection-${eventSlug}`) : null;
       const onMessage = (msg: any) => {
         if (!eventSlug) return;
         if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {

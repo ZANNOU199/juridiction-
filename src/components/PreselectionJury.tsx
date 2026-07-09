@@ -87,6 +87,13 @@ export function PreselectionJury({
     }
   };
 
+  const handleEnableEdit = () => {
+    setLocked(false);
+    setHasEdited(true);
+    setFieldErrors({});
+    setToast(null);
+  };
+
   const handleSubmit = async () => {
     if (!eventSlug || !juryId) return;
     // Validate: all criteria must be filled and at least 1
@@ -151,7 +158,8 @@ export function PreselectionJury({
       setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
       // notify other tabs (admin) to refresh immediately
       try {
-        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        const BroadcastChannelCtor = (window as any).BroadcastChannel;
+        const bc = typeof BroadcastChannelCtor === "function" ? new BroadcastChannelCtor(`preselection-${eventSlug}`) : null;
         if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
         else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
       } catch (e) {
@@ -179,8 +187,21 @@ export function PreselectionJury({
         </div>
       )}
       <div className="max-w-2xl w-full bg-white/5 border border-white/10 p-6">
-        <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
-        <p className="text-sm text-white/40 mb-4">Notation par critères</p>
+        <div className="flex items-start justify-between gap-4 mb-4">
+          <div>
+            <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
+            <p className="text-sm text-white/40">Notation par critères</p>
+          </div>
+          {locked && (
+            <button
+              type="button"
+              onClick={handleEnableEdit}
+              className="px-3 py-2 border border-white/15 bg-white/10 text-sm font-bold uppercase hover:bg-white/20"
+            >
+              Modifier
+            </button>
+          )}
+        </div>
 
         <div className="space-y-3">
           {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
