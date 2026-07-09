@@ -362,7 +362,7 @@ export function PreselectionJury({
         )}
 
         <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
+          <div className="text-sm text-white/40 hidden">Index: {currentIndex + 1}</div>
           <div className="flex items-center gap-3">
             <button
               onClick={hasEdited && submitted ? handleResubmit : handleSubmit}
