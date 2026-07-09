@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Plus, Save, Trash2 } from "lucide-react";
 
@@ -23,32 +23,41 @@ export function PreselectionAdmin() {
   const [criteria, setCriteria] = useState<PreselectionCriterion[]>([createCriterion()]);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  const storageKey = useMemo(() => {
-    return eventSlug ? `juge_preselection_${eventSlug}` : "juge_preselection";
-  }, [eventSlug]);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    try {
-      const savedCriteria = localStorage.getItem(storageKey);
-      if (savedCriteria) {
-        const parsed = JSON.parse(savedCriteria);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setCriteria(
-            parsed.map((item: Partial<PreselectionCriterion>, index: number) => ({
-              id: item.id || `${Date.now()}-${index}`,
-              name: item.name || "",
-              maxScore: item.maxScore?.toString() || "10",
-            }))
-          );
-        }
+    const loadCriteria = async () => {
+      if (!eventSlug) {
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.error("Failed to load preselection criteria", error);
-    } finally {
-      setLoading(false);
-    }
-  }, [storageKey]);
+
+      try {
+        const res = await fetch(`/api/preselection/${eventSlug}`);
+        if (res.ok) {
+          const data = await res.json();
+          const loadedCriteria = Array.isArray(data?.criteria) ? data.criteria : [];
+          if (loadedCriteria.length > 0) {
+            setCriteria(
+              loadedCriteria.map((item: Partial<PreselectionCriterion>, index: number) => ({
+                id: `${Date.now()}-${index}`,
+                name: item.name || "",
+                maxScore: item.maxScore?.toString() || "10",
+              }))
+            );
+          } else {
+            setCriteria([createCriterion()]);
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load preselection criteria", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadCriteria();
+  }, [eventSlug]);
 
   const updateCriterion = (id: string, field: "name" | "maxScore", value: string) => {
     setCriteria((prev) =>
@@ -72,7 +81,7 @@ export function PreselectionAdmin() {
     setSaved(false);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const cleanedCriteria = criteria
       .map((criterion) => ({
         ...criterion,
@@ -96,12 +105,30 @@ export function PreselectionAdmin() {
       return;
     }
 
+    if (!eventSlug) {
+      alert("Aucun événement n’est associé à cette page.");
+      return;
+    }
+
     try {
-      localStorage.setItem(storageKey, JSON.stringify(cleanedCriteria));
+      setSaving(true);
+      const res = await fetch(`/api/preselection/${eventSlug}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ criteria: cleanedCriteria }),
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to save");
+      }
+
       setSaved(true);
     } catch (error) {
       console.error("Failed to save preselection criteria", error);
       alert("L’enregistrement a échoué.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -134,10 +161,11 @@ export function PreselectionAdmin() {
             </div>
             <button
               onClick={handleSave}
-              className="bg-green-600/30 hover:bg-green-600/50 border border-green-500/30 text-green-300 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all"
+              disabled={saving}
+              className="bg-green-600/30 hover:bg-green-600/50 border border-green-500/30 text-green-300 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all disabled:opacity-60"
             >
               <Save className="w-4 h-4" />
-              Enregistrer
+              {saving ? "Enregistrement..." : "Enregistrer"}
             </button>
           </div>
 

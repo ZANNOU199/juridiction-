@@ -181,6 +181,34 @@ app.get("/state", async (req, res) => {
   }
 });
 
+// Preselection criteria
+app.get("/preselection/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const criteria = await db.getPreselectionCriteriaForEvent(eventSlug);
+    res.json({ criteria });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/preselection/:eventSlug", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { criteria } = req.body;
+    if (!Array.isArray(criteria)) {
+      return res.status(400).json({ error: "Criteria must be an array" });
+    }
+
+    const savedCriteria = await db.savePreselectionCriteriaForEvent(eventSlug, criteria);
+    res.json({ success: true, criteria: savedCriteria });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Selected Category
 app.get("/:eventSlug/selected-category", async (req, res) => {
   try {

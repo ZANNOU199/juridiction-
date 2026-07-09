@@ -235,6 +235,49 @@ export async function getAllCategoriesForEvent(eventSlug: string) {
   return tournaments.map(t => t.category);
 }
 
+export async function getPreselectionCriteriaForEvent(eventSlug: string) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+    select: { preselectionCriteria: true },
+  });
+
+  if (!event) return [];
+
+  try {
+    const parsed = JSON.parse(event.preselectionCriteria || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export async function savePreselectionCriteriaForEvent(
+  eventSlug: string,
+  criteria: Array<{ name: string; maxScore: string }>
+) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+  });
+
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  const safeCriteria = criteria
+    .map((criterion) => ({
+      name: (criterion.name || "").trim(),
+      maxScore: (criterion.maxScore || "10").toString().trim(),
+    }))
+    .filter((criterion) => criterion.name.length > 0);
+
+  await prisma.event.update({
+    where: { eventSlug },
+    data: { preselectionCriteria: JSON.stringify(safeCriteria) },
+  });
+
+  return safeCriteria;
+}
+
 export async function getSharedScreenMode(eventSlug: string) {
   const event = await prisma.event.findUnique({
     where: { eventSlug },
