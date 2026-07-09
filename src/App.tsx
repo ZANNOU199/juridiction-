@@ -30,6 +30,7 @@ import { COUNTRIES } from "./data/countries";
 import { AdminHub, EventSelector } from "./components/EventHub";
 import { JuryManager } from "./components/JuryManager";
 import { WaitingPage } from "./components/WaitingPage";
+import { PreselectionAdmin } from "./components/PreselectionAdmin";
 import { useGlobalCategory } from "./useGlobalCategory";
 
 // --- Types ---
@@ -441,6 +442,7 @@ export default function App() {
         {/* Multi-event routes */}
         <Route path="/admin" element={<AdminAuthGuard><AdminHub /></AdminAuthGuard>} />
         <Route path="/admin/:eventSlug/jury-manager" element={<AdminAuthGuard><JuryManager /></AdminAuthGuard>} />
+        <Route path="/admin/:eventSlug/preselection" element={<AdminAuthGuard><PreselectionAdmin /></AdminAuthGuard>} />
         <Route
           path="/admin/:eventSlug/:category"
           element={

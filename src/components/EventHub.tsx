@@ -303,6 +303,16 @@ export function AdminHub() {
                     Manage Jury
                   </button>
 
+                  <button
+                    onClick={() =>
+                      navigate(`/admin/${event.eventSlug}/preselection`)
+                    }
+                    className="w-full bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/30 hover:border-amber-500/50 px-4 py-2 text-amber-200 text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Shield className="w-4 h-4" />
+                    Preselection
+                  </button>
+
                   <div className="flex gap-2">
                     <button
                       onClick={() =>
