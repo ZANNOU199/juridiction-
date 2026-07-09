@@ -130,12 +130,12 @@ export function PublicPreselectionRanking() {
             <div className="text-white/60 text-center py-6 text-base">Aucun classement disponible pour l'instant.</div>
           ) : (
             <div className="overflow-y-auto flex-1 w-full">
-              <table className="w-full text-base text-left text-white">
+              <table className="w-full text-lg text-left text-white">
                 <thead className="sticky top-0">
                   <tr className="bg-gradient-to-r from-amber-600/40 to-amber-500/30 border-b-2 border-amber-400/50">
-                    <th className="px-4 py-3 font-black uppercase text-amber-200 text-sm tracking-wider w-20">Rang</th>
-                    <th className="px-4 py-3 font-black uppercase text-amber-200 text-sm tracking-wider">Participant</th>
-                    <th className="px-4 py-3 font-black uppercase text-amber-200 text-sm tracking-wider text-right w-24">Points</th>
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider w-20">Rang</th>
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider">Participant</th>
+                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider text-right w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,13 +152,13 @@ export function PublicPreselectionRanking() {
                           : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
                       } border-b border-white/10 transition-colors`}
                     >
-                      <td className="px-4 py-3">
+                      <td className="px-6 py-4">
                         <div className="flex items-center justify-center">
-                          <span className="font-black text-lg text-amber-300">{index + 1}</span>
+                          <span className="font-black text-2xl text-amber-300">{index + 1}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 font-semibold text-white text-base">{row.participantName}</td>
-                      <td className="px-4 py-3 font-black text-right text-amber-300 text-lg">{row.totalScore}</td>
+                      <td className="px-6 py-4 font-semibold text-white text-xl">{row.participantName}</td>
+                      <td className="px-6 py-4 font-black text-right text-amber-300 text-2xl">{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
