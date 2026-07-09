@@ -165,7 +165,7 @@ export function PublicPreselectionRanking() {
                         </div>
                       </td>
                       <td className={`px-4 py-2 font-semibold text-white text-3xl ${index >= 8 ? "line-through" : ""}`}>{row.participantName}</td>
-                      <td className={`px-4 py-2 font-black text-right text-red-300 text-3xl ${index >= 8 ? "line-through" : ""}`}>{row.totalScore}</td>
+                      <td className={`px-4 py-2 font-black text-right text-red-300 text-3xl`}>{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
