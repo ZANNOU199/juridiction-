@@ -311,6 +311,33 @@ export async function savePreselectionScoresForEvent(eventSlug: string, scores: 
   return scores;
 }
 
+export async function getPreselectionModeForEvent(eventSlug: string) {
+  const event = await prisma.event.findUnique({
+    where: { eventSlug },
+    select: { preselectionActive: true, preselectionCurrentIndex: true },
+  });
+  return {
+    active: event?.preselectionActive ?? false,
+    currentIndex: event?.preselectionCurrentIndex ?? 0,
+  };
+}
+
+export async function setPreselectionModeForEvent(eventSlug: string, active: boolean) {
+  await prisma.event.update({
+    where: { eventSlug },
+    data: { preselectionActive: active },
+  });
+  return getPreselectionModeForEvent(eventSlug);
+}
+
+export async function setPreselectionCurrentIndexForEvent(eventSlug: string, index: number) {
+  await prisma.event.update({
+    where: { eventSlug },
+    data: { preselectionCurrentIndex: index },
+  });
+  return getPreselectionModeForEvent(eventSlug);
+}
+
 export async function getSharedScreenMode(eventSlug: string) {
   const event = await prisma.event.findUnique({
     where: { eventSlug },

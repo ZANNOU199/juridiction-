@@ -204,6 +204,59 @@ app.get("/preselection/:eventSlug/scores", async (req, res) => {
   }
 });
 
+// Preselection mode (active flag + current index)
+app.get("/preselection/:eventSlug/mode", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const mode = await db.getPreselectionModeForEvent(eventSlug);
+    res.json(mode);
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/preselection/:eventSlug/mode", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { active } = req.body;
+    if (typeof active !== "boolean") {
+      return res.status(400).json({ error: "active must be boolean" });
+    }
+    const mode = await db.setPreselectionModeForEvent(eventSlug, active);
+    res.json({ success: true, ...mode });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.get("/preselection/:eventSlug/current", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const mode = await db.getPreselectionModeForEvent(eventSlug);
+    res.json({ currentIndex: mode.currentIndex });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+app.post("/preselection/:eventSlug/current", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const { index } = req.body;
+    if (typeof index !== "number") {
+      return res.status(400).json({ error: "index must be a number" });
+    }
+    const mode = await db.setPreselectionCurrentIndexForEvent(eventSlug, index);
+    res.json({ success: true, currentIndex: mode.currentIndex });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 app.post("/preselection/:eventSlug", async (req, res) => {
   try {
     const { eventSlug } = req.params;
@@ -227,6 +280,18 @@ app.post("/preselection/:eventSlug/scores", async (req, res) => {
 
     const savedScores = await db.savePreselectionScoresForEvent(eventSlug, scores);
     res.json({ success: true, scores: savedScores });
+  } catch (error) {
+    console.error("Error:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Return flattened saved scores for admin checks
+app.get("/preselection/:eventSlug/scores-flat", async (req, res) => {
+  try {
+    const { eventSlug } = req.params;
+    const scores = await db.getPreselectionScoresForEvent(eventSlug);
+    res.json({ scores });
   } catch (error) {
     console.error("Error:", error);
     res.status(500).json({ error: "Internal Server Error" });

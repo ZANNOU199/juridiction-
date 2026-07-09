@@ -31,6 +31,7 @@ import { AdminHub, EventSelector } from "./components/EventHub";
 import { JuryManager } from "./components/JuryManager";
 import { WaitingPage } from "./components/WaitingPage";
 import { PreselectionAdmin } from "./components/PreselectionAdmin";
+import { PreselectionJury } from "./components/PreselectionJury";
 import { useGlobalCategory } from "./useGlobalCategory";
 
 // --- Types ---
@@ -3406,6 +3407,32 @@ function JuryView({
   // Check if this jury is assigned to this category
   const isJuryAssignedToCategory = state.juryAccounts.some((j) => j.id === juryId);
 
+  const [preselectionActive, setPreselectionActive] = useState(false);
+  const [preselectionIndex, setPreselectionIndex] = useState(0);
+
+  useEffect(() => {
+    let mounted = true;
+    if (!eventSlug) return;
+    const fetchMode = async () => {
+      try {
+        const res = await fetch(`/api/preselection/${eventSlug}/mode`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!mounted) return;
+        setPreselectionActive(Boolean(data.active));
+        setPreselectionIndex(Number(data.currentIndex || 0));
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchMode();
+    const interval = setInterval(fetchMode, 2000);
+    return () => {
+      mounted = false;
+      clearInterval(interval);
+    };
+  }, [eventSlug]);
+
   if (!isJuryAssignedToCategory) {
     return (
       <div className="min-h-screen bg-black flex flex-col items-center justify-center font-black p-6 text-center">
@@ -3420,6 +3447,12 @@ function JuryView({
           Vous n'êtes pas assigné à cette catégorie
         </p>
       </div>
+    );
+  }
+
+  if (preselectionActive && eventSlug) {
+    return (
+      <PreselectionJury eventSlug={eventSlug} participants={state.participants} juryId={juryId} />
     );
   }
 

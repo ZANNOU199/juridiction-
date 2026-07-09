@@ -85,6 +85,9 @@ export function PreselectionAdmin() {
     tournaments: [],
     juryAccounts: [],
   });
+  const [savedScoresRaw, setSavedScoresRaw] = useState<any[]>([]);
+  const [preselectionActive, setPreselectionActive] = useState(false);
+  const [preselectionIndex, setPreselectionIndex] = useState(0);
   const [scoreRows, setScoreRows] = useState<ScoreRow[]>([]);
 
   useEffect(() => {
@@ -106,7 +109,7 @@ export function PreselectionAdmin() {
           : [];
         const loadedEvent = eventRes.ok ? await eventRes.json() : null;
         const loadedScores = scoresRes.ok
-          ? (((await scoresRes.json())?.scores as ScoreEntry[]) || [])
+          ? (((await scoresRes.json())?.scores) || [])
           : [];
 
         const tournaments = (loadedEvent?.tournaments || []) as EventTournament[];
@@ -123,7 +126,20 @@ export function PreselectionAdmin() {
         );
 
         setEventData({ tournaments, juryAccounts: juries });
-        setScoreRows(buildScoreRows(tournaments, juries, loadedScores));
+        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
+        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
+
+        // fetch preselection mode + index
+        try {
+          const modeRes = await fetch(`/api/preselection/${eventSlug}/mode`);
+          if (modeRes.ok) {
+            const modeJson = await modeRes.json();
+            setPreselectionActive(Boolean(modeJson.active));
+            setPreselectionIndex(Number(modeJson.currentIndex || 0));
+          }
+        } catch (e) {
+          // ignore
+        }
       } catch (error) {
         console.error("Failed to load preselection data", error);
       } finally {
@@ -259,12 +275,77 @@ export function PreselectionAdmin() {
       }
 
       setScoreSaved(true);
+      // refresh saved raw scores and ranking
+      setSavedScoresRaw(scores);
+      setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
     } catch (error) {
       console.error("Failed to save preselection scores", error);
       alert("L’enregistrement des points a échoué.");
     } finally {
       setSavingScores(false);
     }
+  };
+
+  const togglePreselection = async (active: boolean) => {
+    if (!eventSlug) return;
+    try {
+      const res = await fetch(`/api/preselection/${eventSlug}/mode`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setPreselectionActive(Boolean(json.active));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const advanceToNext = async () => {
+    if (!eventSlug) return;
+    try {
+      const nextIndex = preselectionIndex + 1;
+      const res = await fetch(`/api/preselection/${eventSlug}/current`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: nextIndex }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setPreselectionIndex(Number(json.currentIndex || nextIndex));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const allJuriesSubmittedForCurrent = () => {
+    const tournaments = eventData.tournaments || [];
+    const juries = eventData.juryAccounts || [];
+    const participants = (tournaments[0]?.participants) || [];
+    const participant = participants[preselectionIndex];
+    if (!participant) return false;
+
+    // Normalize saved scores to entries with participantId and juryId
+    const entries: Array<{ participantId?: string; juryId?: string }> = [];
+    for (const item of savedScoresRaw) {
+      if (!item) continue;
+      if (item.participantId && item.juryId) {
+        entries.push({ participantId: item.participantId, juryId: item.juryId });
+      } else if (item.entry) {
+        const en = item.entry;
+        if (en.participantId && en.juryId) entries.push({ participantId: en.participantId, juryId: en.juryId });
+      } else if (Array.isArray(item)) {
+        for (const sub of item) {
+          if (sub.participantId && sub.juryId) entries.push({ participantId: sub.participantId, juryId: sub.juryId });
+        }
+      }
+    }
+
+    const submittedJuries = new Set(entries.filter(e => e.participantId === participant.id).map(e => e.juryId));
+    return submittedJuries.size >= juries.length && juries.length > 0;
   };
 
   const maxPossibleScore = useMemo(() => {
@@ -363,10 +444,26 @@ export function PreselectionAdmin() {
                 <h2 className="text-xl font-black italic text-white uppercase">Tableau de présélection</h2>
                 <p className="text-sm text-white/50 mt-1">Note maximale possible : {maxPossibleScore} points</p>
               </div>
-              <button onClick={handleSaveScores} disabled={savingScores} className="bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 text-blue-200 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all disabled:opacity-60">
-                <Save className="w-4 h-4" />
-                {savingScores ? "Sauvegarde..." : "Sauvegarder les points"}
-              </button>
+                <div className="flex items-center gap-3">
+                  <button onClick={handleSaveScores} disabled={savingScores} className="bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500/30 text-blue-200 px-4 py-2 font-bold uppercase flex items-center gap-2 transition-all disabled:opacity-60">
+                    <Save className="w-4 h-4" />
+                    {savingScores ? "Sauvegarde..." : "Sauvegarder les points"}
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-white/60">Mode préselection</label>
+                    <button onClick={() => togglePreselection(!preselectionActive)} className={`px-3 py-2 font-bold uppercase rounded ${preselectionActive ? "bg-amber-400 text-black" : "bg-white/5 text-white/60"}`}>
+                      {preselectionActive ? "Actif" : "Inactif"}
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-white/60">Index</label>
+                    <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
+                  </div>
+                  <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
+                    Match suivant
+                  </button>
+                </div>
             </div>
 
             {scoreSaved && <div className="mb-6 border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-200">Les points ont bien été enregistrés.</div>}
