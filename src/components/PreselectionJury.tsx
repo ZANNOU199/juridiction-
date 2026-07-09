@@ -21,6 +21,8 @@ export function PreselectionJury({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
 
+  const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
+
   useEffect(() => {
     let mounted = true;
     const fetchData = async () => {
@@ -56,20 +58,19 @@ export function PreselectionJury({
   }, [eventSlug]);
 
   useEffect(() => {
-    // Reset scores when criteria or index change only if user hasn't edited yet and the form is not locked
-    if (hasEdited || locked) return;
     const initial: Record<string, number> = {};
     criteria.forEach((c, i) => {
       initial[String(i)] = 0;
     });
     setScores(initial);
     setLocked(false);
-  }, [criteria, currentIndex, hasEdited, locked]);
+    setHasEdited(false);
+    setFieldErrors({});
+    setToast(null);
+  }, [participant.id, currentIndex, criteria.length]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
-
-  const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
