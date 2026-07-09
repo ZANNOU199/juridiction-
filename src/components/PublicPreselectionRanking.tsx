@@ -118,24 +118,24 @@ export function PublicPreselectionRanking() {
       {/* Semi-transparent overlay */}
       <div className="absolute inset-0 bg-black/70" />
       
-      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-3" style={{ height: "100vh", paddingTop: "1rem", paddingBottom: "1rem" }}>
-        <div className="text-center mb-3">
-          <h1 className="text-4xl md:text-5xl font-black italic text-white uppercase tracking-wide">{title}</h1>
+      <div className="relative z-10 w-full max-w-5xl flex flex-col items-center justify-center px-3" style={{ height: "100vh", paddingTop: "0.5rem", paddingBottom: "0.5rem" }}>
+        <div className="text-center mb-1">
+          <h1 className="text-5xl md:text-6xl font-black italic text-white uppercase tracking-wide">{title}</h1>
         </div>
 
-        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-4 shadow-2xl w-full flex-1 flex flex-col overflow-hidden">
+        <div className="bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/20 rounded-lg p-2 shadow-2xl w-full flex-1 flex flex-col overflow-hidden">
           {loading ? (
             <div className="text-white/60 text-center py-6 text-base">Chargement du classement…</div>
           ) : rankingRows.length === 0 ? (
             <div className="text-white/60 text-center py-6 text-base">Aucun classement disponible pour l'instant.</div>
           ) : (
             <div className="overflow-y-auto flex-1 w-full">
-              <table className="w-full text-lg text-left text-white">
+              <table className="w-full text-2xl text-left text-white">
                 <thead className="sticky top-0">
                   <tr className="bg-gradient-to-r from-amber-600/40 to-amber-500/30 border-b-2 border-amber-400/50">
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider w-20">Rang</th>
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider">Participant</th>
-                    <th className="px-6 py-4 font-black uppercase text-amber-200 text-lg tracking-wider text-right w-24">Points</th>
+                    <th className="px-4 py-2 font-black uppercase text-amber-200 text-2xl tracking-wider w-20">Rang</th>
+                    <th className="px-4 py-2 font-black uppercase text-amber-200 text-2xl tracking-wider">Participant</th>
+                    <th className="px-4 py-2 font-black uppercase text-amber-200 text-2xl tracking-wider text-right w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -152,13 +152,13 @@ export function PublicPreselectionRanking() {
                           : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
                       } border-b border-white/10 transition-colors`}
                     >
-                      <td className="px-6 py-4">
+                      <td className="px-4 py-2">
                         <div className="flex items-center justify-center">
-                          <span className="font-black text-2xl text-amber-300">{index + 1}</span>
+                          <span className="font-black text-4xl text-amber-300">{index + 1}</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 font-semibold text-white text-xl">{row.participantName}</td>
-                      <td className="px-6 py-4 font-black text-right text-amber-300 text-2xl">{row.totalScore}</td>
+                      <td className="px-4 py-2 font-semibold text-white text-3xl">{row.participantName}</td>
+                      <td className="px-4 py-2 font-black text-right text-amber-300 text-3xl">{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
