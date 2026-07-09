@@ -183,7 +183,43 @@ export function PreselectionAdmin() {
         // ignore polling errors
       }
     }, 2500);
-    return () => clearInterval(poll);
+    // Listen for cross-tab updates (BroadcastChannel or storage fallback)
+    try {
+      const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+      const onMessage = (msg: any) => {
+        if (!eventSlug) return;
+        if (msg?.data?.type === "scoresUpdated" || msg?.type === "scoresUpdated") {
+          fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
+            const loaded = (j?.scores) || [];
+            setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
+            setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, Array.isArray(loaded) ? loaded : []));
+          }).catch(() => {});
+        }
+      };
+      if (bc) {
+        bc.addEventListener?.("message", onMessage);
+      }
+      const onStorage = (e: StorageEvent) => {
+        if (!e.key || !eventSlug) return;
+        if (e.key === `preselection-refresh-${eventSlug}`) {
+          fetch(`/api/preselection/${eventSlug}/scores-flat`).then((r) => r.ok && r.json()).then((j) => {
+            const loaded = (j?.scores) || [];
+            setSavedScoresRaw(Array.isArray(loaded) ? loaded : []);
+            setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, Array.isArray(loaded) ? loaded : []));
+          }).catch(() => {});
+        }
+      };
+      window.addEventListener("storage", onStorage);
+
+      return () => {
+        clearInterval(poll);
+        try { if (bc) bc.removeEventListener?.("message", onMessage); } catch (e) {}
+        window.removeEventListener("storage", onStorage);
+      };
+    } catch (e) {
+      clearInterval(poll);
+      return () => clearInterval(poll);
+    }
   }, [eventSlug]);
 
   const updateCriterion = (id: string, field: "name" | "maxScore", value: string) => {

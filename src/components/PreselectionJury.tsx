@@ -89,6 +89,42 @@ export function PreselectionJury({
 
   const handleSubmit = async () => {
     if (!eventSlug || !juryId) return;
+    // Validate: all criteria must be filled and at least 1
+    const newFieldErrors: Record<string, string> = {};
+    let anyPositive = false;
+    for (let i = 0; i < criteria.length; i++) {
+      const valRaw = scores[String(i)];
+      const val = Number.isFinite(Number(valRaw)) ? Number(valRaw) : NaN;
+      if (Number.isNaN(val)) {
+        newFieldErrors[String(i)] = "Remplissez cette case";
+      } else if (val < 1) {
+        newFieldErrors[String(i)] = "La note doit être ≥ 1";
+      } else {
+        anyPositive = true;
+      }
+      const max = Number(criteria[i]?.maxScore || 0);
+      if (max > 0 && !Number.isNaN(val) && val > max) {
+        newFieldErrors[String(i)] = `Ne peut pas dépasser ${max}`;
+      }
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setToast({ message: "Remplissez les champs vides correctement", type: "error" });
+      setTimeout(() => setToast(null), 3500);
+      return;
+    }
+
+    if (!anyPositive) {
+      setToast({ message: "Au moins une note doit être supérieure à 0", type: "error" });
+      setTimeout(() => setToast(null), 3500);
+      return;
+    }
+
+    // Confirm before final submit
+    const ok = window.confirm("Êtes-vous sûr de vouloir enregistrer ? Une fois enregistré, vous ne pourrez plus modifier.");
+    if (!ok) return;
+
     setLocked(true);
     const payload = {
       entry: {
@@ -101,28 +137,6 @@ export function PreselectionJury({
       },
     };
 
-    // Validate scores against maxScore and collect field errors
-    const newFieldErrors: Record<string, string> = {};
-    for (let i = 0; i < criteria.length; i++) {
-      const c = criteria[i];
-      const val = Number(scores[String(i)] || 0);
-      const max = Number(c.maxScore || 0);
-      if (Number.isNaN(val) || val < 0) {
-        newFieldErrors[String(i)] = `Valeur invalide`;
-      } else if (max > 0 && val > max) {
-        newFieldErrors[String(i)] = `Ne peut pas dépasser ${max}`;
-      }
-    }
-
-    if (Object.keys(newFieldErrors).length > 0) {
-      setFieldErrors(newFieldErrors);
-      setToast({ message: "Corrigez les erreurs avant d'envoyer", type: "error" });
-      setLocked(false);
-      // auto-hide toast
-      setTimeout(() => setToast(null), 3500);
-      return;
-    }
-
     try {
       const res = await fetch(`/api/preselection/${eventSlug}/scores`, {
         method: "POST",
@@ -132,9 +146,21 @@ export function PreselectionJury({
       if (!res.ok) {
         throw new Error(`Server error ${res.status}`);
       }
-      // success
+      // success: disable further edits
       setHasEdited(false);
-      setToast({ message: "Notes envoyées", type: "success" });
+      setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
+      // notify other tabs (admin) to refresh immediately
+      try {
+        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
+        else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+      } catch (e) {
+        try {
+          localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+        } catch (err) {
+          // ignore
+        }
+      }
       setTimeout(() => setToast(null), 2500);
     } catch (e) {
       console.error(e);
