@@ -35,6 +35,13 @@ interface ScoreEntry {
   total: number;
 }
 
+interface GeneratedBracketMatch {
+  id: string;
+  round: string;
+  redTeamId: string;
+  blueTeamId: string;
+}
+
 function createCriterion(): PreselectionCriterion {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -109,6 +116,8 @@ export function PreselectionAdmin() {
   const [preselectionActive, setPreselectionActive] = useState(false);
   const [preselectionIndex, setPreselectionIndex] = useState(0);
   const [scoreRows, setScoreRows] = useState<ScoreRow[]>([]);
+  const [bracketMatches, setBracketMatches] = useState<GeneratedBracketMatch[]>([]);
+  const [showBracketPreview, setShowBracketPreview] = useState(false);
   const eventDataRef = useRef<EventSummary>({ tournaments: [], juryAccounts: [] });
 
   useEffect(() => {
@@ -463,6 +472,89 @@ export function PreselectionAdmin() {
     }
   };
 
+  const bracketParticipants = useMemo(() => {
+    const seen = new Set<string>();
+    return (eventData.tournaments || []).flatMap((tournament) => tournament.participants || []).filter((participant) => {
+      if (!participant?.id || seen.has(participant.id)) return false;
+      seen.add(participant.id);
+      return true;
+    });
+  }, [eventData.tournaments]);
+
+  const generateBracketPreview = () => {
+    if (bracketParticipants.length < 2) return;
+
+    const matches: GeneratedBracketMatch[] = [];
+    const firstRoundCount = Math.min(8, Math.ceil(bracketParticipants.length / 2));
+
+    for (let i = 0; i < firstRoundCount; i += 1) {
+      const red = bracketParticipants[i * 2];
+      const blue = bracketParticipants[i * 2 + 1];
+      matches.push({
+        id: `round-1-${i + 1}`,
+        round: "1er tour",
+        redTeamId: red?.id || "",
+        blueTeamId: blue?.id || "",
+      });
+    }
+
+    if (bracketParticipants.length > 4) {
+      for (let i = 0; i < Math.min(4, Math.ceil(firstRoundCount / 2)); i += 1) {
+        matches.push({
+          id: `round-2-${i + 1}`,
+          round: "1/4 de finale",
+          redTeamId: "",
+          blueTeamId: "",
+        });
+      }
+    }
+
+    if (bracketParticipants.length > 8) {
+      for (let i = 0; i < 2; i += 1) {
+        matches.push({
+          id: `round-3-${i + 1}`,
+          round: "1/2 finale",
+          redTeamId: "",
+          blueTeamId: "",
+        });
+      }
+    }
+
+    if (bracketParticipants.length > 2) {
+      matches.push({
+        id: "final",
+        round: "Finale",
+        redTeamId: "",
+        blueTeamId: "",
+      });
+    }
+
+    setBracketMatches(matches);
+    setShowBracketPreview(true);
+  };
+
+  const updateBracketMatch = (matchId: string, side: "red" | "blue", value: string) => {
+    setBracketMatches((prev) =>
+      prev.map((match) => {
+        if (match.id !== matchId) return match;
+
+        const updated = {
+          ...match,
+          [side === "red" ? "redTeamId" : "blueTeamId"]: value,
+        };
+
+        if (side === "red" && value && value === updated.blueTeamId) {
+          updated.blueTeamId = "";
+        }
+        if (side === "blue" && value && value === updated.redTeamId) {
+          updated.redTeamId = "";
+        }
+
+        return updated;
+      })
+    );
+  };
+
   const allJuriesSubmittedForCurrent = () => {
     const tournaments = eventData.tournaments || [];
     const juries = eventData.juryAccounts || [];
@@ -684,6 +776,9 @@ export function PreselectionAdmin() {
                   <button onClick={advanceToNext} disabled={!canAdvance} className={`px-3 py-2 font-bold uppercase ${canAdvance ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
                     Match suivant
                   </button>
+                  <button onClick={generateBracketPreview} disabled={!allParticipantsRated || bracketParticipants.length < 2} className={`px-3 py-2 font-bold uppercase ${allParticipantsRated && bracketParticipants.length >= 2 ? "bg-purple-600/40 hover:bg-purple-600/50 text-purple-200" : "bg-white/5 text-white/60"}`}>
+                    Générer le bracket
+                  </button>
                 </div>
             </div>
 
@@ -733,6 +828,65 @@ export function PreselectionAdmin() {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+
+            {showBracketPreview && bracketMatches.length > 0 && (
+              <div className="mt-8 border border-white/10 bg-black/20 p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h3 className="text-lg font-black italic text-white uppercase">Bracket généré</h3>
+                    <p className="text-sm text-white/50 mt-1">Vous pouvez modifier librement les participants assignés à chaque rencontre.</p>
+                  </div>
+                  <button onClick={generateBracketPreview} className="px-3 py-2 font-bold uppercase bg-white/10 hover:bg-white/20 text-white/80">
+                    Régénérer
+                  </button>
+                </div>
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {bracketMatches.map((match) => {
+                    const redParticipant = bracketParticipants.find((participant) => participant.id === match.redTeamId);
+                    const blueParticipant = bracketParticipants.find((participant) => participant.id === match.blueTeamId);
+
+                    return (
+                      <div key={match.id} className="border border-white/10 bg-white/5 p-4">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-white/50 mb-3">{match.round}</div>
+                        <div className="space-y-2">
+                          <select
+                            value={match.redTeamId}
+                            onChange={(e) => updateBracketMatch(match.id, "red", e.target.value)}
+                            className="w-full bg-black/30 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none"
+                          >
+                            <option value="">Sélectionner un participant</option>
+                            {bracketParticipants.map((participant) => (
+                              <option key={participant.id} value={participant.id}>
+                                {participant.name}
+                              </option>
+                            ))}
+                          </select>
+                          <select
+                            value={match.blueTeamId}
+                            onChange={(e) => updateBracketMatch(match.id, "blue", e.target.value)}
+                            className="w-full bg-black/30 border border-white/10 px-3 py-2 text-sm text-white focus:outline-none"
+                          >
+                            <option value="">Sélectionner un participant</option>
+                            {bracketParticipants.map((participant) => (
+                              <option key={participant.id} value={participant.id}>
+                                {participant.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="mt-3 text-xs text-white/60">
+                          {redParticipant ? `Rouge : ${redParticipant.name}` : "Rouge : —"}
+                        </div>
+                        <div className="text-xs text-white/60">
+                          {blueParticipant ? `Bleu : ${blueParticipant.name}` : "Bleu : —"}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
