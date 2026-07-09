@@ -18,6 +18,7 @@ export function PreselectionJury({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasEdited, setHasEdited] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
 
@@ -56,15 +57,15 @@ export function PreselectionJury({
   }, [eventSlug]);
 
   useEffect(() => {
-    // Reset scores when criteria or index change only if user hasn't edited yet
-    if (hasEdited) return;
+    // Reset scores when criteria or index change only if user hasn't edited yet and hasn't submitted
+    if (hasEdited || submitted) return;
     const initial: Record<string, number> = {};
     criteria.forEach((c, i) => {
       initial[String(i)] = 0;
     });
     setScores(initial);
     setLocked(false);
-  }, [criteria, currentIndex, hasEdited]);
+  }, [criteria, currentIndex, hasEdited, submitted]);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center">Chargement...</div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
@@ -147,7 +148,7 @@ export function PreselectionJury({
         throw new Error(`Server error ${res.status}`);
       }
       // success: disable further edits
-      setHasEdited(false);
+      setSubmitted(true);
       setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
       // notify other tabs (admin) to refresh immediately
       try {
@@ -175,6 +176,87 @@ export function PreselectionJury({
     setHasEdited(true);
     setToast({ message: "Vous pouvez à présent modifier vos notes", type: "success" });
     setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleResubmit = async () => {
+    if (!eventSlug || !juryId) return;
+    // Similar validation as handleSubmit
+    const newFieldErrors: Record<string, string> = {};
+    let anyPositive = false;
+    for (let i = 0; i < criteria.length; i++) {
+      const valRaw = scores[String(i)];
+      const val = Number.isFinite(Number(valRaw)) ? Number(valRaw) : NaN;
+      if (Number.isNaN(val)) {
+        newFieldErrors[String(i)] = "Remplissez cette case";
+      } else if (val < 1) {
+        newFieldErrors[String(i)] = "La note doit être ≥ 1";
+      } else {
+        anyPositive = true;
+      }
+      const max = Number(criteria[i]?.maxScore || 0);
+      if (max > 0 && !Number.isNaN(val) && val > max) {
+        newFieldErrors[String(i)] = `Ne peut pas dépasser ${max}`;
+      }
+    }
+
+    if (Object.keys(newFieldErrors).length > 0) {
+      setFieldErrors(newFieldErrors);
+      setToast({ message: "Remplissez les champs vides correctement", type: "error" });
+      setTimeout(() => setToast(null), 3500);
+      return;
+    }
+
+    if (!anyPositive) {
+      setToast({ message: "Au moins une note doit être supérieure à 0", type: "error" });
+      setTimeout(() => setToast(null), 3500);
+      return;
+    }
+
+    const ok = window.confirm("Êtes-vous sûr de vouloir enregistrer les modifications ?");
+    if (!ok) return;
+
+    setLocked(true);
+    const payload = {
+      entry: {
+        category: category || "",
+        participantId: participant.id,
+        participantName: participant.name,
+        juryId,
+        scores: criteria.map((c, i) => ({ name: c.name, maxScore: c.maxScore, score: Number(scores[String(i)] || 0) })),
+        timestamp: Date.now(),
+      },
+    };
+
+    try {
+      const res = await fetch(`/api/preselection/${eventSlug}/scores`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scores: payload }),
+      });
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}`);
+      }
+      setHasEdited(false);
+      setToast({ message: "Notes modifiées et envoyées avec succès.", type: "success" });
+      // notify other tabs (admin) to refresh immediately
+      try {
+        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
+        else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+      } catch (e) {
+        try {
+          localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
+        } catch (err) {
+          // ignore
+        }
+      }
+      setTimeout(() => setToast(null), 2500);
+    } catch (e) {
+      console.error(e);
+      setToast({ message: "Échec de l'envoi", type: "error" });
+      setLocked(false);
+      setTimeout(() => setToast(null), 3500);
+    }
   };
 
   return (
@@ -231,11 +313,11 @@ export function PreselectionJury({
           <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
           <div className="flex items-center gap-3">
             <button
-              onClick={handleSubmit}
+              onClick={hasEdited && submitted ? handleResubmit : handleSubmit}
               disabled={locked}
               className={`px-4 py-2 font-black uppercase ${locked ? "bg-white/20 text-white/40 cursor-not-allowed" : "bg-white text-black hover:bg-white/90"}`}
             >
-              Envoyer
+              {hasEdited && submitted ? "Renvoyer" : "Envoyer"}
             </button>
             {locked && <div className="text-sm text-green-400">✓ Envoyé</div>}
           </div>
