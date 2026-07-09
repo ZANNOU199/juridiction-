@@ -177,8 +177,12 @@ export function PreselectionAdmin() {
         if (!res.ok) return;
         const json = await res.json();
         const loadedScores = json.scores || [];
-        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
-        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
+        const normalized = Array.isArray(loadedScores) ? loadedScores : [];
+        setSavedScoresRaw(normalized);
+        // use current eventData (which is in state) for tournaments/juries
+        const currentTournaments = eventData.tournaments || [];
+        const currentJuries = eventData.juryAccounts || [];
+        setScoreRows(buildScoreRows(currentTournaments, currentJuries, normalized));
       } catch (e) {
         // ignore polling errors
       }
