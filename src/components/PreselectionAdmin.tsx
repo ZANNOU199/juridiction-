@@ -126,8 +126,9 @@ export function PreselectionAdmin() {
         );
 
         setEventData({ tournaments, juryAccounts: juries });
-        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
-        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
+        const normalized = Array.isArray(loadedScores) ? loadedScores : [];
+        setSavedScoresRaw(normalized);
+        setScoreRows(buildScoreRows(tournaments, juries, normalized));
 
         // fetch preselection mode + index
         try {
@@ -148,6 +149,21 @@ export function PreselectionAdmin() {
     };
 
     loadPageData();
+    // start polling saved scores so admin table updates live when juries send
+    const poll = setInterval(async () => {
+      if (!eventSlug) return;
+      try {
+        const res = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const loadedScores = json.scores || [];
+        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
+        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
+      } catch (e) {
+        // ignore polling errors
+      }
+    }, 2500);
+    return () => clearInterval(poll);
   }, [eventSlug]);
 
   const updateCriterion = (id: string, field: "name" | "maxScore", value: string) => {
@@ -276,14 +292,50 @@ export function PreselectionAdmin() {
 
       setScoreSaved(true);
       // refresh saved raw scores and ranking
-      setSavedScoresRaw(scores);
-      setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
+      // After saving, refresh saved scores from server (to include jury submissions too)
+      try {
+        const refreshed = await fetch(`/api/preselection/${eventSlug}/scores`);
+        const refreshedJson = refreshed.ok ? (await refreshed.json())?.scores || [] : [];
+        const normalized = Array.isArray(refreshedJson) ? refreshedJson : [];
+        setSavedScoresRaw(normalized);
+        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, normalized));
+      } catch (e) {
+        // fallback to what we have
+        setSavedScoresRaw(scores);
+        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
+      }
     } catch (error) {
       console.error("Failed to save preselection scores", error);
       alert("L’enregistrement des points a échoué.");
     } finally {
       setSavingScores(false);
     }
+  };
+
+  const hasSavedFor = (participantId: string, juryId: string) => {
+    for (const item of savedScoresRaw) {
+      const e = item.entry ? item.entry : item;
+      if (!e) continue;
+      if (e.participantId === participantId && e.juryId === juryId) return true;
+      // also accept ScoreEntry format
+      if (e.participantId === participantId && e.juryId === juryId) return true;
+    }
+    return false;
+  };
+
+  const getSavedValue = (participantId: string, juryId: string) => {
+    for (const item of savedScoresRaw) {
+      const e = item.entry ? item.entry : item;
+      if (!e) continue;
+      if (e.participantId === participantId && e.juryId === juryId) {
+        // If e.total or e.scores available
+        if (typeof e.total === "number") return e.total;
+        if (Array.isArray(e.scores)) {
+          return e.scores.reduce((sum: number, s: any) => sum + (Number(s.score) || 0), 0);
+        }
+      }
+    }
+    return null;
   };
 
   const togglePreselection = async (active: boolean) => {
@@ -367,6 +419,47 @@ export function PreselectionAdmin() {
       })
       .sort((a, b) => b.totalScore - a.totalScore);
   }, [scoreRows]);
+
+  const passedParticipants = useMemo(() => {
+    // determine participants that have submissions from all juries
+    const juries = eventData.juryAccounts || [];
+    const tournaments = eventData.tournaments || [];
+    const participants = (tournaments[0]?.participants) || [];
+    const map = new Map<string, Set<string>>();
+    for (const item of savedScoresRaw) {
+      // normalize structure
+      if (!item) continue;
+      if (item.participantId && item.juryId) {
+        const set = map.get(item.participantId) || new Set<string>();
+        set.add(item.juryId);
+        map.set(item.participantId, set);
+      } else if (item.entry) {
+        const en = item.entry;
+        if (en.participantId && en.juryId) {
+          const set = map.get(en.participantId) || new Set<string>();
+          set.add(en.juryId);
+          map.set(en.participantId, set);
+        }
+      } else if (Array.isArray(item)) {
+        for (const sub of item) {
+          if (sub.participantId && sub.juryId) {
+            const set = map.get(sub.participantId) || new Set<string>();
+            set.add(sub.juryId);
+            map.set(sub.participantId, set);
+          }
+        }
+      }
+    }
+
+    const passed = new Set<string>();
+    for (const p of participants) {
+      const set = map.get(p.id) || new Set<string>();
+      if (set.size >= juries.length && juries.length > 0) {
+        passed.add(p.id);
+      }
+    }
+    return passed;
+  }, [savedScoresRaw, eventData]);
 
   const juryTotals = useMemo(() => {
     return eventData.juryAccounts.reduce<Record<string, number>>((acc, jury) => {
@@ -489,11 +582,23 @@ export function PreselectionAdmin() {
                       <tr key={`${row.participantId}-${row.category}`} className="border-b border-white/10">
                         <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
                         <td className="px-3 py-3 text-white/60">{row.category}</td>
-                        {eventData.juryAccounts.map((jury) => (
-                          <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
-                            <input type="number" min="0" max={maxPossibleScore} value={row.juryScores[jury.id] || ""} onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)} className="w-24 bg-white/5 border border-white/10 text-white px-2 py-1 focus:outline-none focus:border-white/30" />
-                          </td>
-                        ))}
+                        {eventData.juryAccounts.map((jury) => {
+                          const saved = hasSavedFor(row.participantId, jury.id);
+                          const savedVal = getSavedValue(row.participantId, jury.id);
+                          return (
+                            <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
+                              <input
+                                type="number"
+                                min="0"
+                                max={maxPossibleScore}
+                                value={savedVal != null ? String(savedVal) : row.juryScores[jury.id] || ""}
+                                onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)}
+                                className={`w-24 border border-white/10 px-2 py-1 focus:outline-none focus:border-white/30 ${saved ? "bg-green-600/30 text-black" : "bg-white/5 text-white"}`}
+                                disabled={saved}
+                              />
+                            </td>
+                          );
+                        })}
                         <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
                         <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                       </tr>

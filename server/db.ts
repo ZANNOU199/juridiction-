@@ -303,12 +303,50 @@ export async function savePreselectionScoresForEvent(eventSlug: string, scores: 
     throw new Error("Event not found");
   }
 
+  // Read existing scores, normalize to array
+  let existing: any[] = [];
+  try {
+    existing = JSON.parse(event.preselectionScores || "[]");
+    if (!Array.isArray(existing)) existing = [];
+  } catch {
+    existing = [];
+  }
+
+  // Incoming could be a single entry, an object with `entry`, or an array
+  const incoming = scores as any;
+  const toAppend: any[] = [];
+
+  if (Array.isArray(incoming)) {
+    toAppend.push(...incoming);
+  } else if (incoming && typeof incoming === "object") {
+    // if it's a wrapper { entry: ... }
+    if (incoming.entry) {
+      toAppend.push(incoming.entry);
+    } else {
+      toAppend.push(incoming);
+    }
+  }
+
+  // Merge: append new entries. Avoid duplicates by checking juryId+participantId+category
+  const key = (it: any) => `${it.category || it.entry?.category || ""}::${it.participantId || it.entry?.participantId || ""}::${it.juryId || it.entry?.juryId || ""}`;
+  const existingKeys = new Set(existing.map((e) => key(e)));
+  for (const item of toAppend) {
+    const k = key(item);
+    // If duplicate, replace the existing entry with this one
+    const idx = existing.findIndex((e) => key(e) === k);
+    if (idx >= 0) {
+      existing[idx] = item;
+    } else {
+      existing.push(item);
+    }
+  }
+
   await prisma.event.update({
     where: { eventSlug },
-    data: { preselectionScores: JSON.stringify(scores) },
+    data: { preselectionScores: JSON.stringify(existing) },
   });
 
-  return scores;
+  return existing;
 }
 
 export async function getPreselectionModeForEvent(eventSlug: string) {
