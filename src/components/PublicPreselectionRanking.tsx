@@ -144,19 +144,19 @@ export function PublicPreselectionRanking() {
                       key={`${row.category}-${row.participantId}`}
                       className={`${
                         index === 0
-                          ? "bg-red-500/20 border-l-4 border-red-400"
+                          ? "bg-red-500/20"
                           : index === 1
-                          ? "bg-gray-400/10 border-l-4 border-gray-300"
+                          ? "bg-gray-400/10"
                           : index === 2
-                          ? "bg-orange-700/15 border-l-4 border-orange-600"
-                          : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
+                          ? "bg-orange-700/15"
+                          : "bg-white/5 hover:bg-white/10"
                       } ${
                         index === 8 ? "border-t-4 border-red-500" : "border-b border-white/10"
                       } transition-colors ${
                         index >= 8 ? "opacity-60" : ""
                       }`}
                       style={{
-                        borderRight: index < 8 ? "6px solid rgb(239, 68, 68)" : "none",
+                        borderLeft: index < 8 ? "6px solid rgb(239, 68, 68)" : "4px solid transparent",
                       }}
                     >
                       <td className="px-4 py-2">
