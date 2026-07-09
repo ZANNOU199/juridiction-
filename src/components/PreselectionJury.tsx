@@ -15,28 +15,41 @@ export function PreselectionJury({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [locked, setLocked] = useState(false);
+  const [showList, setShowList] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasEdited, setHasEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
+  const [savedScoresRaw, setSavedScoresRaw] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
     const fetchData = async () => {
       if (!eventSlug) return;
       try {
-        const [cRes, mRes] = await Promise.all([
+        const [cRes, mRes, scoresRes] = await Promise.all([
           fetch(`/api/preselection/${eventSlug}`),
           fetch(`/api/preselection/${eventSlug}/current`),
+          fetch(`/api/preselection/${eventSlug}/scores-flat`),
         ]);
         if (!cRes.ok) throw new Error("Failed to load criteria");
         if (!mRes.ok) throw new Error("Failed to load current index");
+        if (!scoresRes.ok) throw new Error("Failed to load saved scores");
+
         const cJson = await cRes.json();
         const mJson = await mRes.json();
+        const sJson = await scoresRes.json();
         if (!mounted) return;
-        setCriteria(Array.isArray(cJson.criteria) ? cJson.criteria : []);
-        setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
+
+        const loadedCriteria = Array.isArray(cJson.criteria) ? cJson.criteria : [];
+        const currentIndexValue = typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0;
+        const loadedScores = Array.isArray(sJson.scores) ? sJson.scores : [];
+
+        setCriteria(loadedCriteria);
+        setCurrentIndex(currentIndexValue);
+        setSavedScoresRaw(loadedScores);
+        setShowList(Boolean(loadedScores.length));
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -56,6 +69,28 @@ export function PreselectionJury({
   }, [eventSlug]);
 
   useEffect(() => {
+    if (!eventSlug) return;
+    const fetchUpdates = async () => {
+      try {
+        const [mRes, scoresRes] = await Promise.all([
+          fetch(`/api/preselection/${eventSlug}/current`),
+          fetch(`/api/preselection/${eventSlug}/scores-flat`),
+        ]);
+        if (!mRes.ok || !scoresRes.ok) return;
+        const mJson = await mRes.json();
+        const sJson = await scoresRes.json();
+        setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
+        setSavedScoresRaw(Array.isArray(sJson.scores) ? sJson.scores : []);
+      } catch (e) {
+        // ignore update failures
+      }
+    };
+
+    const interval = setInterval(fetchUpdates, 2000);
+    return () => clearInterval(interval);
+  }, [eventSlug]);
+
+  useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet
     if (hasEdited) return;
     const initial: Record<string, number> = {};
@@ -70,6 +105,16 @@ export function PreselectionJury({
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
+  const currentSubmitted = hasSavedFor(participant.id);
+  const canSubmitCurrent = !locked && !currentSubmitted;
+  const listRows = participants.map((p, idx) => ({
+    id: p.id,
+    name: p.name,
+    status: hasSavedFor(p.id) ? "Noté" : "En attente",
+    isCurrent: idx === currentIndex,
+  }));
+
+  const currentParticipantTotal = getSavedValue(participant.id);
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
@@ -85,6 +130,33 @@ export function PreselectionJury({
     if (max > 0 && value > max) {
       setFieldErrors((fe) => ({ ...fe, [String(idx)]: `Ne peut pas dépasser ${max}` }));
     }
+  };
+
+  const normalizeScoreEntry = (item: any) => {
+    if (!item) return null;
+    if (item.entry) return item.entry;
+    return item;
+  };
+
+  const hasSavedFor = (participantId: string) => {
+    return savedScoresRaw.some((item) => {
+      const entry = normalizeScoreEntry(item);
+      return entry?.participantId === participantId && entry?.juryId === juryId;
+    });
+  };
+
+  const getSavedValue = (participantId: string) => {
+    const item = savedScoresRaw.find((item) => {
+      const entry = normalizeScoreEntry(item);
+      return entry?.participantId === participantId && entry?.juryId === juryId;
+    });
+    const entry = normalizeScoreEntry(item);
+    if (!entry) return null;
+    if (typeof entry.total === "number") return entry.total;
+    if (Array.isArray(entry.scores)) {
+      return entry.scores.reduce((sum: number, score: any) => sum + (Number(score?.score) || 0), 0);
+    }
+    return null;
   };
 
   const handleSubmit = async () => {
@@ -146,9 +218,12 @@ export function PreselectionJury({
       if (!res.ok) {
         throw new Error(`Server error ${res.status}`);
       }
+      const result = await res.json();
       // success: disable further edits
       setHasEdited(false);
+      setSavedScoresRaw(Array.isArray(result.scores) ? result.scores : savedScoresRaw);
       setToast({ message: "Notes envoyées — vous ne pouvez plus modifier.", type: "success" });
+      setShowList(true);
       // notify other tabs (admin) to refresh immediately
       try {
         const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
@@ -182,44 +257,79 @@ export function PreselectionJury({
         <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
         <p className="text-sm text-white/40 mb-4">Notation par critères</p>
 
-        <div className="space-y-3">
-          {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
-          {criteria.map((c, i) => (
-            <div key={i} className="flex items-center gap-4">
-              <div className="flex-1">
-                <div className="text-sm font-bold">{c.name}</div>
-                <div className="text-[11px] text-white/40">Max: {c.maxScore}</div>
-              </div>
-              <div className="w-32">
-                <input
-                  type="number"
-                  min={0}
-                  max={Number(c.maxScore || 10)}
-                  value={scores[String(i)] ?? 0}
-                  onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
-                  disabled={locked}
-                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
-                />
-                {fieldErrors[String(i)] && (
-                  <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
+        {currentSubmitted ? (
+          <div className="text-white/80 mb-6">
+            Vous avez déjà noté ce candidat. En attente que l’administrateur passe au prochain participant.
+          </div>
+        ) : (
+          <>
+            <div className="space-y-3">
+              {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
+              {criteria.map((c, i) => (
+                <div key={i} className="flex items-center gap-4">
+                  <div className="flex-1">
+                    <div className="text-sm font-bold">{c.name}</div>
+                    <div className="text-[11px] text-white/40">Max: {c.maxScore}</div>
+                  </div>
+                  <div className="w-32">
+                    <input
+                      type="number"
+                      min={0}
+                      max={Number(c.maxScore || 10)}
+                      value={scores[String(i)] ?? 0}
+                      onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
+                      disabled={locked}
+                      className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
+                    />
+                    {fieldErrors[String(i)] && (
+                      <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex items-center justify-between">
+              <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={!canSubmitCurrent}
+                  className="px-4 py-2 bg-white text-black font-black uppercase disabled:opacity-50"
+                >
+                  Envoyer
+                </button>
+                {!canSubmitCurrent && currentSubmitted && (
+                  <div className="text-sm text-white/40">Déjà noté, en attente du prochain candidat</div>
+                )}
+                {!canSubmitCurrent && !currentSubmitted && locked && (
+                  <div className="text-sm text-white/40">Enregistrement en cours...</div>
                 )}
               </div>
             </div>
-          ))}
-        </div>
+          </>
+        )}
+      </div>
 
-        <div className="mt-6 flex items-center justify-between">
-          <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSubmit}
-              disabled={locked}
-              className="px-4 py-2 bg-white text-black font-black uppercase"
-            >
-              Envoyer
-            </button>
-            {locked && <div className="text-sm text-white/40">Envoyé</div>}
-          </div>
+      <div className="max-w-2xl w-full bg-white/5 border border-white/10 p-6 mt-6">
+        <h3 className="text-lg font-black mb-4">Liste des candidats</h3>
+        <p className="text-sm text-white/40 mb-4">
+          Seul l’administrateur peut faire avancer le prochain candidat avec « Match suivant ». Vous ne pouvez pas choisir manuellement.
+        </p>
+        <div className="grid gap-2">
+          {listRows.map((row) => (
+            <div
+              key={row.id}
+              className={`flex items-center justify-between gap-4 p-3 rounded-lg border ${row.isCurrent ? "border-cyan-400 bg-cyan-500/10" : "border-white/10 bg-white/5"}`}>
+              <div>
+                <div className="font-bold text-white">{row.name}</div>
+                <div className="text-[11px] text-white/50">{row.isCurrent ? "Candidat actuel" : ""}</div>
+              </div>
+              <span className={`text-xs font-bold px-2 py-1 rounded-full ${row.status === "Noté" ? "bg-emerald-500/20 text-emerald-200" : "bg-white/10 text-white/70"}`}>
+                {row.status}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

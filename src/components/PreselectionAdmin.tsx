@@ -642,10 +642,6 @@ export function PreselectionAdmin() {
       return () => clearInterval(poll);
     }
   }, [eventSlug, eventData]);
-
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm text-white/60">Mode préselection</label>
-                    <button onClick={() => togglePreselection(!preselectionActive)} className={`px-3 py-2 font-bold uppercase ${preselectionActive ? "bg-amber-400 text-black" : "bg-white/5 text-white/60"}`}>
                       {preselectionActive ? "Actif" : "Inactif"}
                     </button>
                   </div>
