@@ -623,15 +623,7 @@ export function PreselectionAdmin() {
                         <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                       </tr>
                     ))}
-                    <tr className="border-t border-white/20 bg-white/5">
-                      <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
-                      <td className="px-3 py-3" />
-                      {eventData.juryAccounts.map((jury) => (
-                        <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
-                      ))}
-                      <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
-                      <td className="px-3 py-3" />
-                    </tr>
+                    
                   </tbody>
                 </table>
               </div>
