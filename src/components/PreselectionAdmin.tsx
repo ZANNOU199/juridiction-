@@ -148,12 +148,7 @@ export function PreselectionAdmin() {
         setEventData({ tournaments, juryAccounts: juries });
         const normalized = Array.isArray(loadedScores) ? loadedScores : [];
         setSavedScoresRaw(normalized);
-        try {
-          setScoreRows(buildScoreRows(tournaments, juries, normalized));
-        } catch (err) {
-          console.error("buildScoreRows failed on initial load", { err, tournaments, juries, normalized });
-          setScoreRows([]);
-        }
+        setScoreRows(buildScoreRows(tournaments, juries, normalized));
 
         // fetch preselection mode + index
         try {
@@ -182,17 +177,8 @@ export function PreselectionAdmin() {
         if (!res.ok) return;
         const json = await res.json();
         const loadedScores = json.scores || [];
-        const normalized = Array.isArray(loadedScores) ? loadedScores : [];
-        setSavedScoresRaw(normalized);
-        // use current eventData (which is in state) for tournaments/juries
-        const currentTournaments = eventData.tournaments || [];
-        const currentJuries = eventData.juryAccounts || [];
-        try {
-          setScoreRows(buildScoreRows(currentTournaments, currentJuries, normalized));
-        } catch (err) {
-          console.error("buildScoreRows failed during polling", { err, currentTournaments, currentJuries, normalized });
-          setScoreRows([]);
-        }
+        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
+        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
       } catch (e) {
         // ignore polling errors
       }
@@ -327,26 +313,16 @@ export function PreselectionAdmin() {
       setScoreSaved(true);
       // refresh saved raw scores and ranking
       // After saving, refresh saved scores from server (to include jury submissions too)
-        try {
+      try {
         const refreshed = await fetch(`/api/preselection/${eventSlug}/scores`);
         const refreshedJson = refreshed.ok ? (await refreshed.json())?.scores || [] : [];
         const normalized = Array.isArray(refreshedJson) ? refreshedJson : [];
         setSavedScoresRaw(normalized);
-        try {
-          setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, normalized));
-        } catch (err) {
-          console.error("buildScoreRows failed after saving scores (refresh)", { err, normalized, eventData });
-          setScoreRows([]);
-        }
+        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, normalized));
       } catch (e) {
         // fallback to what we have
         setSavedScoresRaw(scores);
-        try {
-          setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
-        } catch (err) {
-          console.error("buildScoreRows failed after saving scores (fallback)", { err, scores, eventData });
-          setScoreRows([]);
-        }
+        setScoreRows(buildScoreRows(eventData.tournaments, eventData.juryAccounts, scores));
       }
     } catch (error) {
       console.error("Failed to save preselection scores", error);
@@ -647,7 +623,15 @@ export function PreselectionAdmin() {
                         <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                       </tr>
                     ))}
-                    
+                    <tr className="border-t border-white/20 bg-white/5">
+                      <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
+                      <td className="px-3 py-3" />
+                      {eventData.juryAccounts.map((jury) => (
+                        <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
+                      ))}
+                      <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
+                      <td className="px-3 py-3" />
+                    </tr>
                   </tbody>
                 </table>
               </div>
