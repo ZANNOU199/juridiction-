@@ -20,6 +20,7 @@ export function PreselectionJury({
   const [hasEdited, setHasEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
+  const [submittedForCurrent, setSubmittedForCurrent] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -54,6 +55,52 @@ export function PreselectionJury({
       clearInterval(interval);
     };
   }, [eventSlug]);
+
+  // Check whether this jury already submitted for the current participant
+  useEffect(() => {
+    if (!eventSlug || !juryId) return;
+    const checkSubmitted = async () => {
+      try {
+        const res = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
+        if (!res.ok) return;
+        const json = await res.json();
+        const list = Array.isArray(json.scores) ? json.scores : [];
+        const participant = participants[currentIndex] || null;
+        if (!participant) {
+          setSubmittedForCurrent(false);
+          setLocked(false);
+          return;
+        }
+        const found = list.find((item: any) => {
+          const e = item?.entry ? item.entry : item;
+          if (!e) return false;
+          const matchesParticipant = e.participantId === participant.id;
+          const matchesJury = e.juryId === juryId;
+          const matchesCategory = (e.category || "") === (category || "");
+          return matchesParticipant && matchesJury && matchesCategory;
+        });
+        if (found) {
+          setSubmittedForCurrent(true);
+          setLocked(true);
+          // If we have per-criterion scores, populate the fields so UI displays them
+          const e = found.entry ? found.entry : found;
+          if (Array.isArray(e?.scores)) {
+            const initial: Record<string, number> = {};
+            e.scores.forEach((s: any, idx: number) => {
+              initial[String(idx)] = Number(s?.score || 0);
+            });
+            setScores(initial);
+          }
+        } else {
+          setSubmittedForCurrent(false);
+          setLocked(false);
+        }
+      } catch (err) {
+        // ignore
+      }
+    };
+    checkSubmitted();
+  }, [eventSlug, juryId, currentIndex, category, participants]);
 
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet
