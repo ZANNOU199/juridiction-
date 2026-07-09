@@ -132,10 +132,10 @@ export function PublicPreselectionRanking() {
             <div className="overflow-y-auto flex-1 w-full">
               <table className="w-full text-2xl text-left text-white">
                 <thead className="sticky top-0">
-                  <tr style={{backgroundImage: 'linear-gradient(to right, rgba(255,0,0,0.4), rgba(255,0,0,0.3))', borderBottom: '2px solid #FF0000'}}>
-                    <th className="px-4 py-2 font-black uppercase text-2xl tracking-wider w-20" style={{color: '#FF1111'}}>Rang</th>
-                    <th className="px-4 py-2 font-black uppercase text-2xl tracking-wider" style={{color: '#FF1111'}}>Participant</th>
-                    <th className="px-4 py-2 font-black uppercase text-2xl tracking-wider text-right w-24" style={{color: '#FF1111'}}>Points</th>
+                  <tr className="bg-gradient-to-r from-red-600/40 to-red-500/30 border-b-2 border-red-400/50">
+                    <th className="px-4 py-2 font-black uppercase text-red-200 text-2xl tracking-wider w-20">Rang</th>
+                    <th className="px-4 py-2 font-black uppercase text-red-200 text-2xl tracking-wider">Participant</th>
+                    <th className="px-4 py-2 font-black uppercase text-red-200 text-2xl tracking-wider text-right w-24">Points</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -144,22 +144,21 @@ export function PublicPreselectionRanking() {
                       key={`${row.category}-${row.participantId}`}
                       className={`${
                         index === 0
-                          ? "border-b border-white/10 transition-colors"
+                          ? "bg-red-500/20 border-l-4 border-red-400"
                           : index === 1
-                          ? "bg-gray-400/10 border-l-4 border-gray-300 border-b border-white/10 transition-colors"
+                          ? "bg-gray-400/10 border-l-4 border-gray-300"
                           : index === 2
-                          ? "bg-orange-700/15 border-l-4 border-orange-600 border-b border-white/10 transition-colors"
-                          : "bg-white/5 border-l-4 border-transparent hover:bg-white/10 border-b border-white/10 transition-colors"
-                      }`}
-                      style={index === 0 ? {backgroundColor: 'rgba(255,0,0,0.2)', borderLeft: '4px solid #FF0000'} : undefined}
+                          ? "bg-orange-700/15 border-l-4 border-orange-600"
+                          : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
+                      } border-b border-white/10 transition-colors`}
                     >
                       <td className="px-4 py-2">
                         <div className="flex items-center justify-center">
-                          <span className="font-black text-4xl" style={{color: '#FF0000'}}>{index + 1}</span>
+                          <span className="font-black text-4xl text-red-300">{index + 1}</span>
                         </div>
                       </td>
                       <td className="px-4 py-2 font-semibold text-white text-3xl">{row.participantName}</td>
-                      <td className="px-4 py-2 font-black text-right text-3xl" style={{color: '#FF0000'}}>{row.totalScore}</td>
+                      <td className="px-4 py-2 font-black text-right text-red-300 text-3xl">{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
