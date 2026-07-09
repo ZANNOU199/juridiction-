@@ -81,7 +81,7 @@ export function PreselectionJury({
     fetchSharedData();
     const interval = setInterval(refreshFromEvent, 2000);
 
-    const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+    const bc = (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(`preselection-${eventSlug}`) : null;
     const handleMessage = (event: any) => {
       if (event?.data?.type === "scoresUpdated" || event?.data?.type === "currentUpdated") {
         refreshFromEvent();
@@ -148,20 +148,20 @@ export function PreselectionJury({
     }
   };
 
-  const normalizeScoreEntry = (item: any) => {
+  function normalizeScoreEntry(item: any) {
     if (!item) return null;
     if (item.entry) return item.entry;
     return item;
-  };
+  }
 
-  const hasSavedFor = (participantId: string) => {
+  function hasSavedFor(participantId: string) {
     return savedScoresRaw.some((item) => {
       const entry = normalizeScoreEntry(item);
       return entry?.participantId === participantId && entry?.juryId === juryId;
     });
-  };
+  }
 
-  const getSavedValue = (participantId: string) => {
+  function getSavedValue(participantId: string) {
     const item = savedScoresRaw.find((item) => {
       const entry = normalizeScoreEntry(item);
       return entry?.participantId === participantId && entry?.juryId === juryId;
@@ -173,7 +173,7 @@ export function PreselectionJury({
       return entry.scores.reduce((sum: number, score: any) => sum + (Number(score?.score) || 0), 0);
     }
     return null;
-  };
+  }
 
   const handleSubmit = async () => {
     if (!eventSlug || !juryId) return;
@@ -248,7 +248,7 @@ export function PreselectionJury({
       window.scrollTo({ top: document.body.scrollHeight, behavior: "smooth" });
       // notify other tabs (admin) to refresh immediately
       try {
-        const bc = new (window as any).BroadcastChannel?.(`preselection-${eventSlug}`);
+        const bc = (window as any).BroadcastChannel ? new (window as any).BroadcastChannel(`preselection-${eventSlug}`) : null;
         if (bc) bc.postMessage({ type: "scoresUpdated", timestamp: Date.now() });
         else localStorage.setItem(`preselection-refresh-${eventSlug}`, String(Date.now()));
       } catch (e) {
