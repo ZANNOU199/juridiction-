@@ -20,7 +20,6 @@ export function PreselectionJury({
   const [hasEdited, setHasEdited] = useState(false);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
-  const [savedScoresRaw, setSavedScoresRaw] = useState<any[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -38,16 +37,6 @@ export function PreselectionJury({
         if (!mounted) return;
         setCriteria(Array.isArray(cJson.criteria) ? cJson.criteria : []);
         setCurrentIndex(typeof mJson.currentIndex === "number" ? mJson.currentIndex : 0);
-        // load saved scores so we can know if this jury already submitted
-        try {
-          const sRes = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
-          if (sRes.ok) {
-            const sJson = await sRes.json();
-            setSavedScoresRaw(Array.isArray(sJson.scores) ? sJson.scores : []);
-          }
-        } catch (e) {
-          // ignore
-        }
       } catch (e: any) {
         console.error(e);
         if (!mounted) return;
@@ -66,43 +55,6 @@ export function PreselectionJury({
     };
   }, [eventSlug]);
 
-  // helper to find saved entry for current participant + this jury
-  const findSavedEntry = (participantId: string) => {
-    for (const item of savedScoresRaw) {
-      if (!item) continue;
-      const e = item.entry ? item.entry : item;
-      if (!e) continue;
-      if ((e.participantId === participantId || item.participantId === participantId) && (e.juryId === juryId || item.juryId === juryId)) {
-        return e;
-      }
-    }
-    return null;
-  };
-
-  // when index or saved scores change, lock inputs if this jury already submitted for this participant
-  useEffect(() => {
-    const saved = findSavedEntry(participant.id);
-    if (saved) {
-      // populate per-criterion scores if available
-      if (Array.isArray(saved.scores) && saved.scores.length > 0) {
-        const mapped: Record<string, number> = {};
-        saved.scores.forEach((s: any, i: number) => {
-          mapped[String(i)] = Number(s?.score || 0);
-        });
-        setScores(mapped);
-      }
-      setLocked(true);
-    } else {
-      // if user hasn't edited, reset to defaults
-      if (!hasEdited) {
-        const initial: Record<string, number> = {};
-        criteria.forEach((c, i) => (initial[String(i)] = 0));
-        setScores(initial);
-        setLocked(false);
-      }
-    }
-  }, [currentIndex, savedScoresRaw, criteria, hasEdited, juryId]);
-
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet
     if (hasEdited) return;
@@ -118,7 +70,6 @@ export function PreselectionJury({
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-400">{error}</div>;
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
-  const currentSavedEntry = findSavedEntry(participant.id);
 
   const updateScore = (idx: number, value: number) => {
     setScores((s) => ({ ...s, [String(idx)]: value }));
@@ -220,7 +171,7 @@ export function PreselectionJury({
   };
 
   return (
-    <div className="min-h-screen bg-surface-dark bg-[radial-gradient(circle_at_50%_50%,_rgba(30,41,59,0.2)_0%,_rgba(5,5,5,1)_100%)] p-6 flex items-center justify-center text-white">
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-surface-dark text-white">
       {/* Toast */}
       {toast && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded shadow-lg ${toast.type === "error" ? "bg-red-600 text-white" : "bg-green-400 text-black"}`}>
@@ -244,10 +195,10 @@ export function PreselectionJury({
                   type="number"
                   min={0}
                   max={Number(c.maxScore || 10)}
-                  value={currentSavedEntry ? String(Number(currentSavedEntry.scores?.[i]?.score || 0)) : String(scores[String(i)] ?? 0)}
+                  value={scores[String(i)] ?? 0}
                   onChange={(e) => updateScore(i, Math.max(0, Math.min(Number(c.maxScore || 10), Number(e.target.value || 0))))}
-                  disabled={locked || Boolean(currentSavedEntry)}
-                  className="w-full bg-white/5 border border-white/10 px-3 py-2 text-white font-bold"
+                  disabled={locked}
+                  className="w-full bg-black/40 border border-white/10 px-3 py-2 text-white font-bold"
                 />
                 {fieldErrors[String(i)] && (
                   <div className="text-xs text-red-400 mt-1">{fieldErrors[String(i)]}</div>
@@ -262,8 +213,8 @@ export function PreselectionJury({
           <div className="flex items-center gap-3">
             <button
               onClick={handleSubmit}
-              disabled={locked || Boolean(currentSavedEntry)}
-              className="px-4 py-2 bg-white text-black font-black uppercase disabled:opacity-60"
+              disabled={locked}
+              className="px-4 py-2 bg-white text-black font-black uppercase"
             >
               Envoyer
             </button>
