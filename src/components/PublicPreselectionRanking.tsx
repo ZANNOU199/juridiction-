@@ -150,15 +150,21 @@ export function PublicPreselectionRanking() {
                           : index === 2
                           ? "bg-orange-700/15 border-l-4 border-orange-600"
                           : "bg-white/5 border-l-4 border-transparent hover:bg-white/10"
-                      } border-b border-white/10 transition-colors`}
+                      } ${
+                        index < 8 ? "border-r-4 border-red-500" : ""
+                      } ${
+                        index === 8 ? "border-t-4 border-red-500" : "border-b border-white/10"
+                      } transition-colors ${
+                        index >= 8 ? "opacity-60" : ""
+                      }`}
                     >
                       <td className="px-4 py-2">
                         <div className="flex items-center justify-center">
-                          <span className="font-black text-4xl text-red-300">{index + 1}</span>
+                          <span className={`font-black text-4xl text-red-300 ${index >= 8 ? "line-through" : ""}`}>{index + 1}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-2 font-semibold text-white text-3xl">{row.participantName}</td>
-                      <td className="px-4 py-2 font-black text-right text-red-300 text-3xl">{row.totalScore}</td>
+                      <td className={`px-4 py-2 font-semibold text-white text-3xl ${index >= 8 ? "line-through" : ""}`}>{row.participantName}</td>
+                      <td className={`px-4 py-2 font-black text-right text-red-300 text-3xl ${index >= 8 ? "line-through" : ""}`}>{row.totalScore}</td>
                     </tr>
                   ))}
                 </tbody>
