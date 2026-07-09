@@ -177,10 +177,8 @@ export function PreselectionAdmin() {
         if (!res.ok) return;
         const json = await res.json();
         const loadedScores = json.scores || [];
-        const normalized = Array.isArray(loadedScores) ? loadedScores : [];
-        setSavedScoresRaw(normalized);
-        // use latest eventData for tournaments/juries when rebuilding rows
-        setScoreRows(buildScoreRows(eventData.tournaments || [], eventData.juryAccounts || [], normalized));
+        setSavedScoresRaw(Array.isArray(loadedScores) ? loadedScores : []);
+        setScoreRows(buildScoreRows(tournaments, juries, Array.isArray(loadedScores) ? loadedScores : []));
       } catch (e) {
         // ignore polling errors
       }
@@ -483,40 +481,6 @@ export function PreselectionAdmin() {
     return passed;
   }, [savedScoresRaw, eventData]);
 
-  const submittedCountMap = useMemo(() => {
-    const map = new Map<string, Set<string>>();
-    for (const item of savedScoresRaw) {
-      if (!item) continue;
-      if (item.participantId && item.juryId) {
-        const set = map.get(item.participantId) || new Set<string>();
-        set.add(item.juryId);
-        map.set(item.participantId, set);
-      } else if (item.entry) {
-        const en = item.entry;
-        if (en.participantId && en.juryId) {
-          const set = map.get(en.participantId) || new Set<string>();
-          set.add(en.juryId);
-          map.set(en.participantId, set);
-        }
-      } else if (Array.isArray(item)) {
-        for (const sub of item) {
-          if (sub.participantId && sub.juryId) {
-            const set = map.get(sub.participantId) || new Set<string>();
-            set.add(sub.juryId);
-            map.set(sub.participantId, set);
-          }
-        }
-      }
-    }
-    return map;
-  }, [savedScoresRaw]);
-
-  const juriesRemainingFor = (participantId: string) => {
-    const juries = eventData.juryAccounts || [];
-    const set = submittedCountMap.get(participantId) || new Set<string>();
-    return Math.max(0, juries.length - set.size);
-  };
-
   const juryTotals = useMemo(() => {
     return eventData.juryAccounts.reduce<Record<string, number>>((acc, jury) => {
       acc[jury.id] = scoreRows.reduce((sum, row) => {
@@ -609,18 +573,9 @@ export function PreselectionAdmin() {
                     <label className="text-sm text-white/60">Index</label>
                     <div className="px-3 py-2 bg-white/5 text-white/80">{preselectionIndex + 1}</div>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm text-white/60">Jurys restants: <span className="font-bold text-white">{(() => {
-                      const tournaments = eventData.tournaments || [];
-                      const participants = tournaments[0]?.participants || [];
-                      const participant = participants[preselectionIndex];
-                      if (!participant) return '-';
-                      return juriesRemainingFor(participant.id);
-                    })()}</span></div>
-                    <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
-                      Match suivant
-                    </button>
-                  </div>
+                  <button onClick={advanceToNext} disabled={!allJuriesSubmittedForCurrent()} className={`px-3 py-2 font-bold uppercase ${allJuriesSubmittedForCurrent() ? "bg-green-600 text-black" : "bg-white/5 text-white/60"}`}>
+                    Match suivant
+                  </button>
                 </div>
             </div>
 
@@ -644,7 +599,7 @@ export function PreselectionAdmin() {
                   </thead>
                   <tbody>
                     {rankedRows.map((row, index) => (
-                      <tr key={`${row.participantId}-${row.category}`} className={`border-b border-white/10 ${juriesRemainingFor(row.participantId) === 0 ? 'bg-green-600/10' : ''}`}>
+                      <tr key={`${row.participantId}-${row.category}`} className="border-b border-white/10">
                         <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
                         <td className="px-3 py-3 text-white/60">{row.category}</td>
                         {eventData.juryAccounts.map((jury) => {
@@ -668,7 +623,15 @@ export function PreselectionAdmin() {
                         <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                       </tr>
                     ))}
-                    {/* Summary row removed as requested */}
+                    <tr className="border-t border-white/20 bg-white/5">
+                      <td className="px-3 py-3 font-bold uppercase text-white/70">Total par jury</td>
+                      <td className="px-3 py-3" />
+                      {eventData.juryAccounts.map((jury) => (
+                        <td key={`summary-${jury.id}`} className="px-3 py-3 font-bold text-amber-300">{juryTotals[jury.id] || 0}</td>
+                      ))}
+                      <td className="px-3 py-3 font-bold text-amber-300">{overallTotal}</td>
+                      <td className="px-3 py-3" />
+                    </tr>
                   </tbody>
                 </table>
               </div>

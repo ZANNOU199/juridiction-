@@ -15,8 +15,6 @@ export function PreselectionJury({
   const [currentIndex, setCurrentIndex] = useState<number>(0);
   const [scores, setScores] = useState<Record<string, number>>({});
   const [locked, setLocked] = useState(false);
-  const [showList, setShowList] = useState(false);
-  const [savedByMe, setSavedByMe] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [hasEdited, setHasEdited] = useState(false);
@@ -56,35 +54,6 @@ export function PreselectionJury({
       clearInterval(interval);
     };
   }, [eventSlug]);
-
-  // fetch saved scores for this jury so we can show which participants are already scored
-  useEffect(() => {
-    let mounted = true;
-    if (!eventSlug || !juryId) return;
-    const fetchSaved = async () => {
-      try {
-        const res = await fetch(`/api/preselection/${eventSlug}/scores-flat`);
-        if (!res.ok) return;
-        const json = await res.json();
-        const list = Array.isArray(json.scores) ? json.scores : [];
-        const ids = new Set<string>();
-        for (const item of list) {
-          const e = item?.entry ? item.entry : item;
-          if (!e) continue;
-          if (e.juryId === juryId && e.participantId) ids.add(e.participantId);
-        }
-        if (mounted) setSavedByMe(ids);
-      } catch (e) {
-        // ignore
-      }
-    };
-    fetchSaved();
-    const poll = setInterval(fetchSaved, 3000);
-    return () => {
-      mounted = false;
-      clearInterval(poll);
-    };
-  }, [eventSlug, juryId]);
 
   useEffect(() => {
     // Reset scores when criteria or index change only if user hasn't edited yet
@@ -166,11 +135,6 @@ export function PreselectionJury({
       // success
       setHasEdited(false);
       setToast({ message: "Notes envoyées", type: "success" });
-      // update local saved set so the list reflects immediately
-      setSavedByMe((prev) => new Set(Array.from(prev).concat([participant.id])));
-      // show candidate list so the jury can choose next candidate to score
-      setShowList(true);
-      setLocked(false);
       setTimeout(() => setToast(null), 2500);
     } catch (e) {
       console.error(e);
@@ -189,53 +153,10 @@ export function PreselectionJury({
         </div>
       )}
       <div className="max-w-2xl w-full bg-white/5 border border-white/10 p-6">
-        <h2 className="text-xl font-black mb-2">Préselection</h2>
+        <h2 className="text-xl font-black mb-2">Préselection — {participant.name}</h2>
         <p className="text-sm text-white/40 mb-4">Notation par critères</p>
 
-        {/* Candidate list shown after submit (or via toggle) */}
-        {showList && (
-          <div className="mb-4">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-lg font-bold">Candidats</div>
-              <button className="text-sm text-white/60" onClick={() => setShowList(false)}>Retour notation</button>
-            </div>
-            <div className="space-y-2 max-h-60 overflow-auto">
-              {participants.map((p, idx) => (
-                <div key={p.id} className="flex items-center justify-between p-2 bg-white/5 border border-white/6">
-                  <div>{p.name}</div>
-                  <div className="flex items-center gap-2">
-                    {savedByMe.has(p.id) ? (
-                      <div className="px-2 py-1 bg-green-600 text-black font-bold">Noté</div>
-                    ) : (
-                      <div className="px-2 py-1 bg-white/5 text-white/70">En attente</div>
-                    )}
-                    <button
-                      onClick={() => {
-                        setShowList(false);
-                        setCurrentIndex(idx);
-                        setHasEdited(false);
-                        setLocked(false);
-                      }}
-                      className="px-2 py-1 bg-blue-600 text-black font-bold"
-                    >
-                      Noter
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {!showList && (
-          <>
-            <h3 className="text-lg font-black mb-2">{participant.name}</h3>
-            <p className="text-sm text-white/40 mb-4">Notation par critères</p>
-          </>
-        )}
-
-        {!showList && (
-          <div className="space-y-3">
+        <div className="space-y-3">
           {criteria.length === 0 && <div className="text-white/40">Aucun critère défini</div>}
           {criteria.map((c, i) => (
             <div key={i} className="flex items-center gap-4">
@@ -259,24 +180,21 @@ export function PreselectionJury({
               </div>
             </div>
           ))}
-          </div>
-        )}
+        </div>
 
-        {!showList && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleSubmit}
-                disabled={locked}
-                className="px-4 py-2 bg-white text-black font-black uppercase"
-              >
-                Envoyer
-              </button>
-              {locked && <div className="text-sm text-white/40">Envoyé</div>}
-            </div>
+        <div className="mt-6 flex items-center justify-between">
+          <div className="text-sm text-white/40">Index: {currentIndex + 1}</div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSubmit}
+              disabled={locked}
+              className="px-4 py-2 bg-white text-black font-black uppercase"
+            >
+              Envoyer
+            </button>
+            {locked && <div className="text-sm text-white/40">Envoyé</div>}
           </div>
-        )}
+        </div>
       </div>
     </div>
   );
