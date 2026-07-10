@@ -438,6 +438,28 @@ export function PreselectionAdmin() {
     }
   };
 
+  const launchMatchForParticipant = async (participantId: string) => {
+    if (!eventSlug) return;
+    try {
+      const tournaments = eventData.tournaments || [];
+      const participants = (tournaments[0]?.participants) || [];
+      const idx = participants.findIndex((p) => p.id === participantId);
+      if (idx < 0) return;
+
+      const res = await fetch(`/api/preselection/${eventSlug}/current`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: idx }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setPreselectionIndex(Number(json.currentIndex || idx));
+      }
+    } catch (e) {
+      console.error("Failed to launch match for participant", e);
+    }
+  };
+
   const resetPreselection = async () => {
     if (!eventSlug) return;
     const ok = window.confirm("Réinitialiser les présélections ? Cela remettra à zéro les notes et l’avancement.");
@@ -715,28 +737,54 @@ export function PreselectionAdmin() {
                   <tbody>
                     {rankedRows.map((row, index) => (
                       <tr key={`${row.participantId}-${row.category}`} className="border-b border-white/10">
-                        <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
-                        <td className="px-3 py-3 text-white/60">{row.category}</td>
-                        {eventData.juryAccounts.map((jury) => {
-                          const saved = hasSavedFor(row.participantId, jury.id);
-                          const savedVal = getSavedValue(row.participantId, jury.id);
-                          return (
-                            <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
-                              <input
-                                type="number"
-                                min="0"
-                                max={maxPossibleScore}
-                                value={savedVal != null ? String(savedVal) : row.juryScores[jury.id] || ""}
-                                onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)}
-                                className={`w-24 border border-white/10 px-2 py-1 focus:outline-none focus:border-white/30 ${saved ? "bg-green-600/30 text-black" : "bg-white/5 text-white"}`}
-                                disabled={saved}
-                              />
-                            </td>
-                          );
-                        })}
-                        <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
-                        <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
-                      </tr>
+                          <td className="px-3 py-3 font-semibold text-white">{row.participantName}</td>
+                          <td className="px-3 py-3 text-white/60">{row.category}</td>
+                          {eventData.juryAccounts.map((jury) => {
+                            const saved = hasSavedFor(row.participantId, jury.id);
+                            const savedVal = getSavedValue(row.participantId, jury.id);
+                            return (
+                              <td key={`${row.participantId}-${jury.id}`} className="px-3 py-3">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max={maxPossibleScore}
+                                  value={savedVal != null ? String(savedVal) : row.juryScores[jury.id] || ""}
+                                  onChange={(e) => updateScore(row.participantId, jury.id, e.target.value)}
+                                  className={`w-24 border border-white/10 px-2 py-1 focus:outline-none focus:border-white/30 ${saved ? "bg-green-600/30 text-black" : "bg-white/5 text-white"}`}
+                                  disabled={saved}
+                                />
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
+                          <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
+                          <td className="px-3 py-3">
+                            {/* Match column: show Lancer button when participant doesn't have full saved scores */}
+                            {(() => {
+                              const juries = eventData.juryAccounts || [];
+                              const submitted = (() => {
+                                let count = 0;
+                                for (const item of savedScoresRaw) {
+                                  const e = item.entry ? item.entry : item;
+                                  if (!e) continue;
+                                  if (e.participantId === row.participantId && e.juryId) count++;
+                                }
+                                return count >= juries.length && juries.length > 0;
+                              })();
+
+                              return (
+                                <button
+                                  onClick={() => launchMatchForParticipant(row.participantId)}
+                                  disabled={submitted}
+                                  className={`px-3 py-1 font-bold uppercase rounded ${submitted ? "bg-white/5 text-white/40 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-500"}`}
+                                  title={submitted ? "Tous les jurys ont noté" : "Lancer ce participant"}
+                                >
+                                  Lancer
+                                </button>
+                              );
+                            })()}
+                          </td>
+                        </tr>
                     ))}
                   </tbody>
                 </table>
