@@ -460,6 +460,28 @@ export function PreselectionAdmin() {
     }
   };
 
+  const cancelCurrentMatch = async (participantId?: string) => {
+    if (!eventSlug) return;
+    try {
+      // send -1 to indicate no current participant (best-effort)
+      const res = await fetch(`/api/preselection/${eventSlug}/current`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ index: -1 }),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setPreselectionIndex(Number(json.currentIndex ?? -1));
+      } else {
+        // fallback: clear locally
+        setPreselectionIndex(-1);
+      }
+    } catch (e) {
+      console.error("Failed to cancel current match", e);
+      setPreselectionIndex(-1);
+    }
+  };
+
   const resetPreselection = async () => {
     if (!eventSlug) return;
     const ok = window.confirm("Réinitialiser les présélections ? Cela remettra à zéro les notes et l’avancement.");
@@ -759,7 +781,7 @@ export function PreselectionAdmin() {
                           <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
                           <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                           <td className="px-3 py-3">
-                            {/* Match column: show Lancer button when participant doesn't have full saved scores */}
+                            {/* Match column: show Lancer / Annuler depending on state */}
                             {(() => {
                               const juries = eventData.juryAccounts || [];
                               const submitted = (() => {
@@ -771,6 +793,27 @@ export function PreselectionAdmin() {
                                 }
                                 return count >= juries.length && juries.length > 0;
                               })();
+
+                              const tournaments = eventData.tournaments || [];
+                              const participants = (tournaments[0]?.participants) || [];
+                              const participantIndex = participants.findIndex((p) => p.id === row.participantId);
+                              const isCurrent = participantIndex === preselectionIndex;
+
+                              if (isCurrent) {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <button disabled className="px-3 py-1 font-bold uppercase rounded bg-white/5 text-white/40 cursor-not-allowed">
+                                      Lancer
+                                    </button>
+                                    <button
+                                      onClick={() => cancelCurrentMatch(row.participantId)}
+                                      className="px-3 py-1 font-bold uppercase rounded bg-red-600 text-white hover:bg-red-500"
+                                    >
+                                      Annuler
+                                    </button>
+                                  </div>
+                                );
+                              }
 
                               return (
                                 <button
