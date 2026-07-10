@@ -333,7 +333,7 @@ export function AdminHub() {
           <>
             {showThemeEditor && (
             <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black/60" onClick={() => setShowThemeEditor(false)} />
+              <div className="absolute inset-0 bg-black" onClick={() => setShowThemeEditor(false)} />
               <div className="relative bg-white/5 border border-white/10 p-6 rounded max-w-lg w-full text-white">
                 <h2 className="text-xl font-black mb-4">Thème — Couleurs</h2>
                 <p className="text-sm text-white/60 mb-4">Modifiez les couleurs du thème. Sauvegarde en local (n'affecte que ce navigateur).</p>
