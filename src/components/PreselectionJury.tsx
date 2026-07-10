@@ -238,7 +238,7 @@ export function PreselectionJury({
         </div>
 
         {allGroupsRated ? (
-          <div className="rounded border border-amber-400/30 bg-amber-400/10 px-4 py-6 text-center text-sm text-amber-200">
+          <div className="rounded border border-red-400/30 bg-red-400/10 px-4 py-6 text-center text-sm text-red-200">
             Tous les groupes ont déjà été notés.
           </div>
         ) : (

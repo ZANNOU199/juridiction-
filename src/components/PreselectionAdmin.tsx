@@ -714,7 +714,7 @@ export function PreselectionAdmin() {
 
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-white/60">Mode préselection</label>
-                    <button onClick={() => togglePreselection(!preselectionActive)} className={`px-3 py-2 font-bold uppercase rounded ${preselectionActive ? "bg-amber-400 text-black" : "bg-white/5 text-white/60"}`}>
+                    <button onClick={() => togglePreselection(!preselectionActive)} className={`px-3 py-2 font-bold uppercase rounded ${preselectionActive ? "bg-red-600 text-black" : "bg-white/5 text-white/60"}`}>
                       {preselectionActive ? "Actif" : "Inactif"}
                     </button>
                   </div>
@@ -728,7 +728,7 @@ export function PreselectionAdmin() {
                   <button
                     onClick={() => navigate(`/publicclassement/${eventSlug}`)}
                     disabled={!allParticipantsRated}
-                    className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-amber-500/30 hover:bg-amber-500/40 border border-amber-400/30 text-amber-200 hidden" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
+                    className={`px-3 py-2 font-bold uppercase ${allParticipantsRated ? "bg-red-500/30 hover:bg-red-500/40 border border-red-400/30 text-red-200 hidden" : "bg-white/5 text-white/40 cursor-not-allowed"}`}
                   >
                     Afficher classement
                   </button>
@@ -778,7 +778,7 @@ export function PreselectionAdmin() {
                               </td>
                             );
                           })}
-                          <td className="px-3 py-3 font-bold text-amber-300">{row.totalScore}</td>
+                          <td className="px-3 py-3 font-bold text-red-300">{row.totalScore}</td>
                           <td className="px-3 py-3 font-bold text-white">#{index + 1}</td>
                           <td className="px-3 py-3">
                             {/* Match column: show Lancer / Annuler depending on state */}

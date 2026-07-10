@@ -310,7 +310,7 @@ export function AdminHub() {
                     onClick={() =>
                       navigate(`/admin/${event.eventSlug}/preselection`)
                     }
-                    className="w-full bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/30 hover:border-amber-500/50 px-4 py-2 text-amber-200 text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all"
+                    className="w-full bg-red-600/30 hover:bg-red-600/50 border border-red-500/30 hover:border-red-500/50 px-4 py-2 text-red-200 text-sm font-bold uppercase flex items-center justify-center gap-2 transition-all"
                   >
                     <Shield className="w-4 h-4" />
                     Preselection

@@ -2906,7 +2906,7 @@ function AdminView({
                 onClick={() => onToggleSharedScreen(!showSharedScreen)}
                 className={`text-[10px] font-black tracking-widest uppercase px-3 py-2 rounded transition-all ${
                   showSharedScreen
-                    ? "bg-orange-500 text-black"
+                    ? "bg-red-500 text-black"
                     : "bg-white/10 text-white/50 hover:bg-white/20"
                 }`}
               >

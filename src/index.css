@@ -9,9 +9,19 @@
   
   --color-brand-red: #E11D48;
   --color-brand-blue: #2563EB;
-  --color-primary: #d35f17;
-  --color-primary-light: #f47d31;
+  --color-primary: #ed0707;
+  --color-primary-light: #ed0707;
   --color-accent-red: #e11d48;
+  /* orange replacements */
+  --color-orange-400: #ed0707;
+  --color-orange-500: #ed0707;
+  --color-orange-600: #ed0707;
+  --color-orange-700: #ed0707;
+  --color-amber-400: #ed0707;
+  --color-amber-500: #ed0707;
+  --color-amber-200: #ed0707;
+  --color-amber-300: #ed0707;
+  --color-amber-600: #ed0707;
   --color-background-dark: #0a0807;
   --color-surface-dark: #050505;
   --color-surface-container: #1E293B;
@@ -63,15 +73,15 @@
   }
 
   .bg-primary\/5 {
-    background-color: rgba(211, 95, 23, 0.05) !important;
+    background-color: rgba(237, 7, 7, 0.05) !important;
   }
 
   .bg-primary\/60 {
-    background-color: rgba(211, 95, 23, 0.6) !important;
+    background-color: rgba(237, 7, 7, 0.6) !important;
   }
 
   .selection\:bg-primary\/30::selection {
-    background-color: rgba(211, 95, 23, 0.3) !important;
+    background-color: rgba(237, 7, 7, 0.3) !important;
   }
 
   .bg-\[\#0a0807\] {
@@ -111,7 +121,7 @@
   }
 
   .bracket-card-active {
-    @apply border-primary/50 shadow-[0_0_20px_rgba(211,95,23,0.2)];
+    @apply border-primary/50 shadow-[0_0_20px_rgba(237,7,7,0.2)];
   }
 
   .text-condensed {
@@ -119,12 +129,12 @@
   }
 
   .champion-box {
-    @apply border-2 border-primary bg-[#0a0807] shadow-[0_0_40px_rgba(211,95,23,0.3)] relative overflow-hidden;
+    @apply border-2 border-primary bg-[#0a0807] shadow-[0_0_40px_rgba(237,7,7,0.3)] relative overflow-hidden;
   }
 }
 
 .diagonal-lines {
-  background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(211, 95, 23, 0.03) 40px, rgba(211, 95, 23, 0.03) 80px);
+  background: repeating-linear-gradient(45deg, transparent, transparent 40px, rgba(237, 7, 7, 0.03) 40px, rgba(237, 7, 7, 0.03) 80px);
 }
 
 .bracket-connector-line {
