@@ -26,12 +26,78 @@
 }
 
 @layer base {
+  html,
+  body,
+  #root {
+    background-color: var(--color-background-dark, #000000);
+    color: white;
+    min-height: 100%;
+  }
+
   body {
-    @apply bg-black text-white antialiased;
+    @apply antialiased;
+    background-color: var(--color-background-dark, #000000);
+    color: white;
   }
 }
 
 @layer components {
+  .bg-surface-dark {
+    background-color: var(--color-surface-dark) !important;
+  }
+
+  .bg-background-dark {
+    background-color: var(--color-background-dark) !important;
+  }
+
+  .bg-primary {
+    background-color: var(--color-primary) !important;
+  }
+
+  .text-primary {
+    color: var(--color-primary) !important;
+  }
+
+  .border-primary {
+    border-color: var(--color-primary) !important;
+  }
+
+  .bg-primary\/5 {
+    background-color: rgba(211, 95, 23, 0.05) !important;
+  }
+
+  .bg-primary\/60 {
+    background-color: rgba(211, 95, 23, 0.6) !important;
+  }
+
+  .selection\:bg-primary\/30::selection {
+    background-color: rgba(211, 95, 23, 0.3) !important;
+  }
+
+  .bg-\[\#0a0807\] {
+    background-color: var(--color-background-dark) !important;
+  }
+
+  .bg-\[\#050505\] {
+    background-color: var(--color-surface-dark) !important;
+  }
+
+  .bg-\[\#050502\] {
+    background-color: var(--color-surface-dark) !important;
+  }
+
+  .bg-\[\#101015\] {
+    background-color: var(--color-surface-dark) !important;
+  }
+
+  .bg-\[\#0a0a18\]\/60 {
+    background-color: rgba(10, 8, 7, 0.6) !important;
+  }
+
+  .bg-\[\#1a1512\]\/80 {
+    background-color: rgba(26, 21, 18, 0.8) !important;
+  }
+
   .broadcast-mesh {
     background-image: radial-gradient(circle at 50% 50%, rgba(30, 41, 59, 0.4) 0%, rgba(5, 5, 5, 1) 100%);
   }
