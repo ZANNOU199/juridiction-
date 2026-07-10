@@ -166,44 +166,6 @@ function DancerPhoto({
   );
 }
 
-function cachePhotoUrlToLocalStorage(photoUrl?: string) {
-  if (!photoUrl || photoUrl.startsWith("data:") || photoUrl.startsWith("blob:")) {
-    return;
-  }
-
-  const storageKey = `JUGE_IMAGE_CACHE:${encodeURIComponent(photoUrl)}`;
-  try {
-    if (window.localStorage.getItem(storageKey)) {
-      return;
-    }
-  } catch {
-    return;
-  }
-
-  fetch(photoUrl, { mode: "cors" })
-    .then((response) => {
-      if (!response.ok) return null;
-      return response.blob();
-    })
-    .then((blob) => {
-      if (!blob) return;
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result;
-        if (typeof result !== "string") return;
-        try {
-          window.localStorage.setItem(storageKey, result);
-        } catch {
-          // Ignore storage write failures.
-        }
-      };
-      reader.readAsDataURL(blob);
-    })
-    .catch(() => {
-      // Ignore failures.
-    });
-}
-
 // --- Country Flags Component ---
 function CountryFlags({
   countryFlag,
@@ -4519,12 +4481,6 @@ function PublicView({ state }: { state: TournamentState }) {
     (v) => v === "tie",
   ).length;
   const totalCurrentVotes = currentVotesRed + currentVotesBlue + currentVotesGreen + currentVotesTie;
-
-  useEffect(() => {
-    cachePhotoUrlToLocalStorage(redP?.photo);
-    cachePhotoUrlToLocalStorage(blueP?.photo);
-    cachePhotoUrlToLocalStorage(greenP?.photo);
-  }, [redP?.photo, blueP?.photo, greenP?.photo]);
 
   const gracePeriodPassed = activeMatch.allVotesCastAt
     ? now - activeMatch.allVotesCastAt > 5000
