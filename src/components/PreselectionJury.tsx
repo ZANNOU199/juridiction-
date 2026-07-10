@@ -281,7 +281,7 @@ export function PreselectionJury({
                 </button>
                 {showConfirmModal && (
                   <div className="fixed inset-0 z-40 flex items-center justify-center">
-                    <div className="absolute inset-0 bg-black/60" onClick={cancelSubmit} />
+                    <div className="absolute inset-0 bg-black" onClick={cancelSubmit} />
                     <div className="relative bg-white/5 border border-white/10 p-6 rounded max-w-md w-full text-white">
                       <h3 className="text-lg font-bold mb-2">Confirmer l'envoi</h3>
                       <p className="text-sm text-white/80 mb-4">Êtes-vous sûr de vouloir enregistrer ? Une fois enregistré, vous ne pourrez plus modifier.</p>
