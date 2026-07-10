@@ -815,12 +815,16 @@ export function PreselectionAdmin() {
                                 );
                               }
 
+                              // If there is a current launched participant and juries haven't all submitted for them,
+                              // block launching other participants until submissions are complete.
+                              const isBlocking = preselectionIndex >= 0 && !allJuriesSubmittedForCurrent() && participantIndex !== preselectionIndex;
+
                               return (
                                 <button
                                   onClick={() => launchMatchForParticipant(row.participantId)}
-                                  disabled={submitted}
-                                  className={`px-3 py-1 font-bold uppercase rounded ${submitted ? "bg-white/5 text-white/40 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-500"}`}
-                                  title={submitted ? "Tous les jurys ont noté" : "Lancer ce participant"}
+                                  disabled={submitted || isBlocking}
+                                  className={`px-3 py-1 font-bold uppercase rounded ${submitted || isBlocking ? "bg-white/5 text-white/40 cursor-not-allowed" : "bg-indigo-600 text-white hover:bg-indigo-500"}`}
+                                  title={submitted ? "Tous les jurys ont noté" : isBlocking ? "Un participant est en cours de notation" : "Lancer ce participant"}
                                 >
                                   Lancer
                                 </button>
