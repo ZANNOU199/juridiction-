@@ -42,7 +42,20 @@ export function AdminHub() {
     try {
       const root = document.documentElement;
       Object.entries(t).forEach(([key, value]) => {
-        root.style.setProperty(key, value || "");
+        // ensure value is a non-empty string
+        const v = (value || "").trim();
+        if (v) root.style.setProperty(key, v);
+        else root.style.removeProperty(key);
+        // debug log what we set
+        // eslint-disable-next-line no-console
+        console.debug("applyThemeToDocument:set", key, v || "(removed)");
+      });
+      // quick verification: log computed values for keys
+      // eslint-disable-next-line no-console
+      Object.keys(t).forEach((k) => {
+        // small delay not necessary since setProperty is synchronous
+        // eslint-disable-next-line no-console
+        console.debug("applyThemeToDocument:computed", k, getComputedStyle(document.documentElement).getPropertyValue(k).trim());
       });
     } catch (e) {
       // ignore
@@ -360,6 +373,7 @@ export function AdminHub() {
                 </div>
                 <div className="flex justify-end gap-2">
                   <button onClick={() => { resetTheme(); setShowThemeEditor(false); }} className="px-3 py-2 bg-white/5 text-white rounded">Reset</button>
+                  <button onClick={() => { applyThemeToDocument(theme); }} className="px-3 py-2 bg-yellow-500 text-black font-bold rounded">Appliquer</button>
                   <button onClick={() => saveTheme(theme)} className="px-3 py-2 bg-green-600 text-black font-bold rounded">Save</button>
                 </div>
               </div>
