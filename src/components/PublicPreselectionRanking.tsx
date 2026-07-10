@@ -103,7 +103,7 @@ export function PublicPreselectionRanking() {
     return rows.sort((a, b) => b.totalScore - a.totalScore);
   }, [scores, visibleTournaments]);
 
-  const title = categoryFromRoute ? `Classement ${categoryFromRoute}` : "Classement";
+  const title = "Tableau des scores – Présélection";
 
   return (
     <div
