@@ -33,92 +33,6 @@ export function AdminHub() {
   const [logoUploadProgress, setLogoUploadProgress] = useState(0);
   const [logoUploading, setLogoUploading] = useState(false);
   const navigate = useNavigate();
-  const [showThemeEditor, setShowThemeEditor] = useState(false);
-  const [theme, setTheme] = useState<Record<string, string>>({});
-
-  const THEME_STORAGE_KEY = "site-theme";
-
-  const applyThemeToDocument = (t: Record<string, string>) => {
-    try {
-      const root = document.documentElement;
-      Object.entries(t).forEach(([key, value]) => {
-        // ensure value is a non-empty string
-        const v = (value || "").trim();
-        if (v) root.style.setProperty(key, v);
-        else root.style.removeProperty(key);
-        // debug log what we set
-        // eslint-disable-next-line no-console
-        console.debug("applyThemeToDocument:set", key, v || "(removed)");
-      });
-      // quick verification: log computed values for keys
-      // eslint-disable-next-line no-console
-      Object.keys(t).forEach((k) => {
-        // small delay not necessary since setProperty is synchronous
-        // eslint-disable-next-line no-console
-        console.debug("applyThemeToDocument:computed", k, getComputedStyle(document.documentElement).getPropertyValue(k).trim());
-      });
-    } catch (e) {
-      // ignore
-    }
-  };
-
-  useEffect(() => {
-    // load theme from localStorage or fall back to css variables
-    try {
-      const stored = localStorage.getItem(THEME_STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored || "{}");
-        setTheme(parsed);
-        applyThemeToDocument(parsed);
-      } else {
-        const computed = getComputedStyle(document.documentElement);
-        const keys = [
-          "--color-brand-red",
-          "--color-brand-blue",
-          "--color-primary",
-          "--color-primary-light",
-          "--color-accent-red",
-          "--color-background-dark",
-          "--color-surface-dark",
-        ];
-        const initial: Record<string, string> = {};
-        keys.forEach((k) => {
-          initial[k] = computed.getPropertyValue(k) || "";
-        });
-        setTheme(initial);
-      }
-    } catch (e) {
-      // ignore
-    }
-  }, []);
-
-  const saveTheme = (newTheme: Record<string, string>) => {
-    try {
-      const normalized = Object.fromEntries(Object.entries(newTheme).map(([k, v]) => [k, v.trim()]));
-      setTheme(normalized);
-      applyThemeToDocument(normalized);
-      localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(normalized));
-      setShowThemeEditor(false);
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const resetTheme = () => {
-    try {
-      localStorage.removeItem(THEME_STORAGE_KEY);
-      const computed = getComputedStyle(document.documentElement);
-      const keys = Object.keys(theme);
-      const restored: Record<string, string> = {};
-      keys.forEach((k) => {
-        restored[k] = computed.getPropertyValue(k) || "";
-      });
-      setTheme(restored);
-      applyThemeToDocument(restored);
-    } catch (e) {
-      // ignore
-    }
-  };
 
   useEffect(() => {
     const fetchEvents = async () => {
@@ -324,14 +238,6 @@ export function AdminHub() {
           <h1 className="text-4xl font-black italic text-white uppercase">
             Event Management
           </h1>
-          <div>
-            <button
-              onClick={() => setShowThemeEditor(true)}
-              className="px-3 py-2 bg-white/10 hover:bg-white/20 border border-white/10 text-white text-sm font-bold uppercase"
-            >
-              Thème
-            </button>
-          </div>
           <div className="w-24" /> {/* Balance grid */}
         </div>
       </div>
@@ -343,42 +249,6 @@ export function AdminHub() {
             <div className="animate-spin w-8 h-8 border-2 border-white/10 border-t-white rounded-full mx-auto" />
           </div>
         ) : (
-          <>
-            {showThemeEditor && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center">
-              <div className="absolute inset-0 bg-black" onClick={() => setShowThemeEditor(false)} />
-              <div className="relative bg-white/5 border border-white/10 p-6 rounded max-w-lg w-full text-white">
-                <h2 className="text-xl font-black mb-4">Thème — Couleurs</h2>
-                <p className="text-sm text-white/60 mb-4">Modifiez les couleurs du thème. Sauvegarde en local (n'affecte que ce navigateur).</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                  {Object.keys(theme).length === 0 ? null : Object.keys(theme).map((key) => (
-                    <label key={key} className="flex flex-col text-sm">
-                      <span className="text-white/70 mb-1">{key}</span>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="color"
-                          value={(theme[key] || "").trim() || "#000000"}
-                          onChange={(e) => setTheme((t) => ({ ...t, [key]: e.target.value }))}
-                          className="w-12 h-8 p-0 border-0"
-                        />
-                        <input
-                          type="text"
-                          value={theme[key] || ""}
-                          onChange={(e) => setTheme((t) => ({ ...t, [key]: e.target.value }))}
-                          className="flex-1 bg-white/5 border border-white/10 px-2 py-1 text-white"
-                        />
-                      </div>
-                    </label>
-                  ))}
-                </div>
-                <div className="flex justify-end gap-2">
-                  <button onClick={() => { resetTheme(); setShowThemeEditor(false); }} className="px-3 py-2 bg-white/5 text-white rounded">Reset</button>
-                  <button onClick={() => { applyThemeToDocument(theme); }} className="px-3 py-2 bg-yellow-500 text-black font-bold rounded">Appliquer</button>
-                  <button onClick={() => saveTheme(theme)} className="px-3 py-2 bg-green-600 text-black font-bold rounded">Save</button>
-                </div>
-              </div>
-            </div>
-          )}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {events.map((event) => (
               <div
@@ -555,7 +425,6 @@ export function AdminHub() {
               </span>
             </button>
           </div>
-          </>
         )}
 
         {/* Create Event Form */}
