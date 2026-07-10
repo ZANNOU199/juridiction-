@@ -103,7 +103,7 @@ export function PublicPreselectionRanking() {
     return rows.sort((a, b) => b.totalScore - a.totalScore);
   }, [scores, visibleTournaments]);
 
-  const title = "Tableau des scores – Présélection";
+  const title = "Résultat – Présélection";
 
   return (
     <div
