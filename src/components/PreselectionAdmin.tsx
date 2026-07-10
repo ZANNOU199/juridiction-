@@ -423,15 +423,63 @@ export function PreselectionAdmin() {
   const advanceToNext = async () => {
     if (!eventSlug) return;
     try {
-      const nextIndex = preselectionIndex + 1;
-      const res = await fetch(`/api/preselection/${eventSlug}/current`, {
+      const tournaments = eventData.tournaments || [];
+      const juries = eventData.juryAccounts || [];
+      const participants = (tournaments[0]?.participants) || [];
+
+      if (participants.length === 0) return;
+
+      // Build map of participantId => set of juries that submitted
+      const submittedMap = new Map<string, Set<string>>();
+      for (const item of savedScoresRaw) {
+        const e = item.entry ? item.entry : item;
+        if (!e) continue;
+        const pid = e.participantId;
+        const jid = e.juryId;
+        if (!pid || !jid) continue;
+        const s = submittedMap.get(pid) || new Set<string>();
+        s.add(jid);
+        submittedMap.set(pid, s);
+      }
+
+      const isFullySubmitted = (pid: string) => (submittedMap.get(pid)?.size || 0) >= juries.length && juries.length > 0;
+
+      // find next participant (starting after current) that is NOT fully submitted
+      const start = preselectionIndex >= 0 ? preselectionIndex + 1 : 0;
+      let found = -1;
+      for (let i = 0; i < participants.length; i++) {
+        const idx = (start + i) % participants.length;
+        const p = participants[idx];
+        if (!isFullySubmitted(p.id)) {
+          found = idx;
+          break;
+        }
+      }
+
+      if (found === -1) {
+        // nothing in waiting list — fallback to incrementing index
+        const nextIndex = preselectionIndex + 1;
+        const res = await fetch(`/api/preselection/${eventSlug}/current`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ index: nextIndex }),
+        });
+        if (res.ok) {
+          const json = await res.json();
+          setPreselectionIndex(Number(json.currentIndex || nextIndex));
+        }
+        return;
+      }
+
+      // set to the found waiting participant
+      const res2 = await fetch(`/api/preselection/${eventSlug}/current`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ index: nextIndex }),
+        body: JSON.stringify({ index: found }),
       });
-      if (res.ok) {
-        const json = await res.json();
-        setPreselectionIndex(Number(json.currentIndex || nextIndex));
+      if (res2.ok) {
+        const json = await res2.json();
+        setPreselectionIndex(Number(json.currentIndex || found));
       }
     } catch (e) {
       console.error(e);
