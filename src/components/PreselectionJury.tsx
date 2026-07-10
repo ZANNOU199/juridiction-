@@ -21,6 +21,8 @@ export function PreselectionJury({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [toast, setToast] = useState<{ message: string; type: "error" | "success" | null } | null>(null);
   const [allGroupsRated, setAllGroupsRated] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const pendingPayloadRef = React.useRef<any>(null);
 
   const participant = participants[currentIndex] || { id: `p-${currentIndex + 1}`, name: "Participant inconnu" };
 
@@ -142,11 +144,7 @@ export function PreselectionJury({
       return;
     }
 
-    // Confirm before final submit
-    const ok = window.confirm("Êtes-vous sûr de vouloir enregistrer ? Une fois enregistré, vous ne pourrez plus modifier.");
-    if (!ok) return;
-
-    setLocked(true);
+    // Prepare payload and show confirmation modal instead of window.confirm
     const payload = {
       entry: {
         category: category || "",
@@ -158,6 +156,14 @@ export function PreselectionJury({
       },
     };
 
+    pendingPayloadRef.current = payload;
+    setShowConfirmModal(true);
+  };
+
+  const performSubmit = async (payload: any) => {
+    if (!eventSlug) return;
+    setShowConfirmModal(false);
+    setLocked(true);
     try {
       const res = await fetch(`/api/preselection/${eventSlug}/scores`, {
         method: "POST",
@@ -190,6 +196,20 @@ export function PreselectionJury({
       setLocked(false);
       setTimeout(() => setToast(null), 3500);
     }
+  };
+
+  const confirmSubmit = () => {
+    const payload = pendingPayloadRef.current;
+    if (!payload) {
+      setShowConfirmModal(false);
+      return;
+    }
+    performSubmit(payload);
+  };
+
+  const cancelSubmit = () => {
+    pendingPayloadRef.current = null;
+    setShowConfirmModal(false);
   };
 
   return (
@@ -259,6 +279,19 @@ export function PreselectionJury({
                 >
                   Envoyer
                 </button>
+                {showConfirmModal && (
+                  <div className="fixed inset-0 z-40 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-black/60" onClick={cancelSubmit} />
+                    <div className="relative bg-white/5 border border-white/10 p-6 rounded max-w-md w-full text-white">
+                      <h3 className="text-lg font-bold mb-2">Confirmer l'envoi</h3>
+                      <p className="text-sm text-white/80 mb-4">Êtes-vous sûr de vouloir enregistrer ? Une fois enregistré, vous ne pourrez plus modifier.</p>
+                      <div className="flex justify-end gap-2">
+                        <button onClick={cancelSubmit} className="px-3 py-2 bg-white/5 text-white/80 rounded">Annuler</button>
+                        <button onClick={confirmSubmit} className="px-3 py-2 bg-green-600 text-black font-bold rounded">Confirmer</button>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 {locked && <div className="text-sm text-white/40">Envoyé</div>}
               </div>
             </div>
