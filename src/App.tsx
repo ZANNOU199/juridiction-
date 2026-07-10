@@ -4923,9 +4923,9 @@ function PublicView({ state }: { state: TournamentState }) {
             <motion.div
               initial={{ height: 0, opacity: 0, scale: 0.95 }}
               animate={{ height: "auto", opacity: 1, scale: 1 }}
-              className="w-full max-w-6xl mt-0.5 overflow-hidden"
+              className="w-full max-w-6xl mt-0.5 overflow-visible mb-16 md:mb-20 relative z-40"
             >
-              <div className="py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase text-white bg-white/10 border border-white/10 rounded-sm shadow-[0_0_60px_rgba(0,0,0,1)]">
+              <div className="py-2 md:py-3 flex items-center justify-center gap-1.5 md:gap-2 font-black italic text-base md:text-2xl tracking-tight uppercase text-white bg-white/10 border border-white/10 rounded-sm shadow-[0_0_60px_rgba(0,0,0,1)] relative overflow-hidden">
                 <div className="z-10 flex items-center gap-1 md:gap-1.5 drop-shadow-[0_2px_10px_rgba(0,0,0,0.5)]">
                   <Trophy size={24} className="text-white fill-white/20" />
                   <span className="text-sm md:text-lg truncate">TIE BREAK - AUCUN GAGNANT</span>
