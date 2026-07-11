@@ -863,7 +863,6 @@ function resolveMatchWinner(
   redCount: number,
   blueCount: number,
   greenCount: number,
-  tieCount: number,
   redTeamId: string,
   blueTeamId: string,
   greenTeamId?: string | null,
@@ -876,7 +875,7 @@ function resolveMatchWinner(
 
   const maxCount = Math.max(...counts.map((c) => c.count));
   const winners = counts.filter((c) => c.count === maxCount);
-  const hasClearWinner = winners.length === 1 && maxCount > 0 && maxCount >= tieCount;
+  const hasClearWinner = winners.length === 1 && maxCount > 0;
 
   return {
     winnerId: hasClearWinner ? winners[0].id : null,
@@ -927,7 +926,7 @@ export async function confirmRound(tournamentId: string) {
     const maxTeamCount = Math.max(...teamCounts.map((c) => c.count));
     const leaders = teamCounts.filter((c) => c.count === maxTeamCount);
 
-    if (leaders.length === 1 && maxTeamCount > 0 && maxTeamCount >= tieCount) {
+    if (leaders.length === 1 && maxTeamCount > 0) {
       if (leaders[0].side === "red") redVotesTotal += 1;
       else if (leaders[0].side === "blue") blueVotesTotal += 1;
       else greenVotesTotal += 1;
@@ -997,7 +996,6 @@ export async function revealMatch(tournamentId: string, matchId: string) {
     redCount,
     blueCount,
     greenCount,
-    tieCount,
     match.redTeamId,
     match.blueTeamId,
     match.greenTeamId,
