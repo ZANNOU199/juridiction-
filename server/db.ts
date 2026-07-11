@@ -859,6 +859,31 @@ export async function warnMissingVotes(tournamentId: string) {
   return missingJuryIds;
 }
 
+function resolveMatchWinner(
+  redCount: number,
+  blueCount: number,
+  greenCount: number,
+  tieCount: number,
+  redTeamId: string,
+  blueTeamId: string,
+  greenTeamId?: string | null,
+) {
+  const counts = [
+    { count: redCount, id: redTeamId },
+    { count: blueCount, id: blueTeamId },
+    ...(greenTeamId ? [{ count: greenCount, id: greenTeamId }] : []),
+  ];
+
+  const maxCount = Math.max(...counts.map((c) => c.count));
+  const winners = counts.filter((c) => c.count === maxCount);
+  const hasClearWinner = winners.length === 1 && maxCount > 0 && maxCount >= tieCount;
+
+  return {
+    winnerId: hasClearWinner ? winners[0].id : null,
+    isTieBrek: !hasClearWinner,
+  };
+}
+
 export async function confirmRound(tournamentId: string) {
   const tournament = await prisma.tournament.findUnique({
     where: { id: tournamentId },
@@ -902,7 +927,7 @@ export async function confirmRound(tournamentId: string) {
     const maxTeamCount = Math.max(...teamCounts.map((c) => c.count));
     const leaders = teamCounts.filter((c) => c.count === maxTeamCount);
 
-    if (leaders.length === 1 && maxTeamCount > tieCount) {
+    if (leaders.length === 1 && maxTeamCount > 0 && maxTeamCount >= tieCount) {
       if (leaders[0].side === "red") redVotesTotal += 1;
       else if (leaders[0].side === "blue") blueVotesTotal += 1;
       else greenVotesTotal += 1;
@@ -968,28 +993,15 @@ export async function revealMatch(tournamentId: string, matchId: string) {
   const greenCount = votes.filter((v) => v.vote === "green").length;
   const tieCount = votes.filter((v) => v.vote === "tie").length;
 
-  // Determine winner and if it's a tie
-  let winnerId: string | null = null;
-  let isTieBrek = false;
-
-  // Check if there's a clear winner
-  const counts = [
-    { count: redCount, id: match.redTeamId },
-    { count: blueCount, id: match.blueTeamId },
-    ...(match.greenTeamId ? [{ count: greenCount, id: match.greenTeamId }] : []),
-  ];
-
-  const maxCount = Math.max(...counts.map((c) => c.count));
-  const winnersCount = counts.filter((c) => c.count === maxCount).length;
-
-  if (winnersCount === 1 && maxCount > tieCount) {
-    // Clear winner
-    winnerId = counts.find((c) => c.count === maxCount)!.id;
-  } else {
-    // Tie break situation
-    isTieBrek = true;
-    winnerId = null;
-  }
+  const { winnerId, isTieBrek } = resolveMatchWinner(
+    redCount,
+    blueCount,
+    greenCount,
+    tieCount,
+    match.redTeamId,
+    match.blueTeamId,
+    match.greenTeamId,
+  );
 
   // Update match with revealed status and winner
   await prisma.match.update({
