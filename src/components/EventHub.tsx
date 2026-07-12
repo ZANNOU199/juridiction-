@@ -162,17 +162,13 @@ export function AdminHub() {
     }
   };
 
-  const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-  const [categoryEditValue, setCategoryEditValue] = useState("");
-  const [isUpdatingCategory, setIsUpdatingCategory] = useState(false);
-
   const handleDeleteCategory = async (eventSlug: string, category: string) => {
     if (!confirm(`Are you sure you want to delete the ${category} category?`)) {
       return;
     }
 
     try {
-      const res = await fetch(`/api/admin/${encodeURIComponent(eventSlug)}/${encodeURIComponent(category)}`, {
+      const res = await fetch(`/api/admin/${eventSlug}/${category}`, {
         method: "DELETE",
       });
 
@@ -192,76 +188,6 @@ export function AdminHub() {
     } catch (error) {
       console.error("Failed to delete category:", error);
       alert("Error deleting category");
-    }
-  };
-
-  const handleStartEditCategory = (tournamentId: string, category: string) => {
-    setEditingCategoryId(tournamentId);
-    setCategoryEditValue(category);
-  };
-
-  const handleSaveCategory = async (
-    eventSlug: string,
-    tournamentId: string,
-    oldCategory: string
-  ) => {
-    const newCategory = categoryEditValue.trim();
-    if (!editingCategoryId || !newCategory) {
-      setEditingCategoryId(null);
-      return;
-    }
-
-    if (newCategory === oldCategory) {
-      setEditingCategoryId(null);
-      return;
-    }
-
-    try {
-      setIsUpdatingCategory(true);
-      const res = await fetch(
-        `/api/admin/${encodeURIComponent(eventSlug)}/${encodeURIComponent(oldCategory)}/rename`,
-        {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ category: newCategory }),
-        }
-      );
-
-      if (res.ok) {
-        setEvents(events.map((event) => {
-          if (event.eventSlug !== eventSlug) return event;
-          return {
-            ...event,
-            tournaments: event.tournaments.map((t) =>
-              t.id === tournamentId ? { ...t, category: newCategory } : t
-            ),
-          };
-        }));
-      } else {
-        const errorData = await res.json().catch(() => null);
-        alert(errorData?.error || "Failed to rename category");
-      }
-    } catch (error) {
-      console.error("Failed to rename category:", error);
-      alert("Error renaming category");
-    } finally {
-      setIsUpdatingCategory(false);
-      setEditingCategoryId(null);
-    }
-  };
-
-  const handleCategoryKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    eventSlug: string,
-    tournamentId: string,
-    oldCategory: string
-  ) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      handleSaveCategory(eventSlug, tournamentId, oldCategory);
-    }
-    if (e.key === "Escape") {
-      setEditingCategoryId(null);
     }
   };
 
@@ -353,39 +279,7 @@ export function AdminHub() {
                         className="flex items-center justify-between group/cat"
                       >
                         <div className="text-sm text-white/70">
-                          •{' '}
-                          {editingCategoryId === tournament.id ? (
-                            <input
-                              value={categoryEditValue}
-                              onChange={(e) => setCategoryEditValue(e.target.value)}
-                              onBlur={() =>
-                                handleSaveCategory(
-                                  event.eventSlug,
-                                  tournament.id,
-                                  tournament.category
-                                )
-                              }
-                              onKeyDown={(e) =>
-                                handleCategoryKeyDown(
-                                  e,
-                                  event.eventSlug,
-                                  tournament.id,
-                                  tournament.category
-                                )
-                              }
-                              disabled={isUpdatingCategory}
-                              className="bg-white/10 border border-white/20 text-white text-sm px-2 py-1 focus:outline-none focus:border-white/30 rounded"
-                              autoFocus
-                            />
-                          ) : (
-                            <span
-                              className="cursor-pointer hover:text-white transition-colors"
-                              title={`Click to edit ${tournament.category}`}
-                              onClick={() => handleStartEditCategory(tournament.id, tournament.category)}
-                            >
-                              {tournament.category}
-                            </span>
-                          )}
+                          • {tournament.category}
                         </div>
                         <button
                           onClick={() => handleDeleteCategory(event.eventSlug, tournament.category)}

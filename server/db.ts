@@ -224,47 +224,6 @@ export async function updateSelectedCategory(eventSlug: string, category: string
   });
 }
 
-export async function renameCategory(eventSlug: string, oldCategory: string, newCategory: string) {
-  const event = await prisma.event.findUnique({
-    where: { eventSlug },
-    include: {
-      tournaments: {
-        where: { category: oldCategory },
-        select: { id: true },
-      },
-    },
-  });
-
-  if (!event || event.tournaments.length === 0) {
-    throw new Error("Category not found");
-  }
-
-  const existing = await prisma.tournament.findFirst({
-    where: {
-      eventId: event.id,
-      category: newCategory,
-    },
-  });
-
-  if (existing) {
-    throw new Error("Category already exists");
-  }
-
-  const tournamentId = event.tournaments[0].id;
-
-  await prisma.tournament.update({
-    where: { id: tournamentId },
-    data: { category: newCategory },
-  });
-
-  if (event.selectedCategory === oldCategory) {
-    await prisma.event.update({
-      where: { eventSlug },
-      data: { selectedCategory: newCategory },
-    });
-  }
-}
-
 export async function getAllCategoriesForEvent(eventSlug: string) {
   const tournaments = await prisma.tournament.findMany({
     where: {
