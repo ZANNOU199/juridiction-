@@ -28,13 +28,19 @@ export function PublicPreselectionRanking() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadData = async () => {
+    const loadData = async (showLoading = true) => {
       if (!eventSlug) {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
         return;
       }
 
       try {
+        if (showLoading) {
+          setLoading(true);
+        }
+
         const [eventRes, scoresRes] = await Promise.all([
           fetch(`/api/events/${eventSlug}`),
           fetch(`/api/preselection/${eventSlug}/scores-flat`),
@@ -57,11 +63,19 @@ export function PublicPreselectionRanking() {
       } catch (error) {
         console.error("Failed to load preselection ranking", error);
       } finally {
-        setLoading(false);
+        if (showLoading) {
+          setLoading(false);
+        }
       }
     };
 
-    loadData();
+    loadData(true);
+
+    const refreshInterval = window.setInterval(() => {
+      loadData(false);
+    }, 5000);
+
+    return () => window.clearInterval(refreshInterval);
   }, [eventSlug]);
 
   const visibleTournaments = useMemo(() => {
