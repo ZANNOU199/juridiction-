@@ -457,6 +457,29 @@ app.post("/admin/:eventSlug/:category/update-participants", async (req, res) => 
   }
 });
 
+// Admin Rename Category
+app.put("/admin/:eventSlug/:category/rename", async (req, res) => {
+  try {
+    const { eventSlug, category } = req.params;
+    const { category: newCategory } = req.body;
+    if (!newCategory) {
+      return res.status(400).json({ error: "New category is required" });
+    }
+
+    await db.renameCategory(eventSlug, category, newCategory);
+    res.json({ success: true, category: newCategory });
+  } catch (error) {
+    console.error("Error:", error);
+    if ((error as Error).message === "Category already exists") {
+      return res.status(409).json({ error: "Category already exists" });
+    }
+    if ((error as Error).message === "Category not found") {
+      return res.status(404).json({ error: "Category not found" });
+    }
+    res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
 // Jury Voting
 app.post("/:eventSlug/:category/vote", async (req, res) => {
   try {
